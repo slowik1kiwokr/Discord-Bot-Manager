@@ -3,7 +3,7 @@ import sys
 import subprocess
 import threading
 import importlib.util
-import pkg_resources
+
 
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
@@ -237,16 +237,10 @@ class WindowIntegrationMixin:
                 spec = importlib.util.find_spec(import_name)
                 if spec is None:
                     return False, "—"
-                # Verzió lekérése
+                # Verzió lekérése (importlib.metadata)
                 try:
                     import importlib.metadata as md
                     ver = md.version(pip_name)
-                    return True, ver
-                except Exception:
-                    pass
-                # Fallback pkg_resources
-                try:
-                    ver = pkg_resources.get_distribution(pip_name).version
                     return True, ver
                 except Exception:
                     return True, "?"
