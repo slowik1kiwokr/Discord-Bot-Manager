@@ -55,6 +55,10 @@ from modules.mixins.window_sqlite import WindowSqliteMixin
 from modules.mixins.window_stats import WindowStatsMixin
 from modules.mixins.window_tutorial import WindowTutorialMixin
 from modules.mixins.window_commander import WindowCommanderMixin
+from modules.mixins.hotkeys import HotkeysMixin
+from modules.mixins.ui_extras import UIExtrasMixin
+from modules.mixins.window_report import WindowReportMixin
+from modules.mixins.ui_enhancements import UIEnhancementsMixin
 
 # Matplotlib
 try:
@@ -100,6 +104,10 @@ class BotManagerApp(
     WindowSqliteMixin,
     WindowStatsMixin,
     WindowTutorialMixin,
+    WindowReportMixin,          
+    HotkeysMixin,               
+    UIExtrasMixin, 
+    UIEnhancementsMixin, 
     ctk.CTk,
 ):
     def __init__(self):
@@ -181,8 +189,17 @@ class BotManagerApp(
         self.after(1500, self.check_and_run_autostarts)
         self.after(3000, self.check_scheduled_backup)
         self.after(500, self.process_remote_commands)
-        self.after(4000, lambda: self.schedule_update_check(interval_minutes=60))
+
+        # Új rendszerek inicializálása
+        self.init_toast_system()
+        self.init_collapsible_sidebar()
+        self.init_animated_status()
+        self.register_hotkeys()
+        self.init_monthly_report()
+        self.init_ui_enhancements()
+
         self.log_event("INFO", "A Discord Bot Vezérlőpult sikeresen elindult.")
+        self.notify("🚀 Panel elindult!", "success", 3000)
 
     def prompt_startup_password(self):
         pwd_win = ctk.CTkToplevel(self)
@@ -575,75 +592,190 @@ class BotManagerApp(
         self.btn_add_bot.pack(side="left", padx=5, pady=5)
 
     def _build_sidebar(self):
-        self.sidebar = ctk.CTkFrame(self, width=236, corner_radius=0, fg_color=self.theme_colors["sidebar_bg"])
+        self.sidebar = ctk.CTkFrame(
+            self, width=270, corner_radius=0,
+            fg_color=self.theme_colors["sidebar_bg"]
+        )
         self.sidebar.pack(side="left", fill="y")
         self.sidebar.pack_propagate(False)
 
-        self.lbl_status = ctk.CTkLabel(self.sidebar, text=self.tr("offline"), text_color="#e74c3c", font=("Arial", 16, "bold"))
-        self.lbl_status.pack(padx=20, pady=(16, 8))
+        # ---------- Státuszjelző ----------
+        self.lbl_status = ctk.CTkLabel(
+            self.sidebar, text="● OFFLINE",
+            text_color="#e74c3c", font=("Arial", 14, "bold")
+        )
+        self.lbl_status.pack(padx=20, pady=(18, 10))
 
-        self.sidebar_menu = ctk.CTkScrollableFrame(self.sidebar, fg_color="transparent", corner_radius=0)
-        self.sidebar_menu.pack(fill="both", expand=True, padx=4, pady=(0, 6))
+        # ---------- Görgethető menü ----------
+        self.sidebar_menu = ctk.CTkScrollableFrame(
+            self.sidebar, fg_color="transparent", corner_radius=0
+        )
+        self.sidebar_menu.pack(fill="both", expand=True, padx=2, pady=(0, 4))
         menu = self.sidebar_menu
-        ctk.CTkLabel(menu, text=self.tr("control_section"), font=("Arial", 11, "bold"), text_color=self.theme_colors["subtext"]).pack(anchor="w", padx=8, pady=(4, 3))
 
-        self.btn_dashboard = ctk.CTkButton(menu, text=self.tr("dashboard"), fg_color="transparent", anchor="w", height=34)
-        self.btn_dashboard.pack(fill="x", padx=6, pady=2)
+        # ============================================================
+        #  Segédfüggvények — KÁRTYA alapú szekciók
+        # ============================================================
+        CARD_BG = "#1e2129"
+        CARD_BORDER = "#2f3542"
 
-        self.btn_start = ctk.CTkButton(menu, text=self.tr("start"), fg_color="#27ae60", hover_color="#2ecc71", command=self.start_bot, height=34)
-        self.btn_start.pack(fill="x", padx=6, pady=2)
+        def make_section(title_key, accent="#5865F2", bg_tint="#1e2129"):
+            """Létrehoz egy színes kártya-szekciót címmel.
 
-        self.btn_restart = ctk.CTkButton(menu, text=self.tr("restart"), fg_color="#d35400", hover_color="#e67e22", command=self.restart_bot, height=34)
-        self.btn_restart.pack(fill="x", padx=6, pady=2)
+            accent:  a keret és a cím színe
+            bg_tint: a kártya finom háttérszíne
+            """
+            card = ctk.CTkFrame(
+                menu,
+                fg_color=bg_tint,
+                corner_radius=10,
+                border_width=2,
+                border_color=accent,
+            )
+            card.pack(fill="x", padx=6, pady=(8, 4))
 
-        self.btn_stop = ctk.CTkButton(menu, text=self.tr("stop"), fg_color="#c0392b", hover_color="#e74c3c", command=self.stop_bot, height=34)
-        self.btn_stop.pack(fill="x", padx=6, pady=2)
+            ctk.CTkLabel(
+                card,
+                text=self.tr(title_key).upper(),
+                font=("Arial", 9, "bold"),
+                text_color=accent,
+                anchor="w",
+            ).pack(fill="x", padx=12, pady=(10, 6))
 
-        ctk.CTkLabel(menu, text=self.tr("bulk_control"), font=("Arial", 11, "bold"), text_color=self.theme_colors["subtext"]).pack(anchor="w", padx=8, pady=(14, 3))
-        batch_frame = ctk.CTkFrame(menu, fg_color=self.theme_colors["card_bg"], corner_radius=8)
-        batch_frame.pack(fill="x", padx=4, pady=(0, 6))
+            return card
 
-        self.btn_start_all = ctk.CTkButton(batch_frame, text=self.tr("start_all"), fg_color="#16a085", hover_color="#1abc9c", command=self.start_all_bots)
-        self.btn_start_all.pack(fill="x", padx=2, pady=2)
-        self.btn_restart_all = ctk.CTkButton(batch_frame, text=self.tr("restart_all"), fg_color="#2980b9", hover_color="#3498db", command=self.restart_all_bots)
-        self.btn_restart_all.pack(fill="x", padx=2, pady=2)
-        self.btn_stop_all = ctk.CTkButton(batch_frame, text=self.tr("stop_all"), fg_color="#7f8c8d", hover_color="#95a5a6", command=self.stop_all_bots)
-        self.btn_stop_all.pack(fill="x", padx=2, pady=2)
+        def nav_btn(parent, text, command, active=False, color=None, hover=None):
+            """Ha color=None → áttetsző, ha color megadva → színes gomb."""
+            if color:
+                fg = color
+                hv = hover or color
+            elif active:
+                fg = "#5865F2"
+                hv = "#4752C4"
+            else:
+                fg = "transparent"
+                hv = "#3a4155"
 
-        ctk.CTkLabel(menu, text=self.tr("tools_section"), font=("Arial", 11, "bold"), text_color=self.theme_colors["subtext"]).pack(anchor="w", padx=8, pady=(14, 3))
-        self.btn_github_update = ctk.CTkButton(menu, text="🔄 GitHub Frissítés", fg_color="#3498db", hover_color="#5dade2", command=lambda: self.update_from_github("manual"), height=34)
-        self.btn_github_update.pack(fill="x", padx=6, pady=2)
-        self.btn_alapok = ctk.CTkButton(menu, text=self.tr("integration"), fg_color="#8e44ad", hover_color="#9b59b6", command=self.open_alapok_window, height=34)
-        self.btn_alapok.pack(fill="x", padx=6, pady=2)
+            b = ctk.CTkButton(
+                parent, text=text, command=command, height=34,
+                fg_color=fg,
+                hover_color=hv,
+                anchor="w",
+                font=("Arial", 12),
+                corner_radius=6,
+                text_color="white",
+            )
+            b.pack(fill="x", padx=8, pady=1)
+            return b
 
-        self.btn_tutorial = ctk.CTkButton(menu, text=self.tr("tutorial"), fg_color="#16a085", hover_color="#1abc9c", anchor="w", command=self.open_tutorial_window, height=34,)
-        self.btn_tutorial.pack(fill="x", padx=6, pady=2)
+        def action_btn(parent, text, command, color):
+            b = ctk.CTkButton(
+                parent, text=text, command=command, height=34,
+                fg_color=color, hover_color=color,
+                anchor="w", font=("Arial", 12, "bold"),
+                corner_radius=6,
+            )
+            b.pack(fill="x", padx=8, pady=2)
+            return b
 
-        self.lbl_panel_id = ctk.CTkLabel(menu, text=f"{self.tr('panel_id')}: {config.PANEL_ID}", font=("Arial", 10, "bold"))
-        self.lbl_panel_id.pack(padx=6, pady=(8, 4))
-        self.btn_copy_connect = ctk.CTkButton(menu, text=self.tr("connect_command"), width=180, command=self.copy_panel_connect_command, height=32)
-        self.btn_copy_connect.pack(fill="x", padx=6, pady=(0, 5))
+        def spacer(parent, h=4):
+            ctk.CTkFrame(parent, height=h, fg_color="transparent").pack()
 
-        ctk.CTkLabel(menu, text=self.tr("stats_section"), font=("Arial", 11, "bold"), text_color=self.theme_colors["subtext"]).pack(anchor="w", padx=8, pady=(14, 3))
-        self.btn_settings = ctk.CTkButton(menu, text=self.tr("settings"), fg_color=self.theme_colors["accent"], hover_color=self.theme_colors["accent_hover"], command=self.open_settings_window_v2, height=34)
-        self.btn_settings.pack(fill="x", padx=6, pady=2)
+        # ============================================================
+        #  VEZÉRLÉS
+        # ============================================================
+        card = make_section("control_section")
+        self.btn_start = action_btn(card, "▶   " + self.tr("start"), self.start_bot, "#27ae60")
+        self.btn_restart = action_btn(card, "⟳   " + self.tr("restart"), self.restart_bot, "#d35400")
+        self.btn_stop = action_btn(card, "■   " + self.tr("stop"), self.stop_bot, "#c0392b")
+        spacer(card, 6)
 
-        self.btn_global_stats = ctk.CTkButton(menu, text=self.tr("global_stats"), fg_color="#8e44ad", hover_color="#9b59b6", anchor="w", command=self.open_global_stats_window, height=34)
-        self.btn_global_stats.pack(fill="x", padx=6, pady=2)
+        # ============================================================
+        #  TÖMEGES VEZÉRLÉS
+        # ============================================================
+        card = make_section("bulk_control")
+        self.btn_start_all = nav_btn(card, "▶   Összes indítása", self.start_all_bots, color="#27ae60")
+        self.btn_restart_all = nav_btn(card, "⟳   Összes újraindítása", self.restart_all_bots, color="#d35400")
+        self.btn_stop_all = nav_btn(card, "■   Összes leállítása", self.stop_all_bots, color="#c0392b")
+        spacer(card, 6)
 
-        self.btn_broadcast = ctk.CTkButton(menu, text=self.tr("broadcast"), fg_color="#c0392b", hover_color="#e74c3c", anchor="w", command=self.open_broadcast_window, height=34)
-        self.btn_broadcast.pack(fill="x", padx=6, pady=2)
+        # ============================================================
+        #  INTEGRÁCIÓ
+        # ============================================================
+        card = make_section("tools_section")
+        self.btn_commander = nav_btn(card, "Commander", self.open_commander_window, color="#f39c12")
+        self.btn_plugins = nav_btn(card, self.tr("plugins"), self.open_plugins_window, color="#8e44ad")
+        self.btn_appearance = nav_btn(card, "Megjelenés", self.open_bot_appearance_editor, color="#bb8fce")
+        self.btn_alapok = nav_btn(card, self.tr("integration"), self.open_alapok_window, color="#9b59b6")
+        spacer(card, 6)
 
-        self.btn_backup = ctk.CTkButton(menu, text=self.tr("backups"), fg_color="#2980b9", hover_color="#3498db", anchor="w", command=self.open_backup_manager, height=34)
-        self.btn_backup.pack(fill="x", padx=6, pady=2)
+        # ============================================================
+        #  STATISZTIKA
+        # ============================================================
+        card = make_section("stats_section")
+        self.btn_global_stats = nav_btn(card, self.tr("global_stats"), self.open_global_stats_window, color="#2980b9")
+        self.btn_report = nav_btn(card, "Havi riport", self.open_monthly_report_window, color="#2ecc71")
+        self.btn_broadcast = nav_btn(card, self.tr("broadcast"), self.open_broadcast_window, color="#cb4335")
+        self.btn_backup = nav_btn(card, self.tr("backups"), self.open_backup_manager, color="#9b59b6")
+        self.btn_sqlite = nav_btn(card, self.tr("sqlite_viewer"), self.open_sqlite_viewer, color="#795548")
+        spacer(card, 6)
 
-        self.btn_sqlite = ctk.CTkButton(menu, text=self.tr("sqlite_viewer"), fg_color="#16a085", hover_color="#1abc9c", anchor="w", command=self.open_sqlite_viewer, height=34)
-        self.btn_sqlite.pack(fill="x", padx=6, pady=2)
+        # ============================================================
+        #  RENDSZER
+        # ============================================================
+        card = make_section("system_section")
+        self.btn_settings = nav_btn(card, self.tr("settings"), self.open_settings_window_v2, active=True, color="#3498db")
+        self.btn_tutorial = nav_btn(card, self.tr("tutorial"), self.open_tutorial_window, color="#e74c3c")
+        self.btn_github_update = nav_btn(card, "GitHub Frissítés", lambda: self.update_from_github("manual"), color="#2980b9")
+        spacer(card, 6)
 
-        self.btn_plugins = ctk.CTkButton(menu, text=self.tr("plugins"), fg_color="#7f8c8d", hover_color="#95a5a6", anchor="w", command=self.open_plugins_window, height=34)
-        self.btn_plugins.pack(fill="x", padx=6, pady=(2, 8))
-        self.btn_commander = ctk.CTkButton(menu, text="⚡ Commander", fg_color="#f39c12", hover_color="#e67e22", anchor="w", command=self.open_commander_window, height=34)
-        self.btn_commander.pack(fill="x", padx=6, pady=(2, 8))
+        # ============================================================
+        #  PANEL INFO KÁRTYA
+        # ============================================================
+        info_card = ctk.CTkFrame(
+            menu,
+            fg_color="#1a1d26",
+            corner_radius=10,
+            border_width=1,
+            border_color="#5865F2",
+        )
+        info_card.pack(fill="x", padx=6, pady=(10, 12))
+
+        ctk.CTkLabel(
+            info_card, text="PANEL AZONOSÍTÓ",
+            font=("Arial", 9, "bold"),
+            text_color="#7a8090",
+            anchor="w",
+        ).pack(fill="x", padx=12, pady=(10, 4))
+
+        self.lbl_panel_id = ctk.CTkLabel(
+            info_card,
+            text=config.PANEL_ID,
+            font=("Consolas", 12, "bold"),
+            text_color="#5865F2",
+            anchor="w",
+        )
+        self.lbl_panel_id.pack(fill="x", padx=12, pady=(0, 8))
+
+        self.btn_copy_connect = ctk.CTkButton(
+            info_card,
+            text="📋  Parancs másolása",
+            height=32, corner_radius=6,
+            fg_color="#5865F2", hover_color="#4752C4",
+            font=("Arial", 11, "bold"),
+            command=self.copy_panel_connect_command,
+        )
+        self.btn_copy_connect.pack(fill="x", padx=10, pady=(0, 10))
+
+
+#-------------------------------------------------------------------------------
+    def _build_main_content(self):
+        self.main_frame = ctk.CTkFrame(self, corner_radius=0)
+        self.main_frame.pack(side="right", fill="both", expand=True, padx=10, pady=10)
+
+        self.settings_box = ctk.CTkFrame(self.main_frame)
+        self.settings_box.pack(fill="x", padx=10, pady=5)
+
 
     def _build_main_content(self):
         self.main_frame = ctk.CTkFrame(self, corner_radius=0)
@@ -1093,6 +1225,8 @@ class BotManagerApp(
         return {
             "name": name,
             "path": path,
+            "emoji": "🤖",
+            "color": "#5865F2",
             "autostart": False,
             "test_mode": False,
             "restart_days": 0,
@@ -1129,18 +1263,29 @@ class BotManagerApp(
             child.destroy()
 
         for i, key in enumerate(self.bots):
-            color = self.theme_colors["accent"] if key == self.active_bot_key else self.theme_colors["sidebar_bg"]
+            bot = self.bots[key]
+            emoji = bot.get("emoji", "🤖")
+            custom_color = bot.get("color", None)
+
+            if key == self.active_bot_key:
+                color = custom_color or self.theme_colors["accent"]
+            else:
+                color = self.theme_colors["sidebar_bg"]
+
             is_first = (i == 0)
-            btn_text = key if (is_first or len(self.bots) <= 1) else f"{key}  ✕"
+            base_text = key if (is_first or len(self.bots) <= 1) else f"{key}  ✕"
+            btn_text = f"{emoji}  {base_text}"
 
             btn = ctk.CTkButton(
                 self.tab_buttons_frame,
                 text=btn_text,
-                width=120,
+                width=140,
                 fg_color=color,
+                hover_color=self.theme_colors["accent_hover"] if custom_color else "#3a3a3a",
                 command=lambda k=key: self.switch_bot(k)
             )
-            btn.bind("<Button-3>", lambda e, k=key, first=is_first: self.show_tab_context_menu(e, k, first))
+            btn.bind("<Button-3>",
+                     lambda e, k=key, first=is_first: self.show_tab_context_menu(e, k, first))
             btn.pack(side="left", padx=5, pady=5)
 
     def show_tab_context_menu(self, event, key, is_first):
@@ -1245,10 +1390,11 @@ class BotManagerApp(
         self.lbl_bot_name.configure(text=metadata["name"])
         self.lbl_bot_version.configure(text=metadata["version"])
 
-        if bot["is_running"]:
-            self.lbl_status.configure(text=self.tr("online"), text_color="#2ecc71")
+        emoji = bot.get("emoji", "🤖")
+        custom_color = bot.get("color", None)
+        if bot["is_running"]: self.lbl_status.configure(text=f"{emoji} ● ONLINE", text_color=custom_color or "#2ecc71")
         else:
-            self.lbl_status.configure(text=self.tr("offline"), text_color="#e74c3c")
+            self.lbl_status.configure(text=f"{emoji} ● OFFLINE", text_color="#e74c3c")
 
         self.lbl_errors.configure(text=str(bot["error_count"]))
         self.lbl_commands.configure(text=str(bot["total_commands"]) if bot["path"] and os.path.exists(bot["path"]) else "0")
@@ -1531,6 +1677,8 @@ class BotManagerApp(
             bots_data["bots"][k] = {
                 "name": v["name"],
                 "path": stored_path,
+                "emoji": v.get("emoji", "🤖"),
+                "color": v.get("color", "#5865F2"),
                 "autostart": v["autostart"],
                 "test_mode": v.get("test_mode", False),
                 "restart_days": v["restart_days"],
@@ -1572,7 +1720,8 @@ class BotManagerApp(
             "backup_enabled": self.backup_enabled,
             "backup_on_start": self.backup_on_start,
             "backup_interval_hours": self.backup_interval_hours,
-            "backup_last_run": self.backup_last_run
+            "backup_last_run": self.backup_last_run,
+            "last_report_month": getattr(self, "last_report_month", "")
         }
         try:
             with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
@@ -1590,6 +1739,8 @@ class BotManagerApp(
                     if configured_path and not os.path.isabs(configured_path):
                         configured_path = os.path.abspath(os.path.join(SCRIPT_DIR, configured_path))
                     b_data = self.create_bot_data(v.get("name", k), configured_path)
+                    b_data["emoji"] = v.get("emoji", "🤖")
+                    b_data["color"] = v.get("color", "#5865F2")
                     b_data["autostart"] = v.get("autostart", False)
                     b_data["test_mode"] = v.get("test_mode", False)
                     b_data["restart_days"] = v.get("restart_days", 0)
@@ -1640,6 +1791,7 @@ class BotManagerApp(
                 self.backup_on_start = s_data.get("backup_on_start", False)
                 self.backup_interval_hours = max(0, int(s_data.get("backup_interval_hours", 24)))
                 self.backup_last_run = s_data.get("backup_last_run", "")
+                self.last_report_month = s_data.get("last_report_month", "")
             except Exception as e:
                 print(f"Hiba settings.json betöltéskor: {e}")
 
