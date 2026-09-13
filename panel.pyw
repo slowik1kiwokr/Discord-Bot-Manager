@@ -230,6 +230,7 @@ class BotManagerApp(
         self.register_hotkeys()
         self.init_monthly_report()
         self.init_ui_enhancements()
+        self.enable_scroll_support()
         self.init_achievements()
         self.init_streak()
         self._ui_built = True
@@ -871,6 +872,7 @@ class BotManagerApp(
             command=self.copy_panel_connect_command,
         )
         self.btn_copy_connect.pack(fill="x", padx=10, pady=(0, 10))
+        self.register_scrollable(self.sidebar_menu)
 
 
 #-------------------------------------------------------------------------------
@@ -1027,6 +1029,7 @@ class BotManagerApp(
         self.lbl_servers = self._create_stat_card(self.tr("guilds"), "0", icon="🌐")
         self.lbl_users = self._create_stat_card(self.tr("users"), "0", icon="👥")
         self.lbl_errors = self._create_stat_card(self.tr("error_counter"), "0", text_color="#e74c3c", icon="⚠️")
+        self.register_scrollable(self.stats_panel)
 
     def _create_stat_card(self, title, default_val, text_color=None, icon=""):
         if text_color is None:
@@ -1151,6 +1154,11 @@ class BotManagerApp(
                                 bot["is_running"] = False
                                 bot["process"] = None
                                 self.log_event("ERROR", f"A(z) '{key}' bot automatikusan le lett lőve memóriatúllépés miatt.")
+                                            # Scrollozható frame-ek újraregisztrálása
+                        if hasattr(self, "sidebar_menu"):
+                            self.register_scrollable(self.sidebar_menu)
+                        if hasattr(self, "stats_panel"):
+                            self.register_scrollable(self.stats_panel)
                     except Exception:
                         pass
 

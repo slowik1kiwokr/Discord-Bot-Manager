@@ -177,3 +177,73 @@ class UIExtrasMixin:
 
     def stop_status_pulse(self):
         self._status_pulse_running = False
+
+    # ------------------------------------------------------------------
+    #  Trackpad / egérgörgő támogatás scrollozható frame-ekhez
+    # ------------------------------------------------------------------
+    def enable_scroll_support(self):
+        """Beköti a globális görgetést minden scrollozható frame-re.
+
+        A trackpad kétujjas görgetése Windows-on `MouseWheel` eseményt
+        generál, de csak a fókuszált widget kapja meg. Ez a metódus
+        globálisan figyeli az egér pozícióját, és a megfelelő
+        CTkScrollableFrame-et görgeti.
+        """
+        self._scrollable_frames = []
+
+        def global_scroll(event):
+            try:
+                # Az egér alatti widget
+                x, y = self.winfo_pointerxy()
+                widget_under = self.winfo_containing(x, y)
+                if widget_under is None:
+                    return
+
+                # Végigmegyünk felfelé a szülőkön, hogy scrollozható frame-et találjunk
+                target = None
+                w = widget_under
+                for _ in range(20):  # max 20 szint
+                    if w is None:
+                        break
+                    if w in self._scrollable_frames:
+                        target = w
+                        break
+                    try:
+                        w = w.master
+                    except Exception:
+                        break
+
+                if target is None:
+                    return
+
+                # Görgetés
+                delta = event.delta
+                if delta == 0:
+                    return
+
+                # Windows: 120 egységenként. Linux/Mac: ettől eltérő.
+                if abs(delta) >= 120:
+                    steps = int(-delta / 120)
+                else:
+                    steps = -1 if delta > 0 else 1
+
+                try:
+                    target._parent_canvas.yview_scroll(steps, "units")
+                except Exception:
+                    pass
+            except Exception:
+                pass
+
+        try:
+            self.bind_all("<MouseWheel>", global_scroll, add="+")
+            self.bind_all("<Button-4>", lambda e: None, add="+")  # Linux
+            self.bind_all("<Button-5>", lambda e: None, add="+")  # Linux
+        except Exception as e:
+            print(f"[SCROLL] Bind hiba: {e}")
+
+    def register_scrollable(self, frame):
+        """Regisztrál egy CTkScrollableFrame-et a görgetéshez."""
+        if not hasattr(self, "_scrollable_frames"):
+            self._scrollable_frames = []
+        if frame not in self._scrollable_frames:
+            self._scrollable_frames.append(frame)

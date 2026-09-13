@@ -1,6 +1,5 @@
 # ============================================================
 #  DBM PANEL — Git kizárások
-#  Ezeket a fájlokat/mappákat NE kövesse a git
 # ============================================================
 
 # --- Python cache ---
@@ -17,7 +16,7 @@ env/
 .venv/
 ENV/
 
-# --- Felhasználói adatok (személyes!) ---
+# --- Felhasználói adatok (SZEMÉLYES!) ---
 bots.json
 settings.json
 lang.json
@@ -28,6 +27,16 @@ streak.json
 panel_broadcast_requests.json
 panel_commands.json
 errors.txt
+temp_app_icon.ico
+
+# --- KIVÉTELEK: sablonok, amiket fel KELL tenni ---
+# Ha valamikor sablonokat akarsz feltölteni, nevezd el így:
+!*.example.json
+!*.template.json
+!*.default.json
+!*.sample.json
+!templates/
+!templates/*.json
 
 # --- Mappák (személyes adatok) ---
 backups/
@@ -43,21 +52,25 @@ update_extract/
 # --- Ideiglenes fájlok ---
 update.zip
 _icon_temp.ico
-temp_app_icon.ico
 *.tmp
 *.bak
 *.log
 
-# --- Régi ikonok (már nem használt) ---
+# --- Régi ikonok ---
 dc_icon.ico
 dc_logo.ico
+
+# --- Batch indítók ---
+start.bat
+Inditas.bat
+*.bat
 
 # --- PyInstaller / build ---
 build/
 dist/
 *.spec
 
-# --- IDE / szerkesztő ---
+# --- IDE ---
 .vscode/
 .idea/
 *.swp
@@ -75,7 +88,6 @@ $RECYCLE.BIN/
 # --- Git ---
 .git/
 .github/
-.gitignore
 
 # --- Egyéb ---
 *.zip
