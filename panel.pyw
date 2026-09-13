@@ -53,6 +53,7 @@ from modules.mixins.window_servers import WindowServersMixin
 from modules.mixins.window_settings import WindowSettingsMixin
 from modules.mixins.window_sqlite import WindowSqliteMixin
 from modules.mixins.window_stats import WindowStatsMixin
+from modules.mixins.window_commander import WindowCommanderMixin
 
 # Matplotlib
 try:
@@ -89,6 +90,7 @@ class BotManagerApp(
     WindowBackupMixin,
     WindowBotInfoMixin,
     WindowBroadcastMixin,
+    WindowCommanderMixin,
     WindowGithubMixin,
     WindowIntegrationMixin,
     WindowPluginsMixin,
@@ -638,6 +640,8 @@ class BotManagerApp(
 
         self.btn_plugins = ctk.CTkButton(menu, text=self.tr("plugins"), fg_color="#7f8c8d", hover_color="#95a5a6", anchor="w", command=self.open_plugins_window, height=34)
         self.btn_plugins.pack(fill="x", padx=6, pady=(2, 8))
+        self.btn_commander = ctk.CTkButton(menu, text="⚡ Commander", fg_color="#f39c12", hover_color="#e67e22", anchor="w", command=self.open_commander_window, height=34)
+        self.btn_commander.pack(fill="x", padx=6, pady=(2, 8))
 
     def _build_main_content(self):
         self.main_frame = ctk.CTkFrame(self, corner_radius=0)
