@@ -11,7 +11,8 @@ logs/
 plugins/
 panel_responses/
 __pycache__/
-
+achievements.json
+streak.json
 # Ideiglenes fájlok
 update.zip
 update_extract/

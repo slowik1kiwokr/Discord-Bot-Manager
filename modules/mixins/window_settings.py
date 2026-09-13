@@ -181,6 +181,9 @@ class WindowSettingsMixin:
             self.save_config()
             self.switch_bot(self.active_bot_key)
             self.update_ui_texts()
+            self.ai_provider = provider_var.get() if 'provider_var' in locals() else self.ai_provider
+            self.ai_api_key = key_entry.get().strip() if 'key_entry' in locals() else self.ai_api_key
+            self.ai_model = model_entry.get().strip() if 'model_entry' in locals() else self.ai_model
             win.destroy()
 
         ctk.CTkButton(save_frame, text=self.tr("save"),

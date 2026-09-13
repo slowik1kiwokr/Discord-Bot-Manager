@@ -62,6 +62,9 @@ from modules.mixins.ui_enhancements import UIEnhancementsMixin
 from modules.mixins.dashboard_widgets import DashboardWidgetsMixin
 from modules.mixins.animated_charts import AnimatedChartsMixin
 from modules.mixins.panel_stats import PanelStatsMixin
+from modules.mixins.ai_assistant import AIAssistantMixin
+from modules.mixins.achievements import AchievementsMixin
+from modules.mixins.streak import StreakMixin
 
 
 # Matplotlib
@@ -115,6 +118,9 @@ class BotManagerApp(
     DashboardWidgetsMixin,     
     AnimatedChartsMixin,       
     PanelStatsMixin,
+    AIAssistantMixin,          
+    AchievementsMixin,          
+    StreakMixin, 
     ctk.CTk,
 ):
     def __init__(self):
@@ -126,6 +132,9 @@ class BotManagerApp(
         self.current_theme = "Discord Sötét (Alap)"
         self.custom_icon_path = ""
         self.panel_password = ""
+        self.ai_provider = "OpenAI (GPT)"
+        self.ai_api_key = ""
+        self.ai_model = ""
 
         self.log_save_level = "Mindent mentse"
         self.max_ram_mb = 200
@@ -206,6 +215,8 @@ class BotManagerApp(
         self.register_hotkeys()
         self.init_monthly_report()
         self.init_ui_enhancements()
+        self.init_achievements()
+        self.init_streak()
 
         self.log_event("INFO", "A Discord Bot Vezérlőpult sikeresen elindult.")
         self.notify("🚀 Panel elindult!", "success", 3000)
@@ -741,6 +752,15 @@ class BotManagerApp(
         self.btn_github_update = nav_btn(card, "GitHub Frissítés", lambda: self.update_from_github("manual"), color="#2980b9")
         spacer(card, 6)
 
+        # ============================================================
+        #  AI FUNKCIOK
+        # ============================================================
+        card = make_section("ai_section", accent="#00bcd4", bg_tint="#0f1a24")
+        self.btn_ai_chat = action_btn(card, "🤖   AI Asszisztens", self.open_ai_chat_window, "#5865F2")
+        self.btn_ai_code = action_btn(card, "✨   AI Kód Generátor", self.open_ai_code_generator, "#9b59b6")
+        self.btn_ai_docs = action_btn(card, "📄   AI Dokumentáció", self.open_ai_docs_generator, "#16a085")
+        self.btn_achievements = action_btn(card, "🏆   Achievementek", self.open_achievements_window, "#f39c12")
+        spacer(card, 6)
         # ============================================================
         #  PANEL INFO KÁRTYA
         # ============================================================
@@ -1738,7 +1758,10 @@ class BotManagerApp(
             "last_report_month": getattr(self, "last_report_month", ""),
             "backup_last_run": self.backup_last_run,
             "last_report_month": getattr(self, "last_report_month", ""),
-            "dashboard_layout": getattr(self, "dashboard_layout", [])
+            "dashboard_layout": getattr(self, "dashboard_layout", []),
+            "ai_provider": getattr(self, "ai_provider", "OpenAI (GPT)"),
+            "ai_api_key": getattr(self, "ai_api_key", ""),
+            "ai_model": getattr(self, "ai_model", ""),
         }
         try:
             with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
@@ -1810,6 +1833,9 @@ class BotManagerApp(
                 self.backup_last_run = s_data.get("backup_last_run", "")
                 self.last_report_month = s_data.get("last_report_month", "")
                 self.dashboard_layout = s_data.get("dashboard_layout", [])
+                self.ai_provider = s_data.get("ai_provider", "OpenAI (GPT)")
+                self.ai_api_key = s_data.get("ai_api_key", "")
+                self.ai_model = s_data.get("ai_model", "")
             except Exception as e:
                 print(f"Hiba settings.json betöltéskor: {e}")
 
