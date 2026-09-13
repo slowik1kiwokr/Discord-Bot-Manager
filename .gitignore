@@ -1,0 +1,28 @@
+*.pyc
+# Felhasználói adatok
+bots.json
+settings.json
+lang.json
+local_version.txt
+
+# Mappák
+backups/
+logs/
+plugins/
+panel_responses/
+__pycache__/
+
+# Ideiglenes fájlok
+update.zip
+update_extract/
+_icon_temp.ico
+temp_app_icon.ico
+
+# Python
+*.pyo
+*.pyd
+*.py[cod]
+
+# IDE
+.vscode/
+.idea/

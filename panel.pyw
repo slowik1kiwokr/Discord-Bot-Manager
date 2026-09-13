@@ -29,7 +29,7 @@ from version import version
 import modules.config as config
 from modules.config import (
     SCRIPT_DIR, BOTS_FILE, SETTINGS_FILE, LANG_FILE,
-    BOT_INVITE_URL, REMOTE_COMMANDS_FILE, REMOTE_RESPONSES_DIR,
+    REMOTE_COMMANDS_FILE, REMOTE_RESPONSES_DIR,
     BROADCAST_REQUESTS_FILE, BACKUP_DIR, DISCORD_ICON_PATH,
     PLUGINS_DIR, LOG_DIR,
 )
@@ -53,6 +53,7 @@ from modules.mixins.window_servers import WindowServersMixin
 from modules.mixins.window_settings import WindowSettingsMixin
 from modules.mixins.window_sqlite import WindowSqliteMixin
 from modules.mixins.window_stats import WindowStatsMixin
+from modules.mixins.window_tutorial import WindowTutorialMixin
 from modules.mixins.window_commander import WindowCommanderMixin
 
 # Matplotlib
@@ -98,6 +99,7 @@ class BotManagerApp(
     WindowSettingsMixin,
     WindowSqliteMixin,
     WindowStatsMixin,
+    WindowTutorialMixin,
     ctk.CTk,
 ):
     def __init__(self):
@@ -614,8 +616,8 @@ class BotManagerApp(
         self.btn_alapok = ctk.CTkButton(menu, text=self.tr("integration"), fg_color="#8e44ad", hover_color="#9b59b6", command=self.open_alapok_window, height=34)
         self.btn_alapok.pack(fill="x", padx=6, pady=2)
 
-        self.btn_invite = ctk.CTkButton(menu, text=self.tr("invite"), fg_color="#16a085", hover_color="#1abc9c", command=self.open_bot_invite, height=34)
-        self.btn_invite.pack(fill="x", padx=6, pady=2)
+        self.btn_tutorial = ctk.CTkButton(menu, text=self.tr("tutorial"), fg_color="#16a085", hover_color="#1abc9c", anchor="w", command=self.open_tutorial_window, height=34,)
+        self.btn_tutorial.pack(fill="x", padx=6, pady=2)
 
         self.lbl_panel_id = ctk.CTkLabel(menu, text=f"{self.tr('panel_id')}: {config.PANEL_ID}", font=("Arial", 10, "bold"))
         self.lbl_panel_id.pack(padx=6, pady=(8, 4))
@@ -815,8 +817,6 @@ class BotManagerApp(
         lbl2.pack(side="right", expand=True)
         return lbl1, lbl2
 
-    def open_bot_invite(self):
-        webbrowser.open(BOT_INVITE_URL)
 
     # ---------- BOT METADATA ----------
 
@@ -1004,7 +1004,7 @@ class BotManagerApp(
         self.btn_restart_all.configure(text=self.tr("restart_all"))
         self.btn_stop_all.configure(text=self.tr("stop_all"))
         self.btn_alapok.configure(text=self.tr("integration"))
-        self.btn_invite.configure(text=self.tr("invite"))
+        self.btn_tutorial.configure(text=self.tr("tutorial"))
         self.btn_backup.configure(text=self.tr("backups"))
         self.btn_sqlite.configure(text=self.tr("sqlite_viewer"))
         self.btn_plugins.configure(text=self.tr("plugins"))

@@ -11,16 +11,11 @@ LANG_FILE = os.path.join(SCRIPT_DIR, "lang.json")
 # Ez a változó a load_config() során felülíródik, ezért MINDIG config.PANEL_ID-ként érd el!
 PANEL_ID = "#" + secrets.token_hex(8).upper()
 
-BOT_INVITE_URL = (
-    "https://discord.com/oauth2/authorize?client_id=1524467307361861663"
-    "&permissions=8&integration_type=0&scope=bot"
-)
-
 REMOTE_COMMANDS_FILE = os.path.join(SCRIPT_DIR, "panel_commands.json")
 REMOTE_RESPONSES_DIR = os.path.join(SCRIPT_DIR, "panel_responses")
 BROADCAST_REQUESTS_FILE = os.path.join(SCRIPT_DIR, "panel_broadcast_requests.json")
 BACKUP_DIR = os.path.join(SCRIPT_DIR, "backups")
-DISCORD_ICON_PATH = os.path.join(SCRIPT_DIR, "dc_icon.ico")
+DISCORD_ICON_PATH = os.path.join(SCRIPT_DIR, "discord_icon.ico")
 PLUGINS_DIR = os.path.join(SCRIPT_DIR, "plugins")
 LOG_DIR = os.path.join(SCRIPT_DIR, "logs")
 LOG_FILE_PATH = os.path.join(LOG_DIR, "bot_log.txt")
