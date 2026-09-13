@@ -65,6 +65,7 @@ from modules.mixins.panel_stats import PanelStatsMixin
 from modules.mixins.ai_assistant import AIAssistantMixin
 from modules.mixins.achievements import AchievementsMixin
 from modules.mixins.streak import StreakMixin
+from modules.mixins.afk_screen import AfkScreenMixin
 
 
 # Matplotlib
@@ -121,6 +122,7 @@ class BotManagerApp(
     AIAssistantMixin,          
     AchievementsMixin,          
     StreakMixin, 
+    AfkScreenMixin,
     ctk.CTk,
 ):
     def __init__(self):
@@ -129,12 +131,16 @@ class BotManagerApp(
         self.current_language = "English"
         self.selected_error_sound = "Alap (Beep)"
         self.minimize_to_tray_enabled = True
-        self.current_theme = "Discord Sötét (Alap)"
+        self.current_theme = "DBM (Alap)"
         self.custom_icon_path = ""
         self.panel_password = ""
+        self.update_check_interval_minutes = 60
+        self._update_check_after_id = None
         self.ai_provider = "OpenAI (GPT)"
         self.ai_api_key = ""
         self.ai_model = ""
+        self.afk_enabled = True
+        self.afk_idle_seconds = 60
 
         self.log_save_level = "Mindent mentse"
         self.max_ram_mb = 200
@@ -151,6 +157,10 @@ class BotManagerApp(
         self.dual_stat_headers = []
         self.init_dashboard_widgets()
         self.init_panel_stats()
+        self.afk_enabled = True
+        self.afk_idle_seconds = 60
+        self.init_afk_screen(idle_seconds=self.afk_idle_seconds)
+        self.skipped_version = ""
 
         self.is_loading = True
         self.bots = {}
@@ -207,6 +217,11 @@ class BotManagerApp(
         self.after(1500, self.check_and_run_autostarts)
         self.after(3000, self.check_scheduled_backup)
         self.after(500, self.process_remote_commands)
+                # GitHub auto-update indítása a mentett intervallummal
+        if getattr(self, "update_check_interval_minutes", 60) > 0:
+            self.after(2000, lambda: self.schedule_update_check(
+                interval_minutes=self.update_check_interval_minutes
+            ))
 
         # Új rendszerek inicializálása
         self.init_toast_system()
@@ -217,7 +232,7 @@ class BotManagerApp(
         self.init_ui_enhancements()
         self.init_achievements()
         self.init_streak()
-
+        self._ui_built = True
         self.log_event("INFO", "A Discord Bot Vezérlőpult sikeresen elindult.")
         self.notify("🚀 Panel elindult!", "success", 3000)
 
@@ -526,6 +541,21 @@ class BotManagerApp(
 
     def apply_theme_setting(self, theme_name):
         self.current_theme = theme_name
+        if theme_name == "DBM (Alap)":
+            ctk.set_appearance_mode("dark")
+            ctk.set_default_color_theme("dark-blue")
+            self.theme_colors = {
+                "accent": "#5865F2",
+                "accent_hover": "#4752C4",
+                "sidebar_bg": "#0d0f14",
+                "card_bg": "#1a1d24",
+                "text": "white",
+                "subtext": "#8a8e98",
+                "save_btn": "#27ae60",
+                "save_hover": "#2ecc71",
+                "border": "#2f3542",
+                "bg_main": "#0a0c10",
+            }
         if theme_name == "Discord Sötét (Alap)":
             ctk.set_appearance_mode("dark")
             ctk.set_default_color_theme("blue")
@@ -565,13 +595,55 @@ class BotManagerApp(
                 "text": "white", "subtext": "#aaaaaa", "save_btn": "#27ae60", "save_hover": "#2ecc71"
             }
 
-        if hasattr(self, 'sidebar'):
+        if hasattr(self, 'sidebar') and getattr(self, '_ui_built', False):
             try:
-                self.sidebar.configure(fg_color=self.theme_colors["sidebar_bg"])
-                self.btn_settings.configure(fg_color=self.theme_colors["accent"], hover_color=self.theme_colors["accent_hover"])
-                self.btn_save_path.configure(fg_color=self.theme_colors["save_btn"], hover_color=self.theme_colors["save_hover"])
+                self.after(50, self._rebuild_ui_for_theme)
+            except Exception as e:
+                print(f"[THEME] Rebuild ütemezés hiba: {e}")
+    
+    def _rebuild_ui_for_theme(self):
+        """A teljes UI újraépítése a téma váltás után."""
+        try:
+            self.is_loading = True
+
+            # 1) Csak a fő UI elemeit töröljük
+            for attr in ("top_tab_frame", "sidebar", "main_frame"):
+                w = getattr(self, attr, None)
+                if w is not None:
+                    try:
+                        w.destroy()
+                    except Exception:
+                        pass
+
+            # 2) Reset-eljük a listákat
+            self.stat_card_headers = []
+            self.dual_stat_headers = []
+            self.stats_section_labels = []
+
+            # 3) Újraépítjük a UI-t
+            self._build_tabs()
+            self._build_sidebar()
+            self._build_main_content()
+            self.render_tabs()
+            self.switch_bot(self.active_bot_key)
+
+            # 4) Frissítjük a szövegeket
+            self.update_ui_texts()
+
+            self.is_loading = False
+
+            try:
+                self.notify(f"🎨 Téma: {self.current_theme}", "success", 2000)
             except Exception:
                 pass
+
+            self.log_event("EVENT", f"[THEME] Új téma alkalmazva: {self.current_theme}")
+
+        except Exception as e:
+            self.is_loading = False
+            print(f"[THEME] Rebuild hiba: {e}")
+            import traceback
+            traceback.print_exc()
 
     def apply_window_icon(self):
         if os.path.isfile(DISCORD_ICON_PATH):
@@ -602,7 +674,8 @@ class BotManagerApp(
     # ---------- UI ÉPÍTÉS ----------
 
     def _build_tabs(self):
-        self.top_tab_frame = ctk.CTkFrame(self, height=40, corner_radius=0)
+        self.top_tab_frame = ctk.CTkFrame(
+        self, height=40, corner_radius=0, fg_color=self.theme_colors.get("sidebar_bg", "#2b2b2b"))
         self.top_tab_frame.pack(side="top", fill="x")
 
         self.tab_buttons_frame = ctk.CTkFrame(self.top_tab_frame, fg_color="transparent")
@@ -802,7 +875,8 @@ class BotManagerApp(
 
 #-------------------------------------------------------------------------------
     def _build_main_content(self):
-        self.main_frame = ctk.CTkFrame(self, corner_radius=0)
+        self.main_frame = ctk.CTkFrame(
+        self, corner_radius=0, fg_color=self.theme_colors.get("bg_main", self.theme_colors["card_bg"]))
         self.main_frame.pack(side="right", fill="both", expand=True, padx=10, pady=10)
 
         self.settings_box = ctk.CTkFrame(self.main_frame)
@@ -810,7 +884,8 @@ class BotManagerApp(
 
 
     def _build_main_content(self):
-        self.main_frame = ctk.CTkFrame(self, corner_radius=0)
+        self.main_frame = ctk.CTkFrame(
+        self, corner_radius=0, fg_color=self.theme_colors.get("bg_main", self.theme_colors["card_bg"]))
         self.main_frame.pack(side="right", fill="both", expand=True, padx=10, pady=10)
 
         self.settings_box = ctk.CTkFrame(self.main_frame)
@@ -1762,6 +1837,10 @@ class BotManagerApp(
             "ai_provider": getattr(self, "ai_provider", "OpenAI (GPT)"),
             "ai_api_key": getattr(self, "ai_api_key", ""),
             "ai_model": getattr(self, "ai_model", ""),
+            "afk_enabled": getattr(self, "afk_enabled", True),
+            "afk_idle_seconds": getattr(self, "afk_idle_seconds", 60),
+            "skipped_version": getattr(self, "skipped_version", ""),
+            "update_check_interval_minutes": getattr(self, "update_check_interval_minutes", 60),
         }
         try:
             with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
@@ -1819,7 +1898,7 @@ class BotManagerApp(
                 self.minimize_to_tray_enabled = s_data.get("minimize_to_tray", True)
                 self.panel_password = s_data.get("panel_password", "")
                 self.selected_error_sound = s_data.get("error_sound_type", "Alap (Beep)")
-                self.current_theme = s_data.get("theme", "Discord Sötét (Alap)")
+                self.current_theme = s_data.get("theme", "DBM (Alap)")                
                 self.custom_icon_path = s_data.get("custom_icon", "")
                 if self.custom_icon_path and not os.path.isabs(self.custom_icon_path):
                     self.custom_icon_path = os.path.abspath(os.path.join(SCRIPT_DIR, self.custom_icon_path))
@@ -1836,6 +1915,10 @@ class BotManagerApp(
                 self.ai_provider = s_data.get("ai_provider", "OpenAI (GPT)")
                 self.ai_api_key = s_data.get("ai_api_key", "")
                 self.ai_model = s_data.get("ai_model", "")
+                self.afk_enabled = s_data.get("afk_enabled", True)
+                self.afk_idle_seconds = s_data.get("afk_idle_seconds", 60)
+                self.skipped_version = s_data.get("skipped_version", "")
+                self.update_check_interval_minutes = s_data.get("update_check_interval_minutes", 60)
             except Exception as e:
                 print(f"Hiba settings.json betöltéskor: {e}")
 
@@ -1888,6 +1971,7 @@ class BotManagerApp(
     def perform_exit(self, icon=None, item=None):
         self.is_monitoring = False
         self.rpc_enabled = False
+        self.stop_afk_screen() 
         if hasattr(self, 'tray_icon'):
             self.stop_tray()
         self.save_config()

@@ -1,135 +1,105 @@
-V2.2.0
-✨ Fő funkciók
-🤖 Multi-bot kezelés
-Több bot egyszerre, fülekkel
+v2.3.1
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Egyedi emoji + szín minden botnak
+✨ ÚJ FUNKCIÓK:
+  • AFK képernyő — tétlenség után animált bot-állapot nézet
+  • GitHub auto-frissítés — ellenőrzés percenként / óránként / naponta
+  • Frissítés ablak changelog-gal és előző verziók listájával
+  • DBM (Alap) téma — a splash/AFK stílusához igazodva
+  • Settings ablak teljes újratervezése színes kártyákkal
+  • GitHub frissítés szekció a beállításokban (időköz állítás)
+  • Előző frissítések ablaka — verziótörténet
 
-Csoportos indítás / leállítás / újraindítás
+🎨 UI/UX FEJLESZTÉSEK:
+  • Új ikon (kék-lila pajzs)
+  • Splash screen fade-in / fade-out animációval
+  • Véletlenszerű tippek a betöltés alatt
+  • Sidebar színes kártyákkal (Vezérlés, Tömeges, Integráció...)
+  • Toast értesítések átdolgozva (külön ablakok)
+  • Téma váltás azonnali újraépítéssel (nem kell újraindítás)
 
-Automatikus crash watchdog — ha leáll, újraindul
+🔧 JAVÍTÁSOK:
+  • Splash screen biztonságos bezárás (safe_destroy)
+  • AI chat threading hiba javítva (self.after)
+  • Settings ablak görgethető, mentés gomb mindig látható
+  • Függőségek fül: pkg_resources helyett importlib.metadata
+  • Panel ID helyes kezelése (config.PANEL_ID)
 
-Kereshető fülek (5+ bot esetén)
+v1.0.6
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📊 Élő statisztikák
-RAM, CPU, hőmérséklet valós időben
+✨ ÚJ FUNKCIÓK:
+  • AI Asszisztens — chatbot (OpenAI, Claude, Ollama, LM Studio)
+  • AI Kód Generátor — leírásból Python kód
+  • AI Hibaelemzés — stack trace értelmezése
+  • AI Dokumentáció — kódból Markdown dokumentáció
+  • Achievement rendszer — 15 teljesítmény feloldható
+  • Napi streak számláló — hány napja használod a panelt
+  • Testreszabható Dashboard widgetek (7 widget)
+  • Élő animált grafikonok (hover, zoom, pan)
+  • Panel használati statisztika (megnyitások, top funkciók)
+  • Bot emoji + szín beállítás (24 emoji, 12 szín)
+  • Havi riport — összesítés, exportálás JSON/txt
+  • Tutorial ablak — 13 kategória (magyar + angol)
 
-Uptime, heti uptime, ping válaszidők
+🎮 ÉLmény:
+  • Kereshető bot fülek (5+ bot esetén)
+  • Színes státuszjelző emoji-val
+  • Gyorsgombok (Ctrl+S, Ctrl+B, Ctrl+R, Ctrl+F, F1, F2, F5)
+  • Botváltás Ctrl+1..9-cel
+  • Toast értesítések átdolgozva
 
-Szerverek, felhasználók, parancsok száma
+v1.0.5
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Grafikonok (statikus és élő animált)
+✨ ÚJ FUNKCIÓK:
+  • Commander — Discord parancsok kód nélkül, 8 sablon
+  • Plugin rendszer — 14 kész sablon + szerkesztő
+  • Beépített hangeffekt választó — 8 hang, teszt gomb
+  • Havi riport automatikus felugrással
+  • Tutorial ablak (magyar + angol)
+  • Integrációs ablak — bot.py, Panel.py, függőségek
 
-Havi riport exportálható JSON / szöveg formában
+🎨 UI/UX:
+  • Új splash screen logóval
+  • Modern színes sidebar kártyák
+  • Toast értesítések
 
-Testreszabható Dashboard widgetekkel
+🔧 JAVÍTÁSOK:
+  • Settings ablak görgethető
+  • Splash screen safe_destroy
+  • Jelszóvédelem fókusz javítás
 
-📝 Élő naplók
-Bot stdout/stderr valós időben
+v1.0.4
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Szűrők: ALL / ERRORS / SUCCESS / EVENTS
+✨ ÚJ FUNKCIÓK:
+  • Automatikus GitHub frissítés
+  • Backup rotáció — régi mentések törlése
+  • Keresés a naplókban
+  • Több bot egyszerre (fülek)
 
-Keresés a naplókban
+🔧 JAVÍTÁSOK:
+  • Hőmérséklet olvasás több módszerrel
+  • RAM limit figyelmeztetés
+  • Crash watchdog újraindítás
 
-Színes jelölések — piros hibák, zöld sikerek
+v1.0.0
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Automatikus log rotáció
-
-⚡ Commander — kód nélküli parancsok
-Új Discord parancsokat programozás nélkül
-
-8 sablon: szöveges, embed, hiba, siker, segítség stb.
-
-Színválasztó + élő előnézet
-
-A bot automatikusan regisztrálja
-
-🧩 Plugin rendszer
-Bővíthető Python pluginokkal
-
-14+ kész sablon (számológép, időjárás, webhook, téma váltó...)
-
-Beépített plugin szerkesztő szintaxis-ellenőrzéssel
-
-🤖 AI funkciók
-AI Asszisztens — chatbot segítség
-
-AI Kód Generátor — leírásból Python kód
-
-AI Hibaelemzés — stack trace értelmezése
-
-AI Dokumentáció — kódból Markdown docs
-
-Támogatott providerek:
-
-OpenAI (GPT)
-
-Anthropic (Claude)
-
-Ollama (helyi, ingyenes)
-
-LM Studio (helyi)
-
-🏆 Gamifikáció
-Achievement rendszer — 15 teljesítmény
-
-Napi streak számláló
-
-Statisztikák a panel használatodról
-
-💾 Biztonsági mentések
-Egy kattintás → teljes backup ZIP-ben
-
-Automatikus időzített mentés (pl. naponta)
-
-Visszaállítás pár másodperc alatt
-
-Backup rotáció (max 10 mentés)
-
-🚀 Automatikus frissítés
-A panel magától figyeli a GitHubot
-
-Changelog-gal jelzi az új verziót
-
-Letöltés + újraindítás egy gombra
-
-🔐 Biztonság
-Jelszóvédelem a panelhez
-
-Audit log — ki, mikor, mit csinált
-
-Teszt mód — csak meghatározott Discord ID-k
-
-🎨 Modern UI
-4 beépített téma (Discord Sötét, Világos, Blurple, Hacker)
-
-Színes kártyák a sidebar-on
-
-Toast értesítések
-
-Gyorsgombok:
-
-Ctrl+S — mentés
-
-Ctrl+B — backup
-
-Ctrl+R — összes bot újraindítás
-
-Ctrl+F — keresés a naplókban
-
-Ctrl+T — tutorial
-
-Ctrl+, — beállítások
-
-F1 — tutorial
-
-F2 — gyorsgombok
-
-F5 — statisztikák frissítése
-
-📖 Beépített tutorial
-11 kategória — első lépésektől a haladó funkciókig
-
-Magyar és angol nyelven
-
-Egy kattintás a GitHub linkre
+🎉 ELSŐ KIADÁS:
+  • Multi-bot kezelés
+  • Bot indítás / leállítás / újraindítás
+  • Élő naplók (ALL / ERRORS / SUCCESS / EVENTS)
+  • Pro metrikák (RAM, CPU, uptime, ping)
+  • Automatikus indítás
+  • Auto-restart időzítő
+  • Éjféli újraindítás
+  • Backup kezelés
+  • SQLite viewer
+  • Szerver lista
+  • Activity szerkesztő
+  • 4 beépített téma
+  • Panel jelszóvédelem
+  • Discord Rich Presence
+  • Rendszertálca támogatás

@@ -6,11 +6,22 @@ from modules.languages import LANGUAGES
 from modules.sounds import ERROR_SOUNDS, play_error_sound_by_name
 
 
+# AFK időzítő opciók (címke, másodperc)
+AFK_TIMEOUT_OPTIONS = [
+    ("15 másodperc", 15),
+    ("30 másodperc", 30),
+    ("1 perc", 60),
+    ("2 perc", 120),
+    ("5 perc", 300),
+    ("10 perc", 600),
+    ("30 perc", 1800),
+]
+
+
 class WindowSettingsMixin:
-    """A Settings ablakhoz tartozó metódusok."""
+    """Settings ablak — modern, színes kártyákkal."""
 
     def _center_on_screen(self, win, width, height):
-        """Ablak középre helyezése a képernyőn, és méret korlátozása."""
         screen_w = win.winfo_screenwidth()
         screen_h = win.winfo_screenheight()
         width = min(width, screen_w - 60)
@@ -19,156 +30,477 @@ class WindowSettingsMixin:
         y = (screen_h - height) // 2
         win.geometry(f"{width}x{height}+{x}+{y}")
 
+    def _settings_section(self, parent, title, icon, accent, bg_tint):
+        """Színes szekció kártya a beállításokhoz."""
+        card = ctk.CTkFrame(
+            parent, fg_color=bg_tint, corner_radius=10,
+            border_width=1, border_color=accent,
+        )
+        card.pack(fill="x", pady=6)
+
+        header = ctk.CTkFrame(card, fg_color="transparent")
+        header.pack(fill="x", padx=14, pady=(10, 6))
+
+        ctk.CTkLabel(
+            header,
+            text=f"{icon}   {title}",
+            font=("Arial", 12, "bold"),
+            text_color=accent,
+            anchor="w",
+        ).pack(side="left")
+
+        content = ctk.CTkFrame(card, fg_color="transparent")
+        content.pack(fill="x", padx=14, pady=(0, 12))
+        return content
+
+    def _row_label(self, parent, text):
+        ctk.CTkLabel(
+            parent, text=text,
+            font=("Arial", 11),
+            text_color="#b8bcc6",
+            anchor="w",
+        ).pack(fill="x", pady=(6, 2))
+
+    # ==================================================================
+    #  Settings ablak
+    # ==================================================================
     def open_settings_window_v2(self):
         win = ctk.CTkToplevel(self)
-        win.title(self.tr("settings"))
-        self._center_on_screen(win, 620, 780)
-        win.minsize(480, 460)
+        win.title("⚙️ Beállítások")
+        self._center_on_screen(win, 720, 800)
+        win.minsize(560, 500)
         win.grab_set()
 
-        # --- Alsó sáv: mindig látható Save gomb ---
-        save_frame = ctk.CTkFrame(win, fg_color="transparent")
-        save_frame.pack(side="bottom", fill="x", padx=12, pady=10)
+        # --- Fejléc ---
+        header = ctk.CTkFrame(win, fg_color="#5865F2", corner_radius=0, height=70)
+        header.pack(fill="x")
+        header.pack_propagate(False)
+        ctk.CTkLabel(
+            header, text="⚙️   Beállítások",
+            font=("Arial", 20, "bold"), text_color="white",
+        ).pack(side="left", padx=24, pady=16)
+        ctk.CTkLabel(
+            header, text="Discord Bot Manager",
+            font=("Arial", 11), text_color="#c0c8ff",
+        ).pack(side="right", padx=24)
 
-        # --- Tabview a maradék helyet kitölti ---
-        tabs = ctk.CTkTabview(win)
+        # --- Alsó mentés sáv (fix) ---
+        save_bar = ctk.CTkFrame(win, fg_color="#151820", height=64, corner_radius=0)
+        save_bar.pack(side="bottom", fill="x")
+        save_bar.pack_propagate(False)
+
+        status_lbl = ctk.CTkLabel(
+            save_bar, text="", font=("Arial", 11), text_color="#8a8e98"
+        )
+        status_lbl.pack(side="left", padx=20)
+
+        save_btn = ctk.CTkButton(
+            save_bar, text="💾   Mentés és bezárás",
+            fg_color="#27ae60", hover_color="#2ecc71",
+            width=200, height=42, font=("Arial", 13, "bold"),
+            corner_radius=8,
+        )
+        save_btn.pack(side="right", padx=16, pady=11)
+
+        # --- Tabview ---
+        tabs = ctk.CTkTabview(win, fg_color="#0d0f14",
+                               segmented_button_selected_color="#5865F2",
+                               segmented_button_selected_hover_color="#4752C4")
         tabs.pack(fill="both", expand=True, padx=12, pady=(12, 0))
+        panel_tab = tabs.add("🖥️   Panel")
+        bot_tab = tabs.add("🤖   Bot")
 
-        panel_tab = tabs.add(self.tr("panel_settings"))
-        bot_tab = tabs.add(self.tr("bot_settings"))
-
-        # Görgethető tartalom mindkét fülhöz
+        # ==============================================================
+        #  PANEL TAB
+        # ==============================================================
         panel_scroll = ctk.CTkScrollableFrame(panel_tab, fg_color="transparent")
         panel_scroll.pack(fill="both", expand=True)
 
-        bot_scroll = ctk.CTkScrollableFrame(bot_tab, fg_color="transparent")
-        bot_scroll.pack(fill="both", expand=True)
-
-        # ---------- PANEL SETTINGS ----------
-        ctk.CTkLabel(panel_scroll, text=self.tr("panel_settings"),
-                     font=("Arial", 17, "bold")).pack(pady=(12, 8))
-
-        ctk.CTkLabel(panel_scroll,
-                     text=f"{self.tr('panel_id')}: {config.PANEL_ID}").pack(anchor="w", padx=20, pady=5)
-
-        ctk.CTkLabel(panel_scroll, text="Panel password (empty = disabled)").pack(anchor="w", padx=20, pady=(10, 2))
-        password_entry = ctk.CTkEntry(panel_scroll, show="*", width=280, placeholder_text="Password")
+        # ---------- Biztonság ----------
+        s = self._settings_section(
+            panel_scroll, "Biztonság", "🔐",
+            accent="#e74c3c", bg_tint="#241014",
+        )
+        self._row_label(s, "Panel jelszó (üresen hagyva nincs védelem):")
+        password_entry = ctk.CTkEntry(s, show="*", width=300, placeholder_text="••••••••")
         if self.panel_password:
             password_entry.insert(0, self.panel_password)
-        password_entry.pack(anchor="w", padx=20)
+        password_entry.pack(anchor="w")
 
-        ctk.CTkLabel(panel_scroll, text=self.tr("language")).pack(anchor="w", padx=20, pady=(12, 2))
+        # ---------- Megjelenés ----------
+        s = self._settings_section(
+            panel_scroll, "Megjelenés és nyelv", "🎨",
+            accent="#9b59b6", bg_tint="#1f1726",
+        )
+
+        lang_frame = ctk.CTkFrame(s, fg_color="transparent")
+        lang_frame.pack(fill="x", pady=2)
+        ctk.CTkLabel(lang_frame, text="Nyelv:", font=("Arial", 11),
+                      text_color="#b8bcc6", width=140, anchor="w").pack(side="left")
         language_var = ctk.StringVar(value=self.current_language)
-        ctk.CTkComboBox(panel_scroll, values=["English", "Magyar"],
-                        variable=language_var, width=280,
-                        command=self.apply_language).pack(anchor="w", padx=20)
+        ctk.CTkComboBox(
+            lang_frame, values=["English", "Magyar"],
+            variable=language_var, width=200,
+            command=self.apply_language,
+        ).pack(side="left")
 
-        tray_switch = ctk.CTkSwitch(panel_scroll, text=self.tr("minimize_tray"))
-        tray_switch.pack(anchor="w", padx=20, pady=12)
+        theme_frame = ctk.CTkFrame(s, fg_color="transparent")
+        theme_frame.pack(fill="x", pady=(8, 2))
+        ctk.CTkLabel(theme_frame, text="Téma:", font=("Arial", 11),
+                      text_color="#b8bcc6", width=140, anchor="w").pack(side="left")
+        theme_var = ctk.StringVar(value=self.current_theme)
+        ctk.CTkComboBox(
+            theme_frame,
+            values=[
+                "DBM (Alap)",
+                "Discord Sötét (Alap)",
+                "Discord Világos",
+                "Discord Blurple (Lila-Kék)",
+                "Discord Zöld (Hacker)",
+            ],
+            variable=theme_var, width=220,
+        ).pack(side="left")
+
+        tray_switch = ctk.CTkSwitch(s, text="  Kicsinyítés tálcára bezáráskor")
+        tray_switch.pack(anchor="w", pady=(10, 2))
         if self.minimize_to_tray_enabled:
             tray_switch.select()
 
-        rpc_switch = ctk.CTkSwitch(panel_scroll, text=self.tr("rpc"))
-        rpc_switch.pack(anchor="w", padx=20, pady=5)
+        rpc_switch = ctk.CTkSwitch(s, text="  Discord Rich Presence")
+        rpc_switch.pack(anchor="w", pady=2)
         if self.rpc_enabled:
             rpc_switch.select()
 
-        ctk.CTkLabel(panel_scroll, text=self.tr("log_level")).pack(anchor="w", padx=20, pady=(12, 2))
-        log_var = ctk.StringVar(value=self.log_save_level)
-        ctk.CTkComboBox(panel_scroll,
-                        values=["Mindent mentse", "Csak hibák", "Csak események", "Sikeres interakciók"],
-                        variable=log_var, width=280).pack(anchor="w", padx=20)
+        # ---------- Értesítések ----------
+        s = self._settings_section(
+            panel_scroll, "Értesítések", "🔔",
+            accent="#f39c12", bg_tint="#231f0f",
+        )
 
-        # ---------- HANG ----------
-        ctk.CTkLabel(panel_scroll, text=self.tr("error_sound"),
-                     font=("Arial", 12, "bold")).pack(anchor="w", padx=20, pady=(12, 2))
-
+        ctk.CTkLabel(s, text="Hiba hang:", font=("Arial", 11),
+                      text_color="#b8bcc6", anchor="w").pack(fill="x", pady=(2, 2))
         sound_var = ctk.StringVar(value=self.selected_error_sound)
 
         def on_sound_change(choice):
             play_error_sound_by_name(choice)
 
-        ctk.CTkComboBox(panel_scroll, values=ERROR_SOUNDS, variable=sound_var,
-                        width=280, command=on_sound_change).pack(anchor="w", padx=20)
+        sound_frame = ctk.CTkFrame(s, fg_color="transparent")
+        sound_frame.pack(fill="x")
+        ctk.CTkComboBox(
+            sound_frame, values=ERROR_SOUNDS, variable=sound_var,
+            width=240, command=on_sound_change,
+        ).pack(side="left")
+        ctk.CTkButton(
+            sound_frame, text="🔊  Teszt", width=100, height=28,
+            fg_color="#3498db", hover_color="#5dade2",
+            command=lambda: play_error_sound_by_name(sound_var.get()),
+        ).pack(side="left", padx=8)
 
-        ctk.CTkButton(panel_scroll, text=self.tr("error_sound_test"), width=160,
-                      fg_color="#3498db", hover_color="#5dade2",
-                      command=lambda: play_error_sound_by_name(sound_var.get())
-                      ).pack(anchor="w", padx=20, pady=(6, 4))
+        # ---------- Naplók ----------
+        s = self._settings_section(
+            panel_scroll, "Naplók", "📝",
+            accent="#3498db", bg_tint="#152029",
+        )
+        ctk.CTkLabel(s, text="Napló mentési szint:", font=("Arial", 11),
+                      text_color="#b8bcc6", anchor="w").pack(fill="x", pady=(2, 2))
+        log_var = ctk.StringVar(value=self.log_save_level)
+        ctk.CTkComboBox(
+            s,
+            values=["Mindent mentse", "Csak hibák", "Csak események", "Sikeres interakciók"],
+            variable=log_var, width=280,
+        ).pack(anchor="w")
 
-        # ---------- BACKUP ----------
-        backup_enabled_switch = ctk.CTkSwitch(panel_scroll, text=self.tr("backup_auto"))
-        backup_enabled_switch.pack(anchor="w", padx=20, pady=(14, 4))
+        # ---------- AFK Screen ----------
+        s = self._settings_section(
+            panel_scroll, "AFK képernyő", "💤",
+            accent="#00bcd4", bg_tint="#0f1a24",
+        )
+
+        ctk.CTkLabel(
+            s,
+            text="Ha nem használod a panelt, egy animált képernyő jelenik meg,\n"
+                 "ami a botok élő állapotát mutatja.",
+            font=("Arial", 10), text_color="#8a8e98",
+            justify="left", anchor="w",
+        ).pack(fill="x", pady=(2, 8))
+
+        afk_switch = ctk.CTkSwitch(s, text="  AFK képernyő engedélyezése")
+        afk_switch.pack(anchor="w", pady=(0, 8))
+        if getattr(self, "afk_enabled", True):
+            afk_switch.select()
+
+        ctk.CTkLabel(s, text="Időzítő (ennyi tétlenség után jelenjen meg):",
+                      font=("Arial", 11), text_color="#b8bcc6",
+                      anchor="w").pack(fill="x", pady=(4, 2))
+
+        # Időzítő címkék
+        afk_timeout_labels = [l for l, _ in AFK_TIMEOUT_OPTIONS]
+        current_seconds = getattr(self, "afk_idle_seconds", 60)
+        current_label = next(
+            (l for l, s_val in AFK_TIMEOUT_OPTIONS if s_val == current_seconds),
+            "1 perc",
+        )
+        afk_timeout_var = ctk.StringVar(value=current_label)
+        ctk.CTkComboBox(
+            s, values=afk_timeout_labels,
+            variable=afk_timeout_var, width=200,
+        ).pack(anchor="w")
+
+        ctk.CTkButton(
+            s, text="👁  Előnézet megnyitása", height=30,
+            fg_color="#16a085", hover_color="#1abc9c",
+            width=200,
+            command=self._afk_preview,
+        ).pack(anchor="w", pady=(8, 0))
+
+        # ---------- Backup ----------
+        s = self._settings_section(
+            panel_scroll, "Biztonsági mentés", "💾",
+            accent="#2980b9", bg_tint="#101a26",
+        )
+
+        backup_switch = ctk.CTkSwitch(s, text="  Automatikus biztonsági mentés")
+        backup_switch.pack(anchor="w", pady=2)
         if self.backup_enabled:
-            backup_enabled_switch.select()
+            backup_switch.select()
 
-        backup_start_switch = ctk.CTkSwitch(panel_scroll, text=self.tr("backup_start"))
-        backup_start_switch.pack(anchor="w", padx=20, pady=4)
+        backup_start_switch = ctk.CTkSwitch(s, text="  Mentés panelindításkor")
+        backup_start_switch.pack(anchor="w", pady=2)
         if self.backup_on_start:
             backup_start_switch.select()
 
-        ctk.CTkLabel(panel_scroll, text=self.tr("backup_interval")).pack(anchor="w", padx=20, pady=(8, 2))
-        backup_interval_entry = ctk.CTkEntry(panel_scroll, width=100)
+        ctk.CTkLabel(s, text="Időzített mentés gyakorisága (óra, 0 = kikapcsolva):",
+                      font=("Arial", 11), text_color="#b8bcc6",
+                      anchor="w").pack(fill="x", pady=(8, 2))
+        backup_interval_entry = ctk.CTkEntry(s, width=100)
         backup_interval_entry.insert(0, str(self.backup_interval_hours))
-        backup_interval_entry.pack(anchor="w", padx=20)
+        backup_interval_entry.pack(anchor="w")
 
-        ctk.CTkButton(panel_scroll, text=self.tr("backup_manager"),
-                      command=self.open_backup_manager).pack(anchor="w", padx=20, pady=(10, 20))
+        ctk.CTkButton(
+            s, text="📁  Backup kezelő megnyitása", height=32,
+            fg_color="#3498db", hover_color="#5dade2",
+            width=240,
+            command=self.open_backup_manager,
+        ).pack(anchor="w", pady=(10, 0))
 
-        # ---------- BOT SETTINGS ----------
+        # ---------- GitHub frissítés ----------
+        s = self._settings_section(
+            panel_scroll, "GitHub frissítés", "🚀",
+            accent="#3498db", bg_tint="#101a26",
+        )
+
+        ctk.CTkLabel(
+            s,
+            text="A panel automatikusan ellenőrzi, van-e új verzió a GitHubon.",
+            font=("Arial", 10), text_color="#8a8e98",
+            justify="left", anchor="w",
+            wraplength=460,
+        ).pack(fill="x", pady=(2, 8))
+
+        ctk.CTkLabel(s, text="Ellenőrzés gyakorisága:",
+                      font=("Arial", 11), text_color="#b8bcc6",
+                      anchor="w").pack(fill="x", pady=(2, 2))
+
+        # Opciók (címke, perc)
+        UPDATE_INTERVAL_OPTIONS = [
+            ("❌  Soha", 0),
+            ("⚡  Percenként", 1),
+            ("🔵  10 percenként", 10),
+            ("🟢  Óránként", 60),
+            ("🌙  Naponta", 1440),
+        ]
+
+        # Aktuális érték meghatározása
+        current_minutes = getattr(self, "update_check_interval_minutes", 60)
+        current_label = next(
+            (l for l, m in UPDATE_INTERVAL_OPTIONS if m == current_minutes),
+            "🟢  Óránként",
+        )
+
+        update_interval_var = ctk.StringVar(value=current_label)
+        ctk.CTkComboBox(
+            s, values=[l for l, _ in UPDATE_INTERVAL_OPTIONS],
+            variable=update_interval_var, width=260,
+        ).pack(anchor="w")
+
+        ctk.CTkButton(
+            s, text="🔄   Azonnali ellenőrzés", height=30,
+            fg_color="#2980b9", hover_color="#3498db",
+            width=200,
+            command=lambda: self.check_for_updates(silent=False),
+        ).pack(anchor="w", pady=(10, 0))
+
+        ctk.CTkButton(
+            s, text="📜   Előző frissítések", height=30,
+            fg_color="#8e44ad", hover_color="#9b59b6",
+            width=200,
+            command=lambda: self.open_update_history_window(),
+        ).pack(anchor="w", pady=(4, 0))
+
+        # ---------- AI ----------
+        s = self._settings_section(
+            panel_scroll, "AI beállítások", "🤖",
+            accent="#8e44ad", bg_tint="#1a1230",
+        )
+
+        ctk.CTkLabel(s, text="Provider:", font=("Arial", 11),
+                      text_color="#b8bcc6", anchor="w").pack(fill="x", pady=(2, 2))
+        provider_var = ctk.StringVar(value=getattr(self, "ai_provider", "OpenAI (GPT)"))
+        ctk.CTkComboBox(
+            s,
+            values=["OpenAI (GPT)", "Anthropic (Claude)", "Ollama (helyi)", "LM Studio (helyi)"],
+            variable=provider_var, width=280,
+        ).pack(anchor="w")
+
+        ctk.CTkLabel(s, text="API kulcs (OpenAI/Claude esetén):",
+                      font=("Arial", 11), text_color="#b8bcc6",
+                      anchor="w").pack(fill="x", pady=(8, 2))
+        ai_key_entry = ctk.CTkEntry(s, show="*", width=380, placeholder_text="sk-...")
+        if getattr(self, "ai_api_key", ""):
+            ai_key_entry.insert(0, self.ai_api_key)
+        ai_key_entry.pack(anchor="w")
+
+        ctk.CTkLabel(s, text="Modell (pl. llama3.2, gpt-4o-mini):",
+                      font=("Arial", 11), text_color="#b8bcc6",
+                      anchor="w").pack(fill="x", pady=(8, 2))
+        ai_model_entry = ctk.CTkEntry(s, width=280,
+                                       placeholder_text=getattr(self, "ai_model", ""))
+        ai_model_entry.pack(anchor="w")
+
+        # ==============================================================
+        #  BOT TAB
+        # ==============================================================
+        bot_scroll = ctk.CTkScrollableFrame(bot_tab, fg_color="transparent")
+        bot_scroll.pack(fill="both", expand=True)
+
         bot = self.bots[self.active_bot_key]
-        ctk.CTkLabel(bot_scroll, text=f"{self.tr('bot_settings')}: {self.active_bot_key}",
-                     font=("Arial", 17, "bold")).pack(pady=(12, 8))
 
-        ctk.CTkLabel(bot_scroll, text=self.tr("max_ram")).pack(anchor="w", padx=20, pady=(8, 2))
-        ram_entry = ctk.CTkEntry(bot_scroll, width=180)
+        # ---------- Erőforrások ----------
+        s = self._settings_section(
+            bot_scroll, "Erőforrások", "💻",
+            accent="#2ecc71", bg_tint="#16231a",
+        )
+        ctk.CTkLabel(s, text="Maximum RAM használat (MB):",
+                      font=("Arial", 11), text_color="#b8bcc6",
+                      anchor="w").pack(fill="x", pady=(2, 2))
+        ram_entry = ctk.CTkEntry(s, width=180)
         ram_entry.insert(0, str(self.max_ram_mb))
-        ram_entry.pack(anchor="w", padx=20)
+        ram_entry.pack(anchor="w")
 
-        test_switch = ctk.CTkSwitch(bot_scroll, text=self.tr("test_mode"))
-        test_switch.pack(anchor="w", padx=20, pady=12)
+        ctk.CTkLabel(
+            s,
+            text="Ha a bot túllépi a limitet, a panel figyelmeztet (vagy leállítja).",
+            font=("Arial", 10), text_color="#7a8090",
+            anchor="w",
+        ).pack(fill="x", pady=(4, 0))
+
+        # ---------- Teszt mód ----------
+        s = self._settings_section(
+            bot_scroll, "Teszt mód", "🧪",
+            accent="#e67e22", bg_tint="#241c12",
+        )
+        test_switch = ctk.CTkSwitch(s, text="  Teszt mód engedélyezése")
+        test_switch.pack(anchor="w", pady=2)
         if bot.get("test_mode", False):
             test_switch.select()
 
-        ctk.CTkLabel(bot_scroll, text=self.tr("testers")).pack(anchor="w", padx=20, pady=(8, 2))
-        testers_entry = ctk.CTkEntry(bot_scroll, width=420,
-                                     placeholder_text="123456789012345678, 987654321098765432")
+        ctk.CTkLabel(s, text="Tesztelők Discord ID-i (vesszővel elválasztva):",
+                      font=("Arial", 11), text_color="#b8bcc6",
+                      anchor="w").pack(fill="x", pady=(8, 2))
+        testers_entry = ctk.CTkEntry(
+            s, width=420,
+            placeholder_text="123456789012345678, 987654321098765432",
+        )
         testers_entry.insert(0, ", ".join(str(v) for v in bot.get("allowed_discord_ids", [])))
-        testers_entry.pack(anchor="w", padx=20)
-        ctk.CTkLabel(bot_scroll, text=self.tr("testers_help"),
-                     text_color="#aaaaaa").pack(anchor="w", padx=20, pady=5)
+        testers_entry.pack(anchor="w")
 
-        crash_switch = ctk.CTkSwitch(bot_scroll, text=self.tr("crash_restart"))
-        crash_switch.pack(anchor="w", padx=20, pady=(12, 4))
+        ctk.CTkLabel(
+            s,
+            text="Teszt módban csak ezek az azonosítók használhatják a botot.",
+            font=("Arial", 10), text_color="#7a8090",
+            anchor="w",
+        ).pack(fill="x", pady=(4, 0))
+
+        # ---------- Crash kezelés ----------
+        s = self._settings_section(
+            bot_scroll, "Összeomlás kezelés", "🔄",
+            accent="#e74c3c", bg_tint="#241014",
+        )
+        crash_switch = ctk.CTkSwitch(s, text="  Automatikus újraindítás összeomlás után")
+        crash_switch.pack(anchor="w", pady=2)
         if bot.get("auto_restart_on_crash", False):
             crash_switch.select()
 
-        ctk.CTkLabel(bot_scroll, text=self.tr("crash_delay")).pack(anchor="w", padx=20, pady=(6, 2))
-        crash_delay_entry = ctk.CTkEntry(bot_scroll, width=100)
+        ctk.CTkLabel(s, text="Várakozási idő újraindítás előtt (másodperc):",
+                      font=("Arial", 11), text_color="#b8bcc6",
+                      anchor="w").pack(fill="x", pady=(8, 2))
+        crash_delay_entry = ctk.CTkEntry(s, width=100)
         crash_delay_entry.insert(0, str(bot.get("crash_restart_delay", 10)))
-        crash_delay_entry.pack(anchor="w", padx=20, pady=(0, 20))
+        crash_delay_entry.pack(anchor="w")
 
-        # ---------- SAVE ----------
+        # ==============================================================
+        #  Mentés
+        # ==============================================================
         def save_settings():
+            # --- Panel beállítások ---
             self.current_language = language_var.get()
             self.panel_password = password_entry.get().strip()
             self.minimize_to_tray_enabled = bool(tray_switch.get())
             self.rpc_enabled = bool(rpc_switch.get())
             self.log_save_level = log_var.get()
             self.selected_error_sound = sound_var.get()
-            self.backup_enabled = bool(backup_enabled_switch.get())
+
+            # AFK
+            self.afk_enabled = bool(afk_switch.get())
+            selected_timeout_label = afk_timeout_var.get()
+            for label, seconds in AFK_TIMEOUT_OPTIONS:
+                if label == selected_timeout_label:
+                    self.afk_idle_seconds = seconds
+                    break
+
+            # Backup
+            self.backup_enabled = bool(backup_switch.get())
             self.backup_on_start = bool(backup_start_switch.get())
             try:
                 self.backup_interval_hours = max(0, int(backup_interval_entry.get()))
             except ValueError:
-                messagebox.showwarning("Hiba", "A backup gyakorisága egész szám legyen.", parent=win)
+                status_lbl.configure(text="❌ Backup gyakoriság egész szám legyen!",
+                                      text_color="#e74c3c")
                 return
+
+            # --- GitHub update intervallum ---
+            selected_update_label = update_interval_var.get()
+            for label, minutes in UPDATE_INTERVAL_OPTIONS:
+                if label == selected_update_label:
+                    self.update_check_interval_minutes = minutes
+                    break
+
+            # Ha "Soha" → ne ütemezzük
+            try:
+                if hasattr(self, "_update_check_after_id") and self._update_check_after_id:
+                    self.after_cancel(self._update_check_after_id)
+                    self._update_check_after_id = None
+            except Exception:
+                pass
+
+            if self.update_check_interval_minutes > 0:
+                self.after(200, lambda: self.schedule_update_check(
+                    interval_minutes=self.update_check_interval_minutes
+                ))
+
+            # AI
+            self.ai_provider = provider_var.get()
+            self.ai_api_key = ai_key_entry.get().strip()
+            self.ai_model = ai_model_entry.get().strip()
+
+            # --- Bot beállítások ---
             bot["test_mode"] = bool(test_switch.get())
             bot["auto_restart_on_crash"] = bool(crash_switch.get())
             try:
                 bot["crash_restart_delay"] = max(1, int(crash_delay_entry.get()))
             except ValueError:
-                messagebox.showwarning("Hiba", "A crash várakozási idő egész szám legyen.", parent=win)
+                status_lbl.configure(text="❌ Crash várakozási idő egész szám legyen!",
+                                      text_color="#e74c3c")
                 return
             bot["allowed_discord_ids"] = [
                 v.strip() for v in testers_entry.get().split(",") if v.strip().isdigit()
@@ -176,123 +508,36 @@ class WindowSettingsMixin:
             try:
                 self.max_ram_mb = max(50, int(ram_entry.get()))
             except ValueError:
-                messagebox.showwarning("Hiba", "A RAM értéke egész szám legyen.", parent=win)
+                status_lbl.configure(text="❌ RAM érték egész szám legyen!",
+                                      text_color="#e74c3c")
                 return
+
+            # --- Téma alkalmazása ---
+            selected_theme = theme_var.get()
+            if selected_theme != self.current_theme:
+                self.apply_theme_setting(selected_theme)
+
+            # --- Mentés ---
             self.save_config()
             self.switch_bot(self.active_bot_key)
             self.update_ui_texts()
-            self.ai_provider = provider_var.get() if 'provider_var' in locals() else self.ai_provider
-            self.ai_api_key = key_entry.get().strip() if 'key_entry' in locals() else self.ai_api_key
-            self.ai_model = model_entry.get().strip() if 'model_entry' in locals() else self.ai_model
-            win.destroy()
 
-        ctk.CTkButton(save_frame, text=self.tr("save"),
-                      command=save_settings,
-                      fg_color="#27ae60", width=200, height=38).pack()
+            status_lbl.configure(text="✅ Beállítások mentve!", text_color="#2ecc71")
+            self.notify("⚙️ Beállítások mentve", "success", 2000)
+            self.after(400, win.destroy)
 
-    def open_settings_window(self):
-        win = ctk.CTkToplevel(self)
-        win.title(self.tr("settings"))
-        self._center_on_screen(win, 500, 760)
-        win.minsize(420, 460)
-        win.grab_set()
+        save_btn.configure(command=save_settings)
 
-        save_frame = ctk.CTkFrame(win, fg_color="transparent")
-        save_frame.pack(side="bottom", fill="x", padx=12, pady=10)
-
-        scroll = ctk.CTkScrollableFrame(win, fg_color="transparent")
-        scroll.pack(fill="both", expand=True, padx=6, pady=(12, 0))
-
-        ctk.CTkLabel(scroll, text=self.tr("panel_settings"),
-                     font=("Arial", 16, "bold")).pack(pady=15)
-
-        chk_tray = ctk.CTkSwitch(scroll, text=self.tr("minimize_tray"))
-        chk_tray.pack(pady=5)
-        if self.minimize_to_tray_enabled:
-            chk_tray.select()
-
-        ctk.CTkLabel(scroll, text=self.tr("password_label"),
-                     font=("Arial", 11, "bold")).pack(pady=(10, 2))
-        pwd_entry = ctk.CTkEntry(scroll, show="*", width=260,
-                                 placeholder_text=self.tr("new_password"))
-        pwd_entry.pack(pady=2)
-        if self.panel_password:
-            pwd_entry.insert(0, self.panel_password)
-
-        ctk.CTkLabel(scroll, text=self.tr("log_level"),
-                     font=("Arial", 12, "bold")).pack(pady=(10, 2))
-        log_lvl_var = ctk.StringVar(value=self.log_save_level)
-        ctk.CTkComboBox(scroll,
-                        values=["Mindent mentse", "Csak hibák", "Csak események", "Sikeres interakciók"],
-                        variable=log_lvl_var, width=260).pack(pady=2)
-
-        ctk.CTkLabel(scroll, text=self.tr("max_ram"),
-                     font=("Arial", 12, "bold")).pack(pady=(10, 2))
-        ram_spin = ctk.CTkSpinbox(scroll, from_=50, to=2048, increment=50, width=150) \
-            if hasattr(ctk, "CTkSpinbox") else ctk.CTkEntry(scroll, width=150)
-        if hasattr(ram_spin, "set"):
-            ram_spin.set(self.max_ram_mb)
-        else:
-            ram_spin.insert(0, str(self.max_ram_mb))
-        ram_spin.pack(pady=2)
-
-        chk_task_kill = ctk.CTkSwitch(scroll, text=self.tr("task_kill"))
-        chk_task_kill.pack(pady=5)
-        if self.task_kill_enabled:
-            chk_task_kill.select()
-
-        chk_rpc = ctk.CTkSwitch(scroll, text=self.tr("rpc"))
-        chk_rpc.pack(pady=5)
-        if self.rpc_enabled:
-            chk_rpc.select()
-
-        ctk.CTkLabel(scroll, text=self.tr("language"),
-                     font=("Arial", 12, "bold")).pack(pady=(10, 2))
-        lang_var = ctk.StringVar(value=self.current_language)
-        ctk.CTkComboBox(scroll, values=["English", "Magyar"], variable=lang_var,
-                        width=260, command=self.apply_language).pack(pady=2)
-
-        ctk.CTkLabel(scroll, text=self.tr("error_sound"),
-                     font=("Arial", 12, "bold")).pack(pady=(10, 2))
-        sound_var = ctk.StringVar(value=self.selected_error_sound)
-        ctk.CTkComboBox(scroll, values=ERROR_SOUNDS, variable=sound_var, width=260,
-                        command=lambda c: play_error_sound_by_name(c)).pack(pady=2)
-        ctk.CTkButton(scroll, text=self.tr("error_sound_test"), width=160,
-                      fg_color="#3498db", hover_color="#5dade2",
-                      command=lambda: play_error_sound_by_name(sound_var.get())
-                      ).pack(pady=(4, 2))
-
-        ctk.CTkLabel(scroll, text=self.tr("theme"),
-                     font=("Arial", 12, "bold")).pack(pady=(10, 2))
-        theme_var = ctk.StringVar(value=self.current_theme)
-        ctk.CTkComboBox(
-            scroll,
-            values=["Discord Sötét (Alap)", "Discord Világos",
-                    "Discord Blurple (Lila-Kék)", "Discord Zöld (Hacker)"],
-            variable=theme_var, width=260).pack(pady=(2, 20))
-
-        def save_and_close():
-            self.minimize_to_tray_enabled = bool(chk_tray.get())
-            self.panel_password = pwd_entry.get().strip()
-            self.current_language = lang_var.get()
-            self.selected_error_sound = sound_var.get()
-            self.log_save_level = log_lvl_var.get()
-            self.task_kill_enabled = bool(chk_task_kill.get())
-            self.rpc_enabled = bool(chk_rpc.get())
-
-            try:
-                self.max_ram_mb = int(ram_spin.get())
-            except Exception:
-                pass
-
-            selected_t = theme_var.get()
-            if selected_t != self.current_theme:
-                self.apply_theme_setting(selected_t)
-
-            self.save_config()
-            self.update_ui_texts()
-            win.destroy()
-
-        ctk.CTkButton(save_frame, text="Mentés & Bezárás",
-                      command=save_and_close, fg_color="#27ae60",
-                      width=200, height=38).pack()
+    # ==================================================================
+    #  AFK előnézet
+    # ==================================================================
+    def _afk_preview(self):
+        """Azonnal megnyitja az AFK képernyőt (előnézet)."""
+        try:
+            if hasattr(self, "_show_afk_screen"):
+                # Ha már nyitva van, ne nyissa újra
+                if getattr(self, "_afk_running", False):
+                    return
+                self._show_afk_screen()
+        except Exception as e:
+            print(f"[AFK] Előnézet hiba: {e}")
