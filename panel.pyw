@@ -59,6 +59,10 @@ from modules.mixins.hotkeys import HotkeysMixin
 from modules.mixins.ui_extras import UIExtrasMixin
 from modules.mixins.window_report import WindowReportMixin
 from modules.mixins.ui_enhancements import UIEnhancementsMixin
+from modules.mixins.dashboard_widgets import DashboardWidgetsMixin
+from modules.mixins.animated_charts import AnimatedChartsMixin
+from modules.mixins.panel_stats import PanelStatsMixin
+
 
 # Matplotlib
 try:
@@ -108,6 +112,9 @@ class BotManagerApp(
     HotkeysMixin,               
     UIExtrasMixin, 
     UIEnhancementsMixin, 
+    DashboardWidgetsMixin,     
+    AnimatedChartsMixin,       
+    PanelStatsMixin,
     ctk.CTk,
 ):
     def __init__(self):
@@ -133,6 +140,8 @@ class BotManagerApp(
         self.temperature_last_update = 0
         self.stat_card_headers = []
         self.dual_stat_headers = []
+        self.init_dashboard_widgets()
+        self.init_panel_stats()
 
         self.is_loading = True
         self.bots = {}
@@ -714,6 +723,9 @@ class BotManagerApp(
         # ============================================================
         card = make_section("stats_section")
         self.btn_global_stats = nav_btn(card, self.tr("global_stats"), self.open_global_stats_window, color="#2980b9")
+        self.btn_dashboard = action_btn(card, "📐   Dashboard", self.open_dashboard_window, "#5865F2")
+        self.btn_animated = action_btn(card, "📈   Élő grafikonok", self.open_animated_charts_window, "#e67e22")
+        self.btn_panel_stats = action_btn(card, "📊   Panel statisztika", self.open_panel_stats_window, "#8e44ad")
         self.btn_report = nav_btn(card, "Havi riport", self.open_monthly_report_window, color="#2ecc71")
         self.btn_broadcast = nav_btn(card, self.tr("broadcast"), self.open_broadcast_window, color="#cb4335")
         self.btn_backup = nav_btn(card, self.tr("backups"), self.open_backup_manager, color="#9b59b6")
@@ -1159,6 +1171,8 @@ class BotManagerApp(
         self.chk_autoscroll.configure(text=self.tr("autoscroll"))
         self.btn_open_charts.configure(text=self.tr("open_charts"))
         self.check_env_file()
+        if hasattr(self, "btn_dashboard"):
+            self.btn_dashboard.configure(text="📐   Dashboard")
 
     def _refresh_stat_section_labels(self):
         if hasattr(self, "stats_section_labels"):
@@ -1721,7 +1735,10 @@ class BotManagerApp(
             "backup_on_start": self.backup_on_start,
             "backup_interval_hours": self.backup_interval_hours,
             "backup_last_run": self.backup_last_run,
-            "last_report_month": getattr(self, "last_report_month", "")
+            "last_report_month": getattr(self, "last_report_month", ""),
+            "backup_last_run": self.backup_last_run,
+            "last_report_month": getattr(self, "last_report_month", ""),
+            "dashboard_layout": getattr(self, "dashboard_layout", [])
         }
         try:
             with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
@@ -1792,6 +1809,7 @@ class BotManagerApp(
                 self.backup_interval_hours = max(0, int(s_data.get("backup_interval_hours", 24)))
                 self.backup_last_run = s_data.get("backup_last_run", "")
                 self.last_report_month = s_data.get("last_report_month", "")
+                self.dashboard_layout = s_data.get("dashboard_layout", [])
             except Exception as e:
                 print(f"Hiba settings.json betöltéskor: {e}")
 
