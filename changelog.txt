@@ -1,4 +1,135 @@
-v1.0.8 - 2026-09-13
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+V2.2.0
+✨ Fő funkciók
+🤖 Multi-bot kezelés
+Több bot egyszerre, fülekkel
 
-uj icon
+Egyedi emoji + szín minden botnak
+
+Csoportos indítás / leállítás / újraindítás
+
+Automatikus crash watchdog — ha leáll, újraindul
+
+Kereshető fülek (5+ bot esetén)
+
+📊 Élő statisztikák
+RAM, CPU, hőmérséklet valós időben
+
+Uptime, heti uptime, ping válaszidők
+
+Szerverek, felhasználók, parancsok száma
+
+Grafikonok (statikus és élő animált)
+
+Havi riport exportálható JSON / szöveg formában
+
+Testreszabható Dashboard widgetekkel
+
+📝 Élő naplók
+Bot stdout/stderr valós időben
+
+Szűrők: ALL / ERRORS / SUCCESS / EVENTS
+
+Keresés a naplókban
+
+Színes jelölések — piros hibák, zöld sikerek
+
+Automatikus log rotáció
+
+⚡ Commander — kód nélküli parancsok
+Új Discord parancsokat programozás nélkül
+
+8 sablon: szöveges, embed, hiba, siker, segítség stb.
+
+Színválasztó + élő előnézet
+
+A bot automatikusan regisztrálja
+
+🧩 Plugin rendszer
+Bővíthető Python pluginokkal
+
+14+ kész sablon (számológép, időjárás, webhook, téma váltó...)
+
+Beépített plugin szerkesztő szintaxis-ellenőrzéssel
+
+🤖 AI funkciók
+AI Asszisztens — chatbot segítség
+
+AI Kód Generátor — leírásból Python kód
+
+AI Hibaelemzés — stack trace értelmezése
+
+AI Dokumentáció — kódból Markdown docs
+
+Támogatott providerek:
+
+OpenAI (GPT)
+
+Anthropic (Claude)
+
+Ollama (helyi, ingyenes)
+
+LM Studio (helyi)
+
+🏆 Gamifikáció
+Achievement rendszer — 15 teljesítmény
+
+Napi streak számláló
+
+Statisztikák a panel használatodról
+
+💾 Biztonsági mentések
+Egy kattintás → teljes backup ZIP-ben
+
+Automatikus időzített mentés (pl. naponta)
+
+Visszaállítás pár másodperc alatt
+
+Backup rotáció (max 10 mentés)
+
+🚀 Automatikus frissítés
+A panel magától figyeli a GitHubot
+
+Changelog-gal jelzi az új verziót
+
+Letöltés + újraindítás egy gombra
+
+🔐 Biztonság
+Jelszóvédelem a panelhez
+
+Audit log — ki, mikor, mit csinált
+
+Teszt mód — csak meghatározott Discord ID-k
+
+🎨 Modern UI
+4 beépített téma (Discord Sötét, Világos, Blurple, Hacker)
+
+Színes kártyák a sidebar-on
+
+Toast értesítések
+
+Gyorsgombok:
+
+Ctrl+S — mentés
+
+Ctrl+B — backup
+
+Ctrl+R — összes bot újraindítás
+
+Ctrl+F — keresés a naplókban
+
+Ctrl+T — tutorial
+
+Ctrl+, — beállítások
+
+F1 — tutorial
+
+F2 — gyorsgombok
+
+F5 — statisztikák frissítése
+
+📖 Beépített tutorial
+11 kategória — első lépésektől a haladó funkciókig
+
+Magyar és angol nyelven
+
+Egy kattintás a GitHub linkre
