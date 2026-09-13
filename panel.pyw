@@ -167,6 +167,10 @@ class BotManagerApp(
         self.init_afk_screen(idle_seconds=self.afk_idle_seconds)
         self.skipped_version = ""
         self._bot_tooltip = None
+        self._watermark_base_image = None
+        self._watermark_current_image = None
+        self._watermark_size = (200, 200)
+        self._watermark_fade_id = None
         self._bot_tooltip_key = None
         self._bot_tooltip_after_id = None
         self.is_loading = True
@@ -1055,9 +1059,23 @@ class BotManagerApp(
         self.search_entry.pack(fill="x", padx=0, pady=2)
         self.search_entry.bind("<KeyRelease>", lambda e: self.apply_log_search_and_filter())
 
+        # Tartalom terület — ide kerül a textbox és a vízjel
+        self.log_content_area = ctk.CTkFrame(
+            self.log_container, fg_color="transparent",)
+        self.log_content_area.pack(fill="both", expand=True, padx=10, pady=(5, 10))
+
         self.log_textbox = ctk.CTkTextbox(
-            self.log_container, font=("Consolas", 12), fg_color=self.theme_colors.get("log_bg", "#131720"), border_width=1, border_color=self.theme_colors.get("log_border", "#5865F2"), corner_radius=8,)
-        self.log_textbox.pack(fill="both", expand=True, padx=10, pady=(5, 10))
+            self.log_content_area, font=("Consolas", 12), fg_color=self.theme_colors.get("log_bg", "#131720"), border_width=1, border_color=self.theme_colors.get("log_border", "#5865F2"), corner_radius=8,)
+        self.log_textbox.pack(fill="both", expand=True)
+
+        # Vízjel (üres állapot)
+        self.log_watermark_image = self._create_log_watermark_image()
+        if self.log_watermark_image:
+            self.log_watermark_label = ctk.CTkLabel(
+                self.log_content_area, image=self.log_watermark_image, text="", fg_color="transparent",)
+            self.log_watermark_label.place(relx=0.5, rely=0.5, anchor="center")
+        else:
+            self.log_watermark_label = None
 
         self.stats_panel = ctk.CTkScrollableFrame(
             self.middle_frame,width=260, label_text=self.tr("metrics"), fg_color=self.theme_colors.get("bg_main", "#0d0f14"),)
@@ -1086,6 +1104,213 @@ class BotManagerApp(
         self.lbl_users = self._create_stat_card(self.tr("users"), "0", icon="👥")
         self.lbl_errors = self._create_stat_card(self.tr("error_counter"), "0", text_color="#e74c3c", icon="⚠️")
         self.register_scrollable(self.stats_panel)
+
+    def _create_log_watermark_image(self):
+        """A log vízjel ikonjának betöltése."""
+        try:
+            from PIL import Image
+
+            logo_path = os.path.join(SCRIPT_DIR, "logo_clean.png")
+            if not os.path.isfile(logo_path):
+                logo_path = os.path.join(SCRIPT_DIR, "logo.png")
+            if not os.path.isfile(logo_path):
+                logo_path = os.path.join(SCRIPT_DIR, "logo.jpg")
+            if not os.path.isfile(logo_path):
+                return None
+
+            img = Image.open(logo_path).convert("RGBA")
+
+            # Szürke háttér eltávolítása
+            img = self._remove_solid_background(img)
+
+            # Újra körbevágás (a háttér eltűnése után)
+            alpha = img.split()[3]
+            bbox = alpha.getbbox()
+            if bbox:
+                img = img.crop(bbox)
+
+            # Átméretezés
+            max_size = 220
+            ratio = min(max_size / img.width, max_size / img.height)
+            new_w = int(img.width * ratio)
+            new_h = int(img.height * ratio)
+            new_img = img.resize((new_w, new_h), Image.LANCZOS)
+
+            self._watermark_base_image = new_img
+            self._watermark_size = (new_w, new_h)
+
+            # 0% alphaval indul (fade-in-hez)
+            transparent = new_img.copy()
+            alpha = transparent.split()[3]
+            alpha = alpha.point(lambda p: 0)
+            transparent.putalpha(alpha)
+
+            return ctk.CTkImage(
+                light_image=transparent,
+                dark_image=transparent,
+                size=(new_w, new_h),
+            )
+        except Exception as e:
+            print(f"[LOG] Watermark hiba: {e}")
+            return None
+
+    def _remove_solid_background(self, img):
+        """Eltávolítja a szürke hátteret (ahol R≈G≈B)."""
+        try:
+            img = img.convert("RGBA")
+            pixels = img.load()
+            width, height = img.size
+
+            for y in range(height):
+                for x in range(width):
+                    r, g, b, a = pixels[x, y]
+
+                    # Szürke detektálás: R, G, B közel egyenlő ÉS világos
+                    is_gray = (
+                        abs(r - g) < 18 and
+                        abs(g - b) < 18 and
+                        abs(r - b) < 18
+                    )
+                    is_light = r > 140 and g > 140 and b > 140
+
+                    if is_gray and is_light:
+                        pixels[x, y] = (r, g, b, 0)
+
+            return img
+        except Exception as e:
+            print(f"[LOG] Háttéreltávolítás hiba: {e}")
+            return img
+
+    def _set_watermark_alpha(self, alpha_value):
+        """A vízjel átlátszóságának beállítása (0.0 - 1.0)."""
+        if not getattr(self, "_watermark_base_image", None):
+            return
+        if not hasattr(self, "log_watermark_label") or self.log_watermark_label is None:
+            return
+
+        try:
+            from PIL import Image
+
+            img = self._watermark_base_image.copy()
+            alpha = img.split()[3]
+            alpha = alpha.point(lambda p: int(p * alpha_value))
+            img.putalpha(alpha)
+
+            new_ctk = ctk.CTkImage(
+                light_image=img,
+                dark_image=img,
+                size=self._watermark_size,
+            )
+            self.log_watermark_label.configure(image=new_ctk)
+            # Referenciát tartunk, különben a garbage collector törli
+            self._watermark_current_image = new_ctk
+        except Exception as e:
+            print(f"[LOG] Watermark alpha hiba: {e}")
+
+    def _fade_in_log_watermark(self, duration_ms=500, target_alpha=1.0):
+        """A vízjel lassú megjelenítése (fade-in)."""
+        # Ha már fut egy fade, állítsuk le
+        if getattr(self, "_watermark_fade_id", None):
+            try:
+                self.after_cancel(self._watermark_fade_id)
+            except Exception:
+                pass
+            self._watermark_fade_id = None
+
+        if not hasattr(self, "log_watermark_label") or self.log_watermark_label is None:
+            return
+
+        # Kezdés: 0% alpha
+        self._set_watermark_alpha(0.0)
+        self.log_watermark_label.place(relx=0.5, rely=0.5, anchor="center")
+        self.log_watermark_label.lift()
+
+        # Animáció paraméterek
+        steps = 25
+        step_delay = max(15, duration_ms // steps)
+
+        def animate(step=0):
+            try:
+                if step > steps:
+                    self._set_watermark_alpha(target_alpha)
+                    self._watermark_fade_id = None
+                    return
+                # progress: 0.0 → 1.0
+                progress = step / steps
+                # Ease-out görbe a szebb animációhoz
+                eased = 1 - (1 - progress) ** 2
+                current_alpha = target_alpha * eased
+                self._set_watermark_alpha(current_alpha)
+                self._watermark_fade_id = self.after(
+                    step_delay, lambda: animate(step + 1)
+                )
+            except Exception as e:
+                print(f"[LOG] Fade hiba: {e}")
+                self._watermark_fade_id = None
+
+        animate(0)
+
+    def _fade_out_log_watermark(self, duration_ms=250):
+        """A vízjel lassú eltüntetése (fade-out)."""
+        if getattr(self, "_watermark_fade_id", None):
+            try:
+                self.after_cancel(self._watermark_fade_id)
+            except Exception:
+                pass
+            self._watermark_fade_id = None
+
+        if not hasattr(self, "log_watermark_label") or self.log_watermark_label is None:
+            return
+
+        # Ha már úgyis rejtett, ne csináljunk semmit
+        try:
+            if not self.log_watermark_label.winfo_ismapped():
+                return
+        except Exception:
+            pass
+
+        steps = 15
+        step_delay = max(15, duration_ms // steps)
+        start_alpha = 1.0
+
+        def animate(step=0):
+            try:
+                if step > steps:
+                    try:
+                        self.log_watermark_label.place_forget()
+                    except Exception:
+                        pass
+                    self._watermark_fade_id = None
+                    return
+                progress = step / steps
+                current_alpha = start_alpha * (1 - progress)
+                self._set_watermark_alpha(current_alpha)
+                self._watermark_fade_id = self.after(
+                    step_delay, lambda: animate(step + 1)
+                )
+            except Exception as e:
+                print(f"[LOG] Fade-out hiba: {e}")
+                self._watermark_fade_id = None
+
+        animate(0)
+
+    def _update_log_empty_state(self):
+        """A vízjel megjelenítése/elrejtése a napló tartalma alapján."""
+        if not hasattr(self, "log_textbox"):
+            return
+        if not hasattr(self, "log_watermark_label") or self.log_watermark_label is None:
+            return
+
+        try:
+            content = self.log_textbox.get("1.0", "end").strip()
+            has_content = bool(content)
+        except Exception:
+            has_content = False
+
+        if has_content:
+            self._fade_out_log_watermark()
+        else:
+            self._fade_in_log_watermark()
 
     def _create_stat_card(self, title, default_val, text_color=None, icon=""):
         if text_color is None:
@@ -1919,11 +2144,13 @@ class BotManagerApp(
         self.log_textbox.delete("1.0", "end")
         for entry in self.bots[self.active_bot_key]["raw_logs"]:
             self._write_to_textbox(entry)
+        self._update_log_empty_state()
 
     def _write_to_textbox(self, entry):
         self.log_textbox.insert("end", f"[{entry['time']}][{entry['type']:<7}] {entry['msg']}\n")
         if self.chk_autoscroll.get():
             self.log_textbox.see("end")
+        self._update_log_empty_state()
 
     def filter_logs(self, cat):
         self.search_entry.delete(0, "end")
@@ -1931,6 +2158,7 @@ class BotManagerApp(
         for entry in self.bots[self.active_bot_key]["raw_logs"]:
             if cat == "ALL" or entry["type"] == cat:
                 self._write_to_textbox(entry)
+            self._update_log_empty_state()
 
     def apply_log_search_and_filter(self):
         query = self.search_entry.get().strip().lower()
@@ -1938,6 +2166,7 @@ class BotManagerApp(
         for entry in self.bots[self.active_bot_key]["raw_logs"]:
             if not query or query in entry["msg"].lower() or query in entry["type"].lower() or query in entry["time"].lower():
                 self._write_to_textbox(entry)
+            self._update_log_empty_state()   
 
     def clear_logs(self):
         bot = self.bots[self.active_bot_key]
@@ -1945,6 +2174,7 @@ class BotManagerApp(
         bot["error_count"] = 0
         self.lbl_errors.configure(text="0")
         self.log_textbox.delete("1.0", "end")
+        self._update_log_empty_state()
         self.save_config()
 
     # ---------- CONFIG MENTÉS / BETÖLTÉS ----------
