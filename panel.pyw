@@ -66,7 +66,15 @@ from modules.mixins.ai_assistant import AIAssistantMixin
 from modules.mixins.achievements import AchievementsMixin
 from modules.mixins.streak import StreakMixin
 from modules.mixins.afk_screen import AfkScreenMixin
-
+from modules.theme import (
+    THEMES,
+    DEFAULT_THEME,
+    get_theme_names,
+    get_theme,
+    get_theme_colors,
+    get_appearance_mode,
+    get_default_color_theme,
+)
 
 # Matplotlib
 try:
@@ -139,9 +147,6 @@ class BotManagerApp(
         self.ai_provider = "OpenAI (GPT)"
         self.ai_api_key = ""
         self.ai_model = ""
-        self.afk_enabled = True
-        self.afk_idle_seconds = 60
-
         self.log_save_level = "Mindent mentse"
         self.max_ram_mb = 200
         self.task_kill_enabled = False
@@ -161,7 +166,9 @@ class BotManagerApp(
         self.afk_idle_seconds = 60
         self.init_afk_screen(idle_seconds=self.afk_idle_seconds)
         self.skipped_version = ""
-
+        self._bot_tooltip = None
+        self._bot_tooltip_key = None
+        self._bot_tooltip_after_id = None
         self.is_loading = True
         self.bots = {}
         self.active_bot_key = "Main Bot"
@@ -541,67 +548,117 @@ class BotManagerApp(
     # ---------- TÉMA & IKON ----------
 
     def apply_theme_setting(self, theme_name):
-        self.current_theme = theme_name
-        if theme_name == "DBM (Alap)":
-            ctk.set_appearance_mode("dark")
-            ctk.set_default_color_theme("dark-blue")
-            self.theme_colors = {
-                "accent": "#5865F2",
-                "accent_hover": "#4752C4",
-                "sidebar_bg": "#0d0f14",
-                "card_bg": "#1a1d24",
-                "text": "white",
-                "subtext": "#8a8e98",
-                "save_btn": "#27ae60",
-                "save_hover": "#2ecc71",
-                "border": "#2f3542",
-                "bg_main": "#0a0c10",
-            }
-        if theme_name == "Discord Sötét (Alap)":
-            ctk.set_appearance_mode("dark")
-            ctk.set_default_color_theme("blue")
-            self.theme_colors = {
-                "accent": "#1f538d", "accent_hover": "#143d6e",
-                "sidebar_bg": "#2b2b2b", "card_bg": "#232323",
-                "text": "white", "subtext": "#aaaaaa", "save_btn": "#27ae60", "save_hover": "#2ecc71"
-            }
-        elif theme_name == "Discord Világos":
-            ctk.set_appearance_mode("light")
-            ctk.set_default_color_theme("blue")
-            self.theme_colors = {
-                "accent": "#3b8ed0", "accent_hover": "#36719f",
-                "sidebar_bg": "#e0e0e0", "card_bg": "#f0f0f0",
-                "text": "black", "subtext": "#444444", "save_btn": "#27ae60", "save_hover": "#2ecc71"
-            }
-        elif theme_name == "Discord Blurple (Lila-Kék)":
-            ctk.set_appearance_mode("dark")
-            ctk.set_default_color_theme("dark-blue")
-            self.theme_colors = {
-                "accent": "#5865F2", "accent_hover": "#4752C4",
-                "sidebar_bg": "#2f3136", "card_bg": "#202225",
-                "text": "white", "subtext": "#b9bbbe", "save_btn": "#5865F2", "save_hover": "#4752C4"
-            }
-        elif theme_name == "Discord Zöld (Hacker)":
-            ctk.set_appearance_mode("dark")
-            ctk.set_default_color_theme("green")
-            self.theme_colors = {
-                "accent": "#2ecc71", "accent_hover": "#27ae60",
-                "sidebar_bg": "#1b261b", "card_bg": "#141c14",
-                "text": "white", "subtext": "#7ecc8e", "save_btn": "#2ecc71", "save_hover": "#27ae60"
-            }
-        else:
-            self.theme_colors = {
-                "accent": "#1f538d", "accent_hover": "#143d6e",
-                "sidebar_bg": "#2b2b2b", "card_bg": "#232323",
-                "text": "white", "subtext": "#aaaaaa", "save_btn": "#27ae60", "save_hover": "#2ecc71"
-            }
+        """Alkalmazza a kiválasztott témát."""
+        try:
+            from modules.theme import (
+                THEMES, DEFAULT_THEME,
+                get_theme_colors, get_appearance_mode, get_default_color_theme,
+            )
+        except ImportError:
+            print("[THEME] Hiba: a modules/theme.py nem található!")
+            return
 
-        if hasattr(self, 'sidebar') and getattr(self, '_ui_built', False):
+        if theme_name not in THEMES:
+            theme_name = DEFAULT_THEME
+
+        self.current_theme = theme_name
+
+        ctk.set_appearance_mode(get_appearance_mode(theme_name))
+        ctk.set_default_color_theme(get_default_color_theme(theme_name))
+
+        self.theme_colors = get_theme_colors(theme_name)
+
+        # Főablak háttere
+        try:
+            self.configure(fg_color=self.theme_colors.get("bg_main", "#0f1420"))
+        except Exception:
+            pass
+
+        # Ha a panel már felépült, építsük újra
+        if hasattr(self, "sidebar") and getattr(self, "_ui_built", False):
             try:
                 self.after(50, self._rebuild_ui_for_theme)
             except Exception as e:
                 print(f"[THEME] Rebuild ütemezés hiba: {e}")
-    
+
+        # Log és konténerek stílusának frissítése
+        try:
+            self.after(50, self._apply_log_styling)
+        except Exception:
+            pass
+
+    def _apply_log_styling(self):
+        """A napló és fő konténerek stílusának frissítése a témához."""
+        # Log textbox
+        if hasattr(self, "log_textbox"):
+            try:
+                self.log_textbox.configure(
+                    fg_color=self.theme_colors.get("log_bg", "#131720"),
+                    border_width=1,
+                    border_color=self.theme_colors.get("log_border", "#5865F2"),
+                )
+            except Exception:
+                pass
+
+        # Log container
+        if hasattr(self, "log_container"):
+            try:
+                self.log_container.configure(
+                    fg_color=self.theme_colors.get("card_bg", "#1e2330"),
+                    border_width=1,
+                    border_color=self.theme_colors.get("border", "#3a4258"),
+                )
+            except Exception:
+                pass
+
+        # Settings box
+        if hasattr(self, "settings_box"):
+            try:
+                self.settings_box.configure(
+                    fg_color=self.theme_colors.get("settings_box_bg", "#1e2330"),
+                    border_width=1,
+                    border_color=self.theme_colors.get("border", "#3a4258"),
+                )
+            except Exception:
+                pass
+
+        # Stats panel
+        if hasattr(self, "stats_panel"):
+            try:
+                self.stats_panel.configure(
+                    fg_color=self.theme_colors.get("bg_main", "#0f1420"),
+                )
+            except Exception:
+                pass
+
+        # Main frame
+        if hasattr(self, "main_frame"):
+            try:
+                self.main_frame.configure(
+                    fg_color=self.theme_colors.get("bg_main", "#0f1420"),
+                )
+            except Exception:
+                pass
+
+        # Top tab frame
+        if hasattr(self, "top_tab_frame"):
+            try:
+                self.top_tab_frame.configure(
+                    fg_color=self.theme_colors.get("top_tab_bg", "#131720"),
+                )
+            except Exception:
+                pass
+
+        # Sidebar
+        if hasattr(self, "sidebar"):
+            try:
+                self.sidebar.configure(
+                    fg_color=self.theme_colors.get("sidebar_bg", "#131720"),
+                )
+            except Exception:
+                pass
+
+
     def _rebuild_ui_for_theme(self):
         """A teljes UI újraépítése a téma váltás után."""
         try:
@@ -639,6 +696,7 @@ class BotManagerApp(
                 pass
 
             self.log_event("EVENT", f"[THEME] Új téma alkalmazva: {self.current_theme}")
+            self._apply_log_styling()
 
         except Exception as e:
             self.is_loading = False
@@ -878,20 +936,14 @@ class BotManagerApp(
 #-------------------------------------------------------------------------------
     def _build_main_content(self):
         self.main_frame = ctk.CTkFrame(
-        self, corner_radius=0, fg_color=self.theme_colors.get("bg_main", self.theme_colors["card_bg"]))
+            self, corner_radius=0,
+            fg_color=self.theme_colors.get("bg_main", "#0d0f14"),
+        )
         self.main_frame.pack(side="right", fill="both", expand=True, padx=10, pady=10)
 
-        self.settings_box = ctk.CTkFrame(self.main_frame)
-        self.settings_box.pack(fill="x", padx=10, pady=5)
-
-
-    def _build_main_content(self):
-        self.main_frame = ctk.CTkFrame(
-        self, corner_radius=0, fg_color=self.theme_colors.get("bg_main", self.theme_colors["card_bg"]))
-        self.main_frame.pack(side="right", fill="both", expand=True, padx=10, pady=10)
-
-        self.settings_box = ctk.CTkFrame(self.main_frame)
-        self.settings_box.pack(fill="x", padx=10, pady=5)
+        self.settings_box = ctk.CTkFrame(
+            self.main_frame, fg_color=self.theme_colors.get("card_bg", "#1a1d24"), corner_radius=10, border_width=1, border_color=self.theme_colors.get("border", "#2f3542"),)
+        self.settings_box.pack(fill="x", padx=10, pady=(10, 5))
 
         self.lbl_path_title = ctk.CTkLabel(self.settings_box, text=self.tr("bot_script"), font=("Arial", 12, "bold"))
         self.lbl_path_title.grid(row=0, column=0, padx=10, pady=(10, 5), sticky="w")
@@ -963,10 +1015,12 @@ class BotManagerApp(
         self.lbl_r_mins = ctk.CTkLabel(restart_frame, text="0m", font=("Arial", 10), width=20)
         self.lbl_r_mins.pack(side="left")
 
-        self.middle_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        self.middle_frame = ctk.CTkFrame(
+            self.main_frame, fg_color="transparent",)
         self.middle_frame.pack(fill="both", expand=True, padx=0, pady=5)
 
-        self.log_container = ctk.CTkFrame(self.middle_frame)
+        self.log_container = ctk.CTkFrame(
+            self.middle_frame, fg_color=self.theme_colors.get("card_bg", "#1a1d24"), corner_radius=10, border_width=1, border_color=self.theme_colors.get("border", "#2f3542"), )
         self.log_container.pack(side="left", fill="both", expand=True, padx=(0, 5))
 
         self.log_header_frame = ctk.CTkFrame(self.log_container, fg_color="transparent")
@@ -1001,10 +1055,12 @@ class BotManagerApp(
         self.search_entry.pack(fill="x", padx=0, pady=2)
         self.search_entry.bind("<KeyRelease>", lambda e: self.apply_log_search_and_filter())
 
-        self.log_textbox = ctk.CTkTextbox(self.log_container, font=("Consolas", 12))
-        self.log_textbox.pack(fill="both", expand=True, padx=10, pady=10)
+        self.log_textbox = ctk.CTkTextbox(
+            self.log_container, font=("Consolas", 12), fg_color=self.theme_colors.get("log_bg", "#131720"), border_width=1, border_color=self.theme_colors.get("log_border", "#5865F2"), corner_radius=8,)
+        self.log_textbox.pack(fill="both", expand=True, padx=10, pady=(5, 10))
 
-        self.stats_panel = ctk.CTkScrollableFrame(self.middle_frame, width=260, label_text=self.tr("metrics"))
+        self.stats_panel = ctk.CTkScrollableFrame(
+            self.middle_frame,width=260, label_text=self.tr("metrics"), fg_color=self.theme_colors.get("bg_main", "#0d0f14"),)
         self.stats_panel.pack(side="right", fill="y", padx=(5, 0))
 
         self.btn_open_charts = ctk.CTkButton(self.stats_panel, text=self.tr("open_charts"), fg_color="#e67e22", hover_color="#d35400", command=self.open_performance_charts_window)
@@ -1154,11 +1210,6 @@ class BotManagerApp(
                                 bot["is_running"] = False
                                 bot["process"] = None
                                 self.log_event("ERROR", f"A(z) '{key}' bot automatikusan le lett lőve memóriatúllépés miatt.")
-                                            # Scrollozható frame-ek újraregisztrálása
-                        if hasattr(self, "sidebar_menu"):
-                            self.register_scrollable(self.sidebar_menu)
-                        if hasattr(self, "stats_panel"):
-                            self.register_scrollable(self.stats_panel)
                     except Exception:
                         pass
 
@@ -1403,7 +1454,189 @@ class BotManagerApp(
             )
             btn.bind("<Button-3>",
                      lambda e, k=key, first=is_first: self.show_tab_context_menu(e, k, first))
+            btn.bind("<Enter>", lambda e, k=key: self._show_bot_tooltip(e, k), add="+")
+            btn.bind("<Leave>", lambda e: self._hide_bot_tooltip(), add="+")
             btn.pack(side="left", padx=5, pady=5)
+
+    def _show_bot_tooltip(self, event, bot_key):
+        """Tooltip megjelenítése késleltetéssel (400 ms)."""
+        try:
+            if getattr(self, "_bot_tooltip_key", None) == bot_key:
+                return
+
+            if getattr(self, "_bot_tooltip_after_id", None):
+                try:
+                    self.after_cancel(self._bot_tooltip_after_id)
+                except Exception:
+                    pass
+                self._bot_tooltip_after_id = None
+
+            self._bot_tooltip_key = bot_key
+
+            self._bot_tooltip_after_id = self.after(
+                400, lambda: self._really_show_bot_tooltip(bot_key)
+            )
+        except Exception as e:
+            print(f"[TOOLTIP] show hiba: {e}")
+
+    def _really_show_bot_tooltip(self, bot_key):
+        """A tooltip tényleges megjelenítése."""
+        if getattr(self, "_bot_tooltip_key", None) != bot_key:
+            return
+
+        self._hide_bot_tooltip(clear_key=False)
+
+        try:
+            bot = self.bots.get(bot_key)
+            if not bot:
+                return
+
+            tip = ctk.CTkToplevel(self)
+            tip.overrideredirect(True)
+            try:
+                tip.attributes("-topmost", True)
+                tip.attributes("-alpha", 0.0)
+            except Exception:
+                pass
+            tip.configure(fg_color="#0d0f14")
+
+            border = ctk.CTkFrame(
+                tip, fg_color="#0d0f14", corner_radius=10,
+                border_width=2, border_color="#5865F2",
+            )
+            border.pack(fill="both", expand=True, padx=1, pady=1)
+
+            emoji = bot.get("emoji", "🤖")
+            ctk.CTkLabel(
+                border, text=f"{emoji}  {bot_key}",
+                font=("Arial", 13, "bold"), text_color="#ffffff",
+            ).pack(padx=14, pady=(10, 6))
+
+            ctk.CTkFrame(border, height=1, fg_color="#2f3542").pack(
+                fill="x", padx=12, pady=(0, 6)
+            )
+
+            info = ctk.CTkFrame(border, fg_color="transparent")
+            info.pack(padx=14, pady=(0, 10))
+
+            is_running = bot.get("is_running", False)
+            status_color = "#2ecc71" if is_running else "#e74c3c"
+            status_text = "● ONLINE" if is_running else "● OFFLINE"
+
+            def add_row(label, value, color="#ffffff"):
+                row = ctk.CTkFrame(info, fg_color="transparent")
+                row.pack(fill="x", pady=1)
+                ctk.CTkLabel(
+                    row, text=label, font=("Arial", 10),
+                    text_color="#8a8e98", width=90, anchor="w",
+                ).pack(side="left")
+                ctk.CTkLabel(
+                    row, text=value, font=("Consolas", 10, "bold"),
+                    text_color=color, anchor="w",
+                ).pack(side="left")
+
+            add_row("Állapot:", status_text, status_color)
+
+            if is_running and bot.get("start_time"):
+                sec = int(time.time() - bot["start_time"])
+                h, rem = divmod(sec, 3600)
+                m, s = divmod(rem, 60)
+                add_row("Uptime:", f"{h:02d}:{m:02d}:{s:02d}", "#2ecc71")
+            else:
+                add_row("Uptime:", "—", "#6a6e78")
+
+            ram_text = "—"
+            cpu_text = "—"
+            if is_running and bot.get("process"):
+                try:
+                    p = psutil.Process(bot["process"].pid)
+                    ram_mb = p.memory_info().rss / (1024 * 1024)
+                    ram_text = f"{ram_mb:.1f} MB"
+                    cpu_text = f"{p.cpu_percent(interval=None):.1f}%"
+                except Exception:
+                    pass
+
+            add_row("RAM:", ram_text, "#3498db")
+            add_row("CPU:", cpu_text, "#2ecc71")
+            add_row("Hibák:", str(bot.get("error_count", 0)),
+                    "#e74c3c" if bot.get("error_count", 0) > 0 else "#6a6e78")
+            add_row("Parancsok:", str(bot.get("total_commands", 0)), "#f39c12")
+
+            tip.update_idletasks()
+            tip_w = tip.winfo_reqwidth()
+            tip_h = tip.winfo_reqheight()
+
+            try:
+                btn_widget = None
+                for child in self.tab_buttons_frame.winfo_children():
+                    if bot_key in str(child.cget("text")):
+                        btn_widget = child
+                        break
+
+                if btn_widget:
+                    x = btn_widget.winfo_rootx()
+                    y = btn_widget.winfo_rooty() + btn_widget.winfo_height() + 6
+                else:
+                    x = self.winfo_pointerx() + 10
+                    y = self.winfo_pointery() + 20
+            except Exception:
+                x = self.winfo_pointerx() + 10
+                y = self.winfo_pointery() + 20
+
+            screen_w = tip.winfo_screenwidth()
+            screen_h = tip.winfo_screenheight()
+            if x + tip_w > screen_w:
+                x = screen_w - tip_w - 10
+            if y + tip_h > screen_h:
+                y = screen_h - tip_h - 10
+            if x < 0:
+                x = 10
+            if y < 0:
+                y = 10
+
+            tip.geometry(f"{tip_w}x{tip_h}+{x}+{y}")
+
+            self._bot_tooltip = tip
+
+            def fade_in(alpha=0.0):
+                try:
+                    if not tip.winfo_exists():
+                        return
+                    new_alpha = min(1.0, alpha + 0.2)
+                    tip.attributes("-alpha", new_alpha)
+                    if new_alpha < 1.0:
+                        tip.after(15, lambda: fade_in(new_alpha))
+                except Exception:
+                    pass
+
+            tip.after(10, fade_in)
+
+        except Exception as e:
+            print(f"[TOOLTIP] megjelenítés hiba: {e}")
+
+    def _hide_bot_tooltip(self, event=None, clear_key=True):
+        """Tooltip eltüntetése."""
+        try:
+            if getattr(self, "_bot_tooltip_after_id", None):
+                try:
+                    self.after_cancel(self._bot_tooltip_after_id)
+                except Exception:
+                    pass
+                self._bot_tooltip_after_id = None
+
+            if clear_key:
+                self._bot_tooltip_key = None
+
+            tip = getattr(self, "_bot_tooltip", None)
+            if tip is not None:
+                try:
+                    if tip.winfo_exists():
+                        tip.destroy()
+                except Exception:
+                    pass
+                self._bot_tooltip = None
+        except Exception:
+            pass
 
     def show_tab_context_menu(self, event, key, is_first):
         menu = tk.Menu(self, tearoff=0)
@@ -1839,8 +2072,6 @@ class BotManagerApp(
             "backup_interval_hours": self.backup_interval_hours,
             "backup_last_run": self.backup_last_run,
             "last_report_month": getattr(self, "last_report_month", ""),
-            "backup_last_run": self.backup_last_run,
-            "last_report_month": getattr(self, "last_report_month", ""),
             "dashboard_layout": getattr(self, "dashboard_layout", []),
             "ai_provider": getattr(self, "ai_provider", "OpenAI (GPT)"),
             "ai_api_key": getattr(self, "ai_api_key", ""),
@@ -1906,7 +2137,7 @@ class BotManagerApp(
                 self.minimize_to_tray_enabled = s_data.get("minimize_to_tray", True)
                 self.panel_password = s_data.get("panel_password", "")
                 self.selected_error_sound = s_data.get("error_sound_type", "Alap (Beep)")
-                self.current_theme = s_data.get("theme", "DBM (Alap)")                
+                self.current_theme = s_data.get("theme", DEFAULT_THEME)               
                 self.custom_icon_path = s_data.get("custom_icon", "")
                 if self.custom_icon_path and not os.path.isabs(self.custom_icon_path):
                     self.custom_icon_path = os.path.abspath(os.path.join(SCRIPT_DIR, self.custom_icon_path))

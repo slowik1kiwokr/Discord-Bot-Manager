@@ -4,7 +4,7 @@ from tkinter import messagebox
 import modules.config as config
 from modules.languages import LANGUAGES
 from modules.sounds import ERROR_SOUNDS, play_error_sound_by_name
-
+from modules.theme import get_theme_names
 
 # AFK időzítő opciók (címke, másodperc)
 AFK_TIMEOUT_OPTIONS = [
@@ -151,13 +151,7 @@ class WindowSettingsMixin:
         theme_var = ctk.StringVar(value=self.current_theme)
         ctk.CTkComboBox(
             theme_frame,
-            values=[
-                "DBM (Alap)",
-                "Discord Sötét (Alap)",
-                "Discord Világos",
-                "Discord Blurple (Lila-Kék)",
-                "Discord Zöld (Hacker)",
-            ],
+            values=get_theme_names(),
             variable=theme_var, width=220,
         ).pack(side="left")
 
