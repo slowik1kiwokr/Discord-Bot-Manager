@@ -130,15 +130,30 @@ class BotManagerApp(
 
         if self.panel_password:
             self.withdraw()
-            if not self.prompt_startup_password():
+            if self.prompt_startup_password():
+                # Sikeres belépés → újra megjelenítjük a főablakot
+                self.after(50, self.deiconify)
+            else:
+                # Felhasználó bezárta / megszakította
                 sys.exit(0)
 
         self.apply_theme_setting(self.current_theme)
         self.apply_window_icon()
 
         self.title(self.tr("title"))
-        self.geometry("1280x800")
-        self.minsize(1050, 700)
+
+        # Igazodás a képernyőhöz
+        screen_w = self.winfo_screenwidth()
+        screen_h = self.winfo_screenheight()
+
+        # Ne legyen nagyobb a képernyőnél (60-80 px margó a tálcának/címsornak)
+        win_w = min(1280, screen_w - 60)
+        win_h = min(800, screen_h - 80)
+        pos_x = max(0, (screen_w - win_w) // 2)
+        pos_y = max(0, (screen_h - win_h) // 2)
+
+        self.geometry(f"{win_w}x{win_h}+{pos_x}+{pos_y}")
+        self.minsize(1000, 620)
 
         self.protocol('WM_DELETE_WINDOW', self.on_window_close)
 
@@ -162,36 +177,75 @@ class BotManagerApp(
         self.after(1500, self.check_and_run_autostarts)
         self.after(3000, self.check_scheduled_backup)
         self.after(500, self.process_remote_commands)
+        self.after(4000, lambda: self.schedule_update_check(interval_minutes=60))
         self.log_event("INFO", "A Discord Bot Vezérlőpult sikeresen elindult.")
 
     def prompt_startup_password(self):
         pwd_win = ctk.CTkToplevel(self)
         pwd_win.title(self.tr("password_title"))
-        pwd_win.geometry("360x220")
+        pwd_win.geometry("380x260")
         pwd_win.resizable(False, False)
         pwd_win.grab_set()
-        pwd_win.protocol("WM_DELETE_WINDOW", lambda: sys.exit(0))
 
-        ctk.CTkLabel(pwd_win, text=self.tr("password_protection"), font=("Arial", 16, "bold"), text_color="#5865F2").pack(pady=(20, 5))
-        ctk.CTkLabel(pwd_win, text=self.tr("enter_password"), font=("Arial", 12)).pack(pady=(0, 10))
+        # Középre
+        pwd_win.update_idletasks()
+        x = (pwd_win.winfo_screenwidth() - 380) // 2
+        y = (pwd_win.winfo_screenheight() - 260) // 2
+        pwd_win.geometry(f"380x260+{x}+{y}")
 
-        pwd_in = ctk.CTkEntry(pwd_win, show="*", width=260, placeholder_text=self.tr("password"))
+        def on_close():
+            # Ha X-el bezárják, kilépünk
+            try:
+                pwd_win.destroy()
+            except Exception:
+                pass
+            sys.exit(0)
+
+        pwd_win.protocol("WM_DELETE_WINDOW", on_close)
+
+        ctk.CTkLabel(pwd_win, text=self.tr("password_protection"),
+                    font=("Arial", 16, "bold"), text_color="#5865F2").pack(pady=(20, 5))
+        ctk.CTkLabel(pwd_win, text=self.tr("enter_password"),
+                    font=("Arial", 12)).pack(pady=(0, 10))
+
+        pwd_in = ctk.CTkEntry(pwd_win, show="*", width=280,
+                            placeholder_text=self.tr("password"))
         pwd_in.pack(pady=5)
-        pwd_in.focus()
+
+        error_label = ctk.CTkLabel(pwd_win, text="", text_color="#e74c3c",
+                                    font=("Arial", 11))
+        error_label.pack(pady=(0, 4))
 
         success = [False]
 
         def verify(event=None):
-            if pwd_in.get() == self.panel_password:
+            entered = pwd_in.get().strip()
+            expected = (self.panel_password or "").strip()
+            if entered == expected:
                 success[0] = True
                 pwd_win.destroy()
-                self.deiconify()
             else:
-                messagebox.showerror("Hiba", "Hibás jelszó!", parent=pwd_win)
+                error_label.configure(text="❌ Hibás jelszó! Próbáld újra.")
                 pwd_in.delete(0, "end")
+                pwd_in.focus_set()
 
         pwd_in.bind("<Return>", verify)
-        ctk.CTkButton(pwd_win, text=self.tr("login"), fg_color="#27ae60", hover_color="#2ecc71", width=260, command=verify).pack(pady=15)
+
+        ctk.CTkButton(pwd_win, text=self.tr("login"), fg_color="#27ae60",
+                    hover_color="#2ecc71", width=280,
+                    command=verify).pack(pady=10)
+
+        # Fókusz kényszerítés — ez a lényeg!
+        def force_focus():
+            try:
+                pwd_win.lift()
+                pwd_win.focus_force()
+                pwd_in.focus_set()
+            except Exception:
+                pass
+
+        pwd_win.after(100, force_focus)
+        pwd_win.after(400, force_focus)
 
         self.wait_window(pwd_win)
         return success[0]
@@ -317,29 +371,78 @@ class BotManagerApp(
         return self.temperature_text
 
     def read_temperature(self):
-        temperature = self.tr("unavailable")
+        """Több módszerrel próbálja kiolvasni a CPU hőmérsékletet."""
+        # 1) psutil (Linuxon működik, Windowson általában nem)
         try:
             sensors = psutil.sensors_temperatures()
-            values = [reading.current for entries in sensors.values() for reading in entries if reading.current is not None]
-            if values:
-                return f"{max(values):.1f} C"
+            if sensors:
+                values = [r.current for entries in sensors.values()
+                        for r in entries if r.current is not None]
+                if values:
+                    return f"{max(values):.1f} C"
         except (AttributeError, OSError):
             pass
-        if os.name == "nt":
+
+        if os.name != "nt":
+            return self.tr("unavailable")
+
+        # 2) OpenHardwareMonitor / LibreHardwareMonitor WMI (ha fut a program)
+        for namespace in ("root/OpenHardwareMonitor", "root/LibreHardwareMonitor"):
             try:
                 result = subprocess.run(
-                    ["powershell", "-NoProfile", "-Command", "Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature | Select-Object -ExpandProperty CurrentTemperature"],
-                    capture_output=True, text=True, timeout=2, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)
+                    ["powershell", "-NoProfile", "-Command",
+                    f"Get-CimInstance -Namespace {namespace} -ClassName Sensor "
+                    f"| Where-Object {{ $_.SensorType -eq 'Temperature' -and $_.Name -like '*CPU*' }} "
+                    f"| Select-Object -First 1 -ExpandProperty Value"],
+                    capture_output=True, text=True, timeout=3,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)
                 )
-                temperatures = []
-                for line in result.stdout.splitlines():
-                    if line.strip().isdigit():
-                        temperatures.append((int(line.strip()) / 10) - 273.15)
-                if temperatures:
-                    return f"{max(temperatures):.1f} C"
+                out = result.stdout.strip().replace(",", ".")
+                if out and out.replace(".", "").isdigit():
+                    return f"{float(out):.1f} C"
             except (OSError, subprocess.SubprocessError, ValueError):
                 pass
-        return temperature
+
+        # 3) MSAcpi_ThermalZoneTemperature (alap Windows, gyakran admin kell)
+        try:
+            result = subprocess.run(
+                ["powershell", "-NoProfile", "-Command",
+                "Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature "
+                "| Select-Object -ExpandProperty CurrentTemperature"],
+                capture_output=True, text=True, timeout=3,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)
+            )
+            temperatures = []
+            for line in result.stdout.splitlines():
+                line = line.strip()
+                if line.isdigit():
+                    temperatures.append((int(line) / 10) - 273.15)
+            if temperatures:
+                return f"{max(temperatures):.1f} C"
+        except (OSError, subprocess.SubprocessError, ValueError):
+            pass
+
+        # 4) wmi Python modul (ha telepítve van: pip install wmi)
+        try:
+            import wmi
+            w = wmi.WMI(namespace="root\\wmi")
+            temps = w.MSAcpi_ThermalZoneTemperature()
+            if temps:
+                values = [(t.CurrentTemperature / 10) - 273.15 for t in temps]
+                return f"{max(values):.1f} C"
+        except ImportError:
+            pass
+        except Exception:
+            pass
+
+        try:
+            cpu = psutil.cpu_percent(interval=0.3)
+            return f"CPU: {cpu:.0f}%"
+        except Exception:
+            return self.tr("unavailable")
+            
+        # 5) Ha semmi nem működik, adjunk egy informatív szöveget
+        return "N/A (admin?)"
 
     def temperature_monitor_loop(self):
         while getattr(self, "is_monitoring", True):
@@ -975,17 +1078,8 @@ class BotManagerApp(
         if not self.sound_var.get():
             return
         try:
-            bot = self.bots.get(self.active_bot_key, {})
-            vol = bot.get("volume", 50)
-            if vol > 0:
-                if self.selected_error_sound == "Alap (Beep)":
-                    winsound.Beep(1000, 200)
-                elif self.selected_error_sound == "Dupla Pittyogás":
-                    winsound.Beep(1200, 100)
-                    time.sleep(0.05)
-                    winsound.Beep(1200, 100)
-                else:
-                    winsound.Beep(400, 350)
+            from modules.sounds import play_error_sound_by_name
+            play_error_sound_by_name(self.selected_error_sound, async_play=True)
         except Exception:
             pass
 
@@ -1607,7 +1701,16 @@ if __name__ == "__main__":
     splash = SplashScreen()
 
     def start_panel():
-        splash.destroy()
+        # A splash biztonságos megsemmisítése (after-ek törlésével)
+        try:
+            splash.safe_destroy()
+        except Exception:
+            try:
+                splash.destroy()
+            except Exception:
+                pass
+
+        # A főablak létrehozása és futtatása
         app = BotManagerApp()
         app.mainloop()
 
