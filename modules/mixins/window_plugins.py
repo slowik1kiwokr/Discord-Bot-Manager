@@ -7,10 +7,208 @@ import customtkinter as ctk
 import modules.config as config
 from modules.config import PLUGINS_DIR
 from modules.languages import LANGUAGES
-les.languages import LANGUAGES
+
+
+PLUGIN_TEMPLATES = {
+    "Üres plugin": '''def setup_panel(panel):
+    """Ez a függvény fut le, amikor a panel betölti a plugint."""
+    panel.log_event("EVENT", "Üres plugin betöltve.")
+''',
+
+    "Esemény loggoló": '''def setup_panel(panel):
+    panel.log_event("EVENT", "Esemény loggoló plugin aktív.")
+
+    def tick():
+        panel.log_event("INFO", "[Plugin] Óra ketyeg...")
+        panel.after(10000, tick)
+
+    panel.after(5000, tick)
+''',
+
+    "Egyedi gomb a sidebar-hoz": '''def setup_panel(panel):
+    import customtkinter as ctk
+
+    def on_click():
+        panel.log_event("EVENT", "Egyedi gomb megnyomva!")
+
+    btn = ctk.CTkButton(
+        panel.sidebar_menu,
+        text="Plugin gomb",
+        fg_color="#9b59b6",
+        command=on_click,
+    )
+    btn.pack(fill="x", padx=6, pady=2)
+''',
+
+    "Egyedi ablak megnyitó gomb": '''def setup_panel(panel):
+    import customtkinter as ctk
+
+    def open_custom_window():
+        win = ctk.CTkToplevel(panel)
+        win.title("Egyedi ablak")
+        win.geometry("400x300")
+        win.grab_set()
+        ctk.CTkLabel(win, text="Szia! Ez a plugin ablaka.",
+                     font=("Arial", 16, "bold")).pack(pady=20)
+        ctk.CTkButton(win, text="Bezárás",
+                      command=win.destroy).pack(pady=10)
+
+    btn = ctk.CTkButton(
+        panel.sidebar_menu,
+        text="Egyedi ablak",
+        fg_color="#e67e22",
+        command=open_custom_window,
+    )
+    btn.pack(fill="x", padx=6, pady=2)
+''',
+
+    "Üdvözlő üzenet a naplóban": '''def setup_panel(panel):
+    panel.append_log("SUCCESS", "🎉 Szia! A plugin sikeresen betöltődött.")
+    panel.append_log("EVENT", "Verzió: 1.0.0")
+''',
+
+    "Bot állapot figyelő": '''def setup_panel(panel):
+    panel.log_event("EVENT", "Bot figyelő plugin aktív.")
+    state = {"last_running": {}}
+
+    def check():
+        for key, bot in panel.bots.items():
+            was = state["last_running"].get(key, False)
+            now = bot.get("is_running", False)
+            if was and not now:
+                panel.log_event("ERROR", f"[FIGYELŐ] A(z) '{key}' bot leállt!")
+            elif not was and now:
+                panel.log_event("SUCCESS", f"[FIGYELŐ] A(z) '{key}' bot elindult.")
+            state["last_running"][key] = now
+        panel.after(2000, check)
+
+    panel.after(2000, check)
+''',
+
+    "Hangjelzés hibánál": '''def setup_panel(panel):
+    import winsound
+
+    original_log = panel.append_log_to_bot
+
+    def wrapped(bot_key, log_type, message):
+        original_log(bot_key, log_type, message)
+        if log_type == "ERROR":
+            try:
+                winsound.Beep(1500, 300)
+            except Exception:
+                pass
+
+    panel.append_log_to_bot = wrapped
+    panel.log_event("EVENT", "Hangjelzés plugin aktív.")
+''',
+
+    "Egyszerű számológép ablak": '''def setup_panel(panel):
+    import customtkinter as ctk
+
+    def open_calc():
+        win = ctk.CTkToplevel(panel)
+        win.title("Számológép")
+        win.geometry("300x400")
+        win.grab_set()
+
+        entry = ctk.CTkEntry(win, width=260, font=("Arial", 18))
+        entry.pack(pady=12, padx=20)
+
+        def press(val):
+            entry.insert("end", str(val))
+
+        def calculate():
+            try:
+                result = eval(entry.get())
+                entry.delete(0, "end")
+                entry.insert(0, str(result))
+            except Exception:
+                entry.delete(0, "end")
+                entry.insert(0, "Hiba")
+
+        btn_frame = ctk.CTkFrame(win, fg_color="transparent")
+        btn_frame.pack(pady=6)
+        buttons = [
+            ["7","8","9","/"],
+            ["4","5","6","*"],
+            ["1","2","3","-"],
+            ["0",".","C","+"],
+        ]
+        for row in buttons:
+            row_f = ctk.CTkFrame(btn_frame, fg_color="transparent")
+            row_f.pack()
+            for b in row:
+                if b == "C":
+                    cmd = lambda: entry.delete(0, "end")
+                else:
+                    cmd = lambda x=b: press(x)
+                ctk.CTkButton(row_f, text=b, width=55, height=45,
+                              command=cmd).pack(side="left", padx=2, pady=2)
+
+        ctk.CTkButton(win, text="=", fg_color="#27ae60", width=240,
+                      command=calculate).pack(pady=8)
+
+    btn = ctk.CTkButton(
+        panel.sidebar_menu,
+        text="Számológép",
+        fg_color="#16a085",
+        command=open_calc,
+    )
+    btn.pack(fill="x", padx=6, pady=2)
+''',
+
+    "Téma váltó gombok": '''def setup_panel(panel):
+    import customtkinter as ctk
+
+    def apply_dark():
+        panel.apply_theme_setting("Discord Sötét (Alap)")
+
+    def apply_green():
+        panel.apply_theme_setting("Discord Zöld (Hacker)")
+
+    frame = ctk.CTkFrame(panel.sidebar_menu, fg_color="transparent")
+    frame.pack(fill="x", padx=6, pady=4)
+
+    ctk.CTkButton(frame, text="🌑 Sötét", width=80,
+                  command=apply_dark).pack(side="left", padx=2)
+    ctk.CTkButton(frame, text="🟢 Zöld", width=80, fg_color="#2ecc71",
+                  command=apply_green).pack(side="left", padx=2)
+''',
+
+    "Discord webhook értesítés": '''def setup_panel(panel):
+    import urllib.request
+    import json
+
+    WEBHOOK_URL = "IDE_IRD_A_WEBHOOK_URL_T"
+
+    if "IDE_IRD" in WEBHOOK_URL:
+        panel.log_event("EVENT", "Webhook plugin: állítsd be a WEBHOOK_URL-t!")
+        return
+
+    original_log = panel.append_log_to_bot
+
+    def wrapped(bot_key, log_type, message):
+        original_log(bot_key, log_type, message)
+        if log_type == "ERROR":
+            try:
+                data = json.dumps({"content": f"⚠️ [{bot_key}] {message}"}).encode()
+                req = urllib.request.Request(
+                    WEBHOOK_URL, data=data,
+                    headers={"Content-Type": "application/json"}
+                )
+                urllib.request.urlopen(req, timeout=5)
+            except Exception:
+                pass
+
+    panel.append_log_to_bot = wrapped
+    panel.log_event("EVENT", "Webhook értesítés plugin aktív.")
+''',
+}
 
 
 class WindowPluginsMixin:
+    """Plugin kezelő mixin."""
+
     def load_plugins(self):
         os.makedirs(PLUGINS_DIR, exist_ok=True)
         self.plugins = []
@@ -32,18 +230,201 @@ class WindowPluginsMixin:
     def open_plugins_window(self):
         win = ctk.CTkToplevel(self)
         win.title(self.tr("plugins"))
-        win.geometry("520x380")
-        ctk.CTkLabel(win, text=self.tr("plugins_help"), wraplength=470).pack(pady=12)
-        box = ctk.CTkTextbox(win, height=180)
-        box.pack(fill="both", expand=True, padx=12, pady=8)
-        box.insert("1.0", "\n".join(self.plugins) or "Nincs betöltött plugin.")
-        box.configure(state="disabled")
-        def create_plugin():
+        win.geometry("980x640")
+        win.minsize(760, 480)
+        win.grab_set()
+
+        win.update_idletasks()
+        x = (win.winfo_screenwidth() - 980) // 2
+        y = (win.winfo_screenheight() - 640) // 2
+        win.geometry(f"980x640+{x}+{y}")
+
+        ctk.CTkLabel(win, text="🧩 " + self.tr("plugins"),
+                     font=("Arial", 18, "bold"), text_color="#7f8c8d").pack(pady=(12, 4))
+        ctk.CTkLabel(win, text=self.tr("plugins_help"),
+                     font=("Arial", 11), text_color="#aaaaaa").pack(pady=(0, 8))
+
+        main = ctk.CTkFrame(win, fg_color="transparent")
+        main.pack(fill="both", expand=True, padx=12, pady=4)
+
+        left = ctk.CTkFrame(main, width=240)
+        left.pack(side="left", fill="y", padx=(0, 8))
+        left.pack_propagate(False)
+
+        ctk.CTkLabel(left, text="Pluginok", font=("Arial", 12, "bold")).pack(pady=(8, 4))
+
+        listbox = ctk.CTkTextbox(left, activate_scrollbars=True, wrap="none",
+                                 font=("Consolas", 11))
+        listbox.pack(fill="both", expand=True, padx=6, pady=(0, 6))
+
+        def render_list():
+            listbox.configure(state="normal")
+            listbox.delete("1.0", "end")
             os.makedirs(PLUGINS_DIR, exist_ok=True)
-            path = os.path.join(PLUGINS_DIR, "example_plugin.py")
-            if not os.path.exists(path):
-                with open(path, "w", encoding="utf-8") as plugin_file:
-                    plugin_file.write("def setup_panel(panel):\n    panel.log_event('EVENT', 'Example plugin betöltve.')\n")
+            for f in sorted(os.listdir(PLUGINS_DIR)):
+                if f.endswith(".py") and not f.startswith("_"):
+                    listbox.insert("end", f + "\n")
+            listbox.configure(state="disabled")
+
+        right = ctk.CTkFrame(main, fg_color="transparent")
+        right.pack(side="right", fill="both", expand=True)
+
+        current_file = {"name": None}
+
+        file_label = ctk.CTkLabel(right, text="Válassz plugint a bal oldalról",
+                                  font=("Arial", 12, "bold"), anchor="w")
+        file_label.pack(fill="x", padx=4, pady=(4, 2))
+
+        editor = ctk.CTkTextbox(right, font=("Consolas", 11), wrap="none")
+        editor.pack(fill="both", expand=True, padx=4, pady=4)
+
+        status = ctk.CTkLabel(right, text="", font=("Arial", 10),
+                              text_color="#aaaaaa", anchor="w")
+        status.pack(fill="x", padx=4)
+
+        def load_file(filename):
+            path = os.path.join(PLUGINS_DIR, filename)
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    content = f.read()
+            except Exception as e:
+                messagebox.showerror("Hiba", f"Nem sikerült olvasni:\n{e}", parent=win)
+                return
+            current_file["name"] = filename
+            file_label.configure(text=f"📄 {filename}")
+            editor.delete("1.0", "end")
+            editor.insert("1.0", content)
+            status.configure(text=f"Betöltve: {filename}")
+
+        def save_file():
+            if not current_file["name"]:
+                messagebox.showwarning("Figyelem", "Előbb válassz egy plugint!",
+                                       parent=win)
+                return
+            content = editor.get("1.0", "end").strip() + "\n"
+            try:
+                compile(content, current_file["name"], "exec")
+            except SyntaxError as e:
+                messagebox.showerror(
+                    "Szintaktikai hiba",
+                    f"A plugin nem menthető, mert hibás:\n\n"
+                    f"Sor {e.lineno}: {e.msg}",
+                    parent=win
+                )
+                return
+            path = os.path.join(PLUGINS_DIR, current_file["name"])
+            try:
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write(content)
+                status.configure(text=f"✅ Mentve: {current_file['name']}")
+                self.log_event("EVENT", f"[PLUGIN] Mentve: {current_file['name']}")
+            except Exception as e:
+                messagebox.showerror("Hiba", f"Nem sikerült menteni:\n{e}", parent=win)
+
+        def new_plugin_dialog():
+            dialog = ctk.CTkToplevel(win)
+            dialog.title("Új plugin")
+            dialog.geometry("420x280")
+            dialog.grab_set()
+            dialog.update_idletasks()
+            x = (dialog.winfo_screenwidth() - 420) // 2
+            y = (dialog.winfo_screenheight() - 280) // 2
+            dialog.geometry(f"420x280+{x}+{y}")
+
+            ctk.CTkLabel(dialog, text="Új plugin létrehozása",
+                         font=("Arial", 14, "bold")).pack(pady=12)
+
+            ctk.CTkLabel(dialog, text="Fájlnév (pl. sajat_plugin.py):").pack(anchor="w", padx=20)
+            name_entry = ctk.CTkEntry(dialog, width=340)
+            name_entry.insert(0, "sajat_plugin.py")
+            name_entry.pack(padx=20, pady=4)
+
+            ctk.CTkLabel(dialog, text="Sablon:").pack(anchor="w", padx=20, pady=(8, 2))
+            template_var = ctk.StringVar(value="Üres plugin")
+            ctk.CTkComboBox(dialog, values=list(PLUGIN_TEMPLATES.keys()),
+                            variable=template_var, width=340).pack(padx=20, pady=4)
+
+            def do_create():
+                fname = name_entry.get().strip()
+                if not fname.endswith(".py"):
+                    fname += ".py"
+                if not fname or "/" in fname or "\\" in fname:
+                    messagebox.showerror("Hiba", "Érvénytelen fájlnév!", parent=dialog)
+                    return
+                path = os.path.join(PLUGINS_DIR, fname)
+                if os.path.exists(path):
+                    if not messagebox.askyesno("Már létezik",
+                                               f"A(z) '{fname}' már létezik. Felülírod?",
+                                               parent=dialog):
+                        return
+                try:
+                    with open(path, "w", encoding="utf-8") as f:
+                        f.write(PLUGIN_TEMPLATES[template_var.get()])
+                    render_list()
+                    load_file(fname)
+                    self.log_event("EVENT", f"[PLUGIN] Létrehozva: {fname}")
+                    dialog.destroy()
+                except Exception as e:
+                    messagebox.showerror("Hiba", str(e), parent=dialog)
+
+            btn_frame = ctk.CTkFrame(dialog, fg_color="transparent")
+            btn_frame.pack(pady=12)
+            ctk.CTkButton(btn_frame, text="Létrehozás", fg_color="#27ae60",
+                          command=do_create).pack(side="left", padx=4)
+            ctk.CTkButton(btn_frame, text="Mégse", fg_color="#555555",
+                          command=dialog.destroy).pack(side="left", padx=4)
+
+        def delete_plugin():
+            if not current_file["name"]:
+                messagebox.showwarning("Figyelem", "Előbb válassz plugint!", parent=win)
+                return
+            if not messagebox.askyesno("Törlés",
+                                       f"Biztosan törlöd: {current_file['name']}?",
+                                       parent=win):
+                return
+            try:
+                os.remove(os.path.join(PLUGINS_DIR, current_file["name"]))
+                self.log_event("EVENT", f"[PLUGIN] Törölve: {current_file['name']}")
+                current_file["name"] = None
+                editor.delete("1.0", "end")
+                file_label.configure(text="Válassz plugint a bal oldalról")
+                status.configure(text="")
+                render_list()
+            except Exception as e:
+                messagebox.showerror("Hiba", str(e), parent=win)
+
+        def reload_all():
             self.load_plugins()
-            win.destroy()
-        ctk.CTkButton(win, text=self.tr("create_plugin"), command=create_plugin).pack(pady=10)
+            render_list()
+            status.configure(text="🔄 Pluginok újratöltve.")
+            self.log_event("EVENT", "[PLUGIN] Összes plugin újratöltve.")
+
+        def on_left_click(event):
+            index = listbox.index(f"@{event.x},{event.y}")
+            line = int(index.split(".")[0])
+            files = [f for f in sorted(os.listdir(PLUGINS_DIR))
+                     if f.endswith(".py") and not f.startswith("_")]
+            if 0 < line <= len(files):
+                load_file(files[line - 1])
+
+        listbox.bind("<Button-1>", on_left_click)
+
+        btns = ctk.CTkFrame(win, fg_color="transparent")
+        btns.pack(fill="x", padx=12, pady=10)
+
+        ctk.CTkButton(btns, text="➕ Új plugin", fg_color="#27ae60",
+                      hover_color="#2ecc71", command=new_plugin_dialog,
+                      width=140).pack(side="left", padx=4)
+        ctk.CTkButton(btns, text="💾 Mentés", fg_color="#2980b9",
+                      hover_color="#3498db", command=save_file,
+                      width=120).pack(side="left", padx=4)
+        ctk.CTkButton(btns, text="🗑️ Törlés", fg_color="#c0392b",
+                      hover_color="#e74c3c", command=delete_plugin,
+                      width=120).pack(side="left", padx=4)
+        ctk.CTkButton(btns, text="🔄 Újratöltés", fg_color="#8e44ad",
+                      hover_color="#9b59b6", command=reload_all,
+                      width=140).pack(side="left", padx=4)
+        ctk.CTkButton(btns, text="Bezárás", fg_color="#555555",
+                      command=win.destroy, width=100).pack(side="right", padx=4)
+
+        render_list()
