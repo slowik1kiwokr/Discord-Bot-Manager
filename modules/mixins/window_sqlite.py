@@ -10,7 +10,7 @@ from modules.languages import LANGUAGES
 
 
 
-class WindowsqliteMixin:
+class WindowSqliteMixin:
     def open_sqlite_viewer(self):
         win = ctk.CTkToplevel(self)
         win.title(self.tr("sqlite_title"))
