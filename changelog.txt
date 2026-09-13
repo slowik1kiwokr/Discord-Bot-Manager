@@ -1,18 +1,4 @@
-v1.0.6 - 2026-09-13
+v1.0.8 - 2026-09-13
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-✨ ÚJ FUNKCIÓK:
-  • Commander plugin - dinamikus Discord parancsok
-  • Fejlett plugin szerkesztő 14 sablonnal
-  • Beépített hangeffekt választó
-  • GitHub automatikus frissítéskezelő
-
-🐛 JAVÍTÁSOK:
-  • Settings ablak görgethető, Save gomb mindig látható
-  • Ablak méret igazodik a képernyőhöz
-  • Jelszóvédelem fókusz javítás
-
-⚡ FEJLESZTÉSEK:
-  • Új ikon (több méret, élesebb megjelenés)
-  • Splash képernyő logóval
-  • Több hőmérséklet-olvasási módszer
+uj icon
