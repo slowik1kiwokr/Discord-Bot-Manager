@@ -1702,10 +1702,12 @@ class BotManagerApp(
 
 
 if __name__ == "__main__":
+    import warnings
+    warnings.filterwarnings("ignore", category=ResourceWarning)
+
     splash = SplashScreen()
 
     def start_panel():
-        # A splash biztonságos megsemmisítése (after-ek törlésével)
         try:
             splash.safe_destroy()
         except Exception:
@@ -1714,7 +1716,6 @@ if __name__ == "__main__":
             except Exception:
                 pass
 
-        # A főablak létrehozása és futtatása
         app = BotManagerApp()
         app.mainloop()
 
