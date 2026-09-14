@@ -1,132 +1,141 @@
-
-v3.0.0
+v2.4.0
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ✨ ÚJ FUNKCIÓK:
 
-  🎨  Skin / Téma rendszer
-      • 5 beépített téma (DBM Alap, Discord Sötét, Világos, Blurple, Zöld)
-      • Külön `modules/theme.py` fájlban — könnyen bővíthető
-      • Új téma hozzáadása csak 1 dict
-      • Azonnali témaváltás (nincs újraindítás)
+  📌  Integrációs panel — teljes újratervezés
+      • „Van már botod?" választó (2 ág)
+      • Meglévő bothoz: csak panel_integrity.py hozzáadása
+      • Új bothoz: teljes 3 fájlos sablon generálás
+      • Fájlok száma 5-ről 3-ra csökkent:
+          - bot.py
+          - panel_integrity.py (minden panel funkció)
+          - version.py
+      • Függőségek ablak a fejlécben
+      • Bot adatai gomb a token beállításához
 
-  📁  3 kártyás felső sáv
-      • 📁 BOT FÁJLOK — bot fájl, .env státusz, mentés, tallózás
-      • ⚙️ PANEL VISELKEDÉS — auto-indítás, hiba hang, éjféli, auto restart
-      • 🤖 BOT INFO — szerverek, bot adatai, activity, teszt mód
-      • Minden kártya saját színnel (kék, zöld, lila)
+  ⚡  Commander — teljes újratervezés
+      • Bot mappa fájlfa (mint VSCode)
+      • Fájl szerkesztő beépítve
+      • Új fájl / mappa létrehozás
+      • Átnevezés / törlés
+      • 18 parancs sablon
+      • Részletes parancs szerkesztő (embed szín, footer, thumbnail)
+      • Élő szín előnézet + gyors színek
+      • Extension lista (bot_extensions.txt)
+      • Auto-extension: új .py fájl automatikusan betöltődik
+      • Python szintaxis ellenőrzés mentés előtt
 
-  💤  AFK képernyő
-      • Tétlenség után automatikusan megjelenik
-      • Élő óra és magyar dátum
-      • Botok állapota valós időben
-      • Pulzáló pöttyök a futó botoknál
-      • Élő uptime számláló
-      • Összesítő kártyák (FUT / LEÁLLT / HIBA)
-      • Fade-in animáció
-      • Időzítő állítható (15 mp – 30 perc)
+  📢  Broadcast — teljes újratervezés
+      • Automatikus szerver + csatorna lista (bot_channels.json)
+      • Csatorna jogosultság jelző:
+          - 🚫 = bot nem tud írni
+          - ⚠️ = bot nem tud embedet küldeni
+      • 8 broadcast sablon
+      • Embed támogatás (cím, leírás, szín, footer, thumbnail)
+      • Időzített küldés (1 perc – 24 óra)
+      • Élő előnézet (Discord-szerű megjelenés)
+      • Csatorna gyorsválasztó (Összes / Egyik sem)
 
-  🚀  GitHub auto-frissítés
-      • Automatikus ellenőrzés indulás után 3 másodperccel
-      • Időköz állítható: Soha / Percenként / 10 percenként /
-        Óránként / Naponta
-      • Azonnali ellenőrzés gomb
-      • Frissítés ablak changelog-gal
-      • Előző frissítések ablaka — verziótörténet
-      • Színkódolt kártyák (jelenlegi / újabb / régebbi)
+  🔤  Bot prefix támogatás
+      • BOT_PREFIX a version.py fájlban
+      • Prefix mező a Bot adatai ablakban
+      • bot.py: get_prefix() függvény
+      • Állítható: / ! ? $ stb.
 
-  💬  Bot hover tooltip
-      • Bot fül fölé húzva kis ablak jelenik meg
-      • Állapot, uptime, RAM, CPU, hibák, parancsok
-      • 400 ms késleltetés — nem villog
-      • Fade-in animáció
-
-  🖼️  Log vízjel
-      • Üres napló esetén halvány pajzs jelenik meg
-      • Fade-in / fade-out animáció
-      • Automatikusan eltűnik, ha naplóbejegyzés érkezik
-      • Külön `logo_watermark.png` generátor script
-
-  🎨  Egyedi ablak háttér
-      • A fő háttér a témához igazodik
-      • Nincs több fekete folt a panelen
-
-  🤖  Dashboard widgetek
-      • Testreszabható widgetek
-      • Élő frissítés
-
-  📈  Élő animált grafikonok
-      • Valós idejű animáció
-      • Hover → érték kiírás
-      • Zoom / pan támogatás
-
-  📊  Panel használati statisztika
-      • Hány megnyitás, mennyi idő
-      • Top használt funkciók
-
-  🏆  Achievementek + Streak
-      • 15 teljesítmény feloldható
-      • Napi streak számláló
-
-  🤖  AI funkciók
-      • AI Asszisztens (OpenAI, Claude, Ollama, LM Studio)
-      • AI Kód Generátor
-      • AI Hibaelemzés
-      • AI Dokumentáció
+  🔌  panel_integrity.py — minden egy fájlban
+      • /connect parancs
+      • Statisztika küldés a panelnek
+      • Csatorna lista küldés
+      • Távoli vezérlés (start / stop / restart / info / log / stressz)
+      • Broadcast (embed + időzítés támogatás)
+      • Commander parancsok betöltése
+      • Auto-extension-ök betöltése
 
 🎨 UI / UX FEJLESZTÉSEK:
 
-  •  Színes sidebar kártyák (Vezérlés, Tömeges, Integráció, stb.)
-  •  Toast értesítések (külön ablakok, fade-in)
-  •  Gyorsgombok (Ctrl+S, Ctrl+B, Ctrl+R, Ctrl+F, Ctrl+T, F1, F2, F5)
-  •  Kereshető bot fülek (5+ bot esetén)
-  •  Emoji + szín minden botnak
-  •  Animált státuszjelző
-  •  Téma váltás azonnali újraépítéssel
-  •  Görgethető Settings ablak
-  •  Trackpad / egérgörgő támogatás minden scrollozható panelen
-  •  Splash screen fade-in / fade-out animációval
-  •  Véletlenszerű tippek a betöltés alatt
+  •  Színes sidebar kártyák (Vezérlés, Tömeges, Integráció, Statisztika)
+  •  3 kártyás felső sáv:
+      - 📁 BOT FÁJLOK (kék)
+      - ⚙️ PANEL VISELKEDÉS (zöld)
+      - 🤖 BOT INFO (lila)
+  •  Téma rendszer külön fájlban (modules/theme.py)
+  •  AFK képernyő logóval (logo.jpg)
+  •  Log vízjel (logo_watermark.png)
+  •  Settings ablak színes kártyákkal
+  •  Toast értesítések
+  •  Gyorsgombok (Ctrl+S, Ctrl+B, Ctrl+R, Ctrl+F, F1, F2, F5)
+  •  Trackpad / egérgörgő támogatás minden panelen
 
 🔧 JAVÍTÁSOK:
 
-  •  Log szűrő debounce — nem fagy többé
+  •  Unicode hiba javítva (UTF-8 kimenet a bot oldalán)
+  •  Log szűrő debounce — nem fagy nagy napló esetén
   •  Log vízjel automatikus elrejtés/megjelenítés
-  •  Téma váltás most azonnal érvénybe lép
-  •  Splash screen biztonságos bezárás (safe_destroy)
-  •  AI chat threading hiba javítva (self.after)
+  •  Téma váltás azonnali újraépítéssel
   •  GitHub update ablak AFK screen fölé kerül
   •  `skipped_version` kezelés javítva
-  •  Panel ID helyes kezelése (config.PANEL_ID)
+  •  `_rebuild_ui_for_theme` duplikáció javítva
+  •  `_build_main_content` duplikáció megszüntetve
+  •  `resource_monitor_loop` scroll duplikáció javítva
   •  Függőségek fül: `pkg_resources` → `importlib.metadata`
-  •  `_rebuild_ui_for_theme` most helyesen törli a régi widgeteket
-  •  Téma váltás nem hoz létre duplikált `top_tab_frame`-et
+  •  Panel ID helyes kezelése (config.PANEL_ID)
+  •  AI chat threading hiba javítva
 
-📦 TECHNIKAI:
+📦 TECHNIKAI VÁLTOZÁSOK:
 
-  •  Moduláris felépítés (modules/mixins/)
   •  Új fájlok:
-     - `modules/theme.py` — téma definíciók
-     - `modules/mixins/afk_screen.py`
-     - `modules/mixins/skin.py`
-     - `modules/mixins/hotkeys.py`
-     - `modules/mixins/ui_extras.py`
-     - `modules/mixins/ui_enhancements.py`
-     - `modules/mixins/dashboard_widgets.py`
-     - `modules/mixins/animated_charts.py`
-     - `modules/mixins/panel_stats.py`
-     - `modules/mixins/ai_assistant.py`
-     - `modules/mixins/achievements.py`
-     - `modules/mixins/streak.py`
-     - `modules/mixins/window_report.py`
-     - `modules/mixins/window_commander.py`
-     - `modules/mixins/window_tutorial.py`
+     - modules/theme.py
+     - modules/mixins/afk_screen.py
+     - modules/mixins/skin.py
+     - modules/mixins/hotkeys.py
+     - modules/mixins/ui_extras.py
+     - modules/mixins/ui_enhancements.py
+     - modules/mixins/dashboard_widgets.py
+     - modules/mixins/animated_charts.py
+     - modules/mixins/panel_stats.py
+     - modules/mixins/ai_assistant.py
+     - modules/mixins/achievements.py
+     - modules/mixins/streak.py
+     - modules/mixins/window_report.py
+     - modules/mixins/window_commander.py
+     - modules/mixins/window_tutorial.py
+     - make_watermark.py
+
+  •  Módosított fájlok:
+     - panel.pyw
+     - modules/templates.py
+     - modules/splash.py
+     - modules/mixins/window_settings.py
+     - modules/mixins/window_github_update.py
+     - modules/mixins/window_integration.py
+     - modules/mixins/window_broadcast.py
+
+  •  Bot oldali fájlok (generált):
+     - bot.py
+     - panel_integrity.py
+     - version.py (BOT_PREFIX hozzáadva)
+     - bot_extensions.txt (auto-generált)
+     - bot_channels.json (auto-generált)
+     - commander_commands.json (auto-generált)
+
+  •  Védett fájlok (.gitignore):
+     - achievements.json
+     - streak.json
+     - panel_stats.json
+     - update_history.json
+
+v2.3.6
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔧  Kisebb hibajavítások
+🎨  UI finomítások
 
 v2.3.5
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🎨  Kisebb UI javítások
 🔧  Hibajavítások
+🎨  Splash screen átdolgozás
 
 v2.3.4
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

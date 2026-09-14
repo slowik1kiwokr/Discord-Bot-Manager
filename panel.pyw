@@ -36,8 +36,9 @@ from modules.config import (
 from modules.splash import SplashScreen
 from modules.languages import LANGUAGES
 from modules.templates import (
-    VERSION_FILE_TEMPLATE, INFO_FILE_TEMPLATE,
-    BOT_VEZERLO_CODE, PANEL_EXTENSION_CODE,
+    VERSION_FILE_TEMPLATE,
+    BOT_PY_TEMPLATE,
+    PANEL_INTEGRITY_CODE,
 )
 from modules import logger  # logging beállítás mellékhatásként
 
@@ -1551,7 +1552,12 @@ class BotManagerApp(
     def read_bot_metadata(self, bot_key=None):
         bot = self.bots.get(bot_key or self.active_bot_key, {})
         script_path = bot.get("path", "")
-        defaults = {"name": bot.get("name", bot_key or self.active_bot_key), "version": "1.0.0", "token": ""}
+        defaults = {
+            "name": bot.get("name", bot_key or self.active_bot_key),
+            "version": "1.0.0",
+            "token": "",
+            "prefix": "/",
+        }
         if not script_path:
             return defaults
         version_path = os.path.join(os.path.dirname(script_path), "version.py")
@@ -1560,34 +1566,48 @@ class BotManagerApp(
         try:
             with open(version_path, "r", encoding="utf-8") as version_file:
                 tree = ast.parse(version_file.read(), filename=version_path)
+            mapping = {
+                "BOT_NAME": "name",
+                "BOT_VERSION": "version",
+                "BOT_TOKEN": "token",
+                "BOT_PREFIX": "prefix",
+            }
             for node in tree.body:
-                if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+                if (isinstance(node, ast.Assign) and
+                        len(node.targets) == 1 and
+                        isinstance(node.targets[0], ast.Name)):
                     key = node.targets[0].id
-                    if key in ("BOT_NAME", "BOT_VERSION", "BOT_TOKEN"):
+                    if key in mapping:
                         value = ast.literal_eval(node.value)
-                        defaults[{"BOT_NAME": "name", "BOT_VERSION": "version", "BOT_TOKEN": "token"}[key]] = str(value)
+                        defaults[mapping[key]] = str(value)
         except (OSError, SyntaxError, ValueError):
             pass
         return defaults
 
-    def save_bot_metadata(self, name, version, token):
+    def save_bot_metadata(self, name, version, token, prefix="/"):
         old_key = self.active_bot_key
         bot = self.bots[old_key]
         name = name.strip() or old_key
+        prefix = prefix.strip() or "/"
         script_path = bot.get("path", "")
         if not script_path or not os.path.isfile(script_path):
             messagebox.showwarning("Hiányzó bot", "Előbb tallózd be a bot.py fájlt.")
             return
         bot_dir = os.path.dirname(script_path)
         with open(os.path.join(bot_dir, "version.py"), "w", encoding="utf-8") as version_file:
-            version_file.write("BOT_NAME = %r\nBOT_VERSION = %r\nBOT_TOKEN = %r\n" % (name, version.strip(), token.strip()))
-        with open(os.path.join(bot_dir, "info.py"), "w", encoding="utf-8") as info_file:
-            info_file.write(INFO_FILE_TEMPLATE)
+            version_file.write(
+                "BOT_NAME = %r\n"
+                "BOT_VERSION = %r\n"
+                "BOT_TOKEN = %r\n"
+                "BOT_PREFIX = %r\n"
+                % (name, version.strip(), token.strip(), prefix)
+            )
         bot["name"] = name
         if name != old_key:
             self.rename_bot_key(old_key, name, persist=False)
         self.save_config()
         self.switch_bot(self.active_bot_key)
+        self.notify(f"💾 Bot adatai mentve: {name}", "success", 2000)
 
     def rename_bot_key(self, old_key, new_key, persist=True):
         new_key = new_key.strip()
@@ -1775,6 +1795,8 @@ class BotManagerApp(
                         python_exe = sys.executable.lower().replace("pythonw.exe", "python.exe")
                         env = os.environ.copy()
                         env["PYTHONUNBUFFERED"] = "1"
+                        env["PYTHONIOENCODING"] = "utf-8"      
+                        env["PYTHONUTF8"] = "1"                
                         creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
 
                         bot["process"] = subprocess.Popen(
@@ -2228,6 +2250,17 @@ class BotManagerApp(
         if not script_path or not os.path.exists(script_path):
             self.append_log("ERROR", "Hiba: A megadott Python fájl nem létezik!")
             return
+
+        bot = self.bots[self.active_bot_key]
+        if not bot["is_running"]:
+            try:
+                bot_dir = os.path.dirname(script_path)
+                python_exe = sys.executable.lower().replace("pythonw.exe", "python.exe")
+                env = os.environ.copy()
+                env["PYTHONUNBUFFERED"] = "1"
+                env["PYTHONIOENCODING"] = "utf-8"        
+                env["PYTHONUTF8"] = "1"                   
+                creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
 
         bot = self.bots[self.active_bot_key]
         if not bot["is_running"]:
