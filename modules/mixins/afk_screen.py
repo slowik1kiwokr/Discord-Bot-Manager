@@ -102,22 +102,10 @@ class AfkScreenMixin:
         )
         border.pack(fill="both", expand=True, padx=1, pady=1)
 
-        # --- Logó ---
-        logo_frame = ctk.CTkFrame(border, fg_color="transparent", height=160)
-        logo_frame.pack(fill="x", pady=(28, 6))
-        logo_frame.pack_propagate(False)
+        # --- Logó (csak logo.jpg) ---
+        logo_frame = ctk.CTkFrame(border, fg_color="transparent")
+        logo_frame.pack(fill="x", pady=(30, 12))
         self._build_afk_logo(logo_frame)
-
-        # --- Cím ---
-        ctk.CTkLabel(
-            border, text="Discord Bot Manager",
-            font=("Segoe UI", 28, "bold"), text_color="#ffffff",
-        ).pack()
-
-        ctk.CTkLabel(
-            border, text="PROFESSIONAL PANEL",
-            font=("Segoe UI", 11, "bold"), text_color="#5865F2",
-        ).pack(pady=(2, 12))
 
         # --- Óra ---
         clock_frame = ctk.CTkFrame(border, fg_color="transparent")
@@ -195,17 +183,26 @@ class AfkScreenMixin:
     #  Logó
     # ------------------------------------------------------------------
     def _build_afk_logo(self, parent):
+        """Betölti a logo.jpg-t a panel gyökeréből."""
         from PIL import Image
+        import modules.config as config
 
-        script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        logo_path = os.path.join(script_dir, "logo.png")
+        # Helyes útvonal — a panel gyökere
+        script_dir = config.SCRIPT_DIR
+
+        # Elsődleges: logo.jpg
+        logo_path = os.path.join(script_dir, "logo.jpg")
         if not os.path.isfile(logo_path):
-            logo_path = os.path.join(script_dir, "logo.jpg")
+            logo_path = os.path.join(script_dir, "logo.png")
+        if not os.path.isfile(logo_path):
+            logo_path = os.path.join(script_dir, "logo_clean.png")
+
+        print(f"[AFK] Logó keresés: {logo_path}")
 
         if os.path.isfile(logo_path):
             try:
                 pil = Image.open(logo_path).convert("RGBA")
-                max_w, max_h = 130, 130
+                max_w, max_h = 260, 260
                 ratio = min(max_w / pil.width, max_h / pil.height)
                 new_w = int(pil.width * ratio)
                 new_h = int(pil.height * ratio)
@@ -213,12 +210,15 @@ class AfkScreenMixin:
                 self._afk_widgets["logo_image"] = img
                 ctk.CTkLabel(parent, image=img, text="").pack(expand=True)
                 return
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"[AFK] Logó betöltési hiba: {e}")
+        else:
+            print(f"[AFK] A logó fájl nem található: {logo_path}")
 
+        # Fallback: emoji
         ctk.CTkLabel(
             parent, text="🛡️",
-            font=("Segoe UI Emoji", 80), text_color="#5865F2",
+            font=("Segoe UI Emoji", 120), text_color="#5865F2",
         ).pack(expand=True)
 
     # ------------------------------------------------------------------

@@ -1,3 +1,145 @@
+
+v3.0.0
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✨ ÚJ FUNKCIÓK:
+
+  🎨  Skin / Téma rendszer
+      • 5 beépített téma (DBM Alap, Discord Sötét, Világos, Blurple, Zöld)
+      • Külön `modules/theme.py` fájlban — könnyen bővíthető
+      • Új téma hozzáadása csak 1 dict
+      • Azonnali témaváltás (nincs újraindítás)
+
+  📁  3 kártyás felső sáv
+      • 📁 BOT FÁJLOK — bot fájl, .env státusz, mentés, tallózás
+      • ⚙️ PANEL VISELKEDÉS — auto-indítás, hiba hang, éjféli, auto restart
+      • 🤖 BOT INFO — szerverek, bot adatai, activity, teszt mód
+      • Minden kártya saját színnel (kék, zöld, lila)
+
+  💤  AFK képernyő
+      • Tétlenség után automatikusan megjelenik
+      • Élő óra és magyar dátum
+      • Botok állapota valós időben
+      • Pulzáló pöttyök a futó botoknál
+      • Élő uptime számláló
+      • Összesítő kártyák (FUT / LEÁLLT / HIBA)
+      • Fade-in animáció
+      • Időzítő állítható (15 mp – 30 perc)
+
+  🚀  GitHub auto-frissítés
+      • Automatikus ellenőrzés indulás után 3 másodperccel
+      • Időköz állítható: Soha / Percenként / 10 percenként /
+        Óránként / Naponta
+      • Azonnali ellenőrzés gomb
+      • Frissítés ablak changelog-gal
+      • Előző frissítések ablaka — verziótörténet
+      • Színkódolt kártyák (jelenlegi / újabb / régebbi)
+
+  💬  Bot hover tooltip
+      • Bot fül fölé húzva kis ablak jelenik meg
+      • Állapot, uptime, RAM, CPU, hibák, parancsok
+      • 400 ms késleltetés — nem villog
+      • Fade-in animáció
+
+  🖼️  Log vízjel
+      • Üres napló esetén halvány pajzs jelenik meg
+      • Fade-in / fade-out animáció
+      • Automatikusan eltűnik, ha naplóbejegyzés érkezik
+      • Külön `logo_watermark.png` generátor script
+
+  🎨  Egyedi ablak háttér
+      • A fő háttér a témához igazodik
+      • Nincs több fekete folt a panelen
+
+  🤖  Dashboard widgetek
+      • Testreszabható widgetek
+      • Élő frissítés
+
+  📈  Élő animált grafikonok
+      • Valós idejű animáció
+      • Hover → érték kiírás
+      • Zoom / pan támogatás
+
+  📊  Panel használati statisztika
+      • Hány megnyitás, mennyi idő
+      • Top használt funkciók
+
+  🏆  Achievementek + Streak
+      • 15 teljesítmény feloldható
+      • Napi streak számláló
+
+  🤖  AI funkciók
+      • AI Asszisztens (OpenAI, Claude, Ollama, LM Studio)
+      • AI Kód Generátor
+      • AI Hibaelemzés
+      • AI Dokumentáció
+
+🎨 UI / UX FEJLESZTÉSEK:
+
+  •  Színes sidebar kártyák (Vezérlés, Tömeges, Integráció, stb.)
+  •  Toast értesítések (külön ablakok, fade-in)
+  •  Gyorsgombok (Ctrl+S, Ctrl+B, Ctrl+R, Ctrl+F, Ctrl+T, F1, F2, F5)
+  •  Kereshető bot fülek (5+ bot esetén)
+  •  Emoji + szín minden botnak
+  •  Animált státuszjelző
+  •  Téma váltás azonnali újraépítéssel
+  •  Görgethető Settings ablak
+  •  Trackpad / egérgörgő támogatás minden scrollozható panelen
+  •  Splash screen fade-in / fade-out animációval
+  •  Véletlenszerű tippek a betöltés alatt
+
+🔧 JAVÍTÁSOK:
+
+  •  Log szűrő debounce — nem fagy többé
+  •  Log vízjel automatikus elrejtés/megjelenítés
+  •  Téma váltás most azonnal érvénybe lép
+  •  Splash screen biztonságos bezárás (safe_destroy)
+  •  AI chat threading hiba javítva (self.after)
+  •  GitHub update ablak AFK screen fölé kerül
+  •  `skipped_version` kezelés javítva
+  •  Panel ID helyes kezelése (config.PANEL_ID)
+  •  Függőségek fül: `pkg_resources` → `importlib.metadata`
+  •  `_rebuild_ui_for_theme` most helyesen törli a régi widgeteket
+  •  Téma váltás nem hoz létre duplikált `top_tab_frame`-et
+
+📦 TECHNIKAI:
+
+  •  Moduláris felépítés (modules/mixins/)
+  •  Új fájlok:
+     - `modules/theme.py` — téma definíciók
+     - `modules/mixins/afk_screen.py`
+     - `modules/mixins/skin.py`
+     - `modules/mixins/hotkeys.py`
+     - `modules/mixins/ui_extras.py`
+     - `modules/mixins/ui_enhancements.py`
+     - `modules/mixins/dashboard_widgets.py`
+     - `modules/mixins/animated_charts.py`
+     - `modules/mixins/panel_stats.py`
+     - `modules/mixins/ai_assistant.py`
+     - `modules/mixins/achievements.py`
+     - `modules/mixins/streak.py`
+     - `modules/mixins/window_report.py`
+     - `modules/mixins/window_commander.py`
+     - `modules/mixins/window_tutorial.py`
+
 v2.3.5
--------------------------
-github update screen patch
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎨  Kisebb UI javítások
+🔧  Hibajavítások
+
+v2.3.4
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✨  Új ikon és splash screen
+🎨  Sidebar újratervezés
+
+v2.3.0
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎉  Első nyilvános kiadás
+    •  Multi-bot kezelés
+    •  Élő naplók
+    •  Statisztikák
+    •  Backup rendszer
+    •  GitHub auto-update

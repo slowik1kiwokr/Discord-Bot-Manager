@@ -171,6 +171,8 @@ class BotManagerApp(
         self._watermark_current_image = None
         self._watermark_size = (200, 200)
         self._watermark_fade_id = None
+        self._watermark_debounce_id = None
+        self.log_watermark_label = None
         self._bot_tooltip_key = None
         self._bot_tooltip_after_id = None
         self.is_loading = True
@@ -600,6 +602,15 @@ class BotManagerApp(
                     fg_color=self.theme_colors.get("log_bg", "#131720"),
                     border_width=1,
                     border_color=self.theme_colors.get("log_border", "#5865F2"),
+                )
+            except Exception:
+                pass
+
+        # Vízjel háttér frissítése — ugyanaz mint a textbox!
+        if hasattr(self, "log_watermark_label") and self.log_watermark_label is not None:
+            try:
+                self.log_watermark_label.configure(
+                    fg_color=self.theme_colors.get("log_bg", "#131720"),
                 )
             except Exception:
                 pass
@@ -1227,10 +1238,17 @@ class BotManagerApp(
         self.log_watermark_image = self._create_log_watermark_image()
         if self.log_watermark_image:
             self.log_watermark_label = ctk.CTkLabel(
-                self.log_content_area, image=self.log_watermark_image, text="", fg_color="transparent",)
+                self.log_content_area,
+                image=self.log_watermark_image,
+                text="",
+                fg_color=self.theme_colors.get("log_bg", "#131720"),  # ← UGYANAZ mint a textbox!
+                corner_radius=0,
+            )
             self.log_watermark_label.place(relx=0.5, rely=0.5, anchor="center")
         else:
             self.log_watermark_label = None
+
+
 
         self.stats_panel = ctk.CTkScrollableFrame(
             self.middle_frame,width=260, label_text=self.tr("metrics"), fg_color=self.theme_colors.get("bg_main", "#0d0f14"),)
@@ -1261,41 +1279,39 @@ class BotManagerApp(
         self.register_scrollable(self.stats_panel)
 
     def _create_log_watermark_image(self):
-        """A log vízjel ikonjának betöltése."""
+        """A log vízjel ikonjának betöltése — a kész watermark PNG-ből."""
         try:
             from PIL import Image
 
-            logo_path = os.path.join(SCRIPT_DIR, "logo_clean.png")
+            # A make_watermark.py által generált fájl
+            logo_path = os.path.join(SCRIPT_DIR, "logo_watermark.png")
+
+            # Fallback-ek, ha a watermark még nincs meg
+            if not os.path.isfile(logo_path):
+                logo_path = os.path.join(SCRIPT_DIR, "logo_clean.png")
             if not os.path.isfile(logo_path):
                 logo_path = os.path.join(SCRIPT_DIR, "logo.png")
-            if not os.path.isfile(logo_path):
-                logo_path = os.path.join(SCRIPT_DIR, "logo.jpg")
+
             if not os.path.isfile(logo_path):
                 return None
 
+            print(f"[LOG] Watermark forrás: {logo_path}")
+
             img = Image.open(logo_path).convert("RGBA")
 
-            # Szürke háttér eltávolítása
-            img = self._remove_solid_background(img)
-
-            # Újra körbevágás (a háttér eltűnése után)
-            alpha = img.split()[3]
-            bbox = alpha.getbbox()
-            if bbox:
-                img = img.crop(bbox)
-
-            # Átméretezés
+            # Ha a watermark PNG már 220-as, nem kell átméretezni
             max_size = 220
-            ratio = min(max_size / img.width, max_size / img.height)
-            new_w = int(img.width * ratio)
-            new_h = int(img.height * ratio)
-            new_img = img.resize((new_w, new_h), Image.LANCZOS)
+            if img.width > max_size or img.height > max_size:
+                ratio = min(max_size / img.width, max_size / img.height)
+                new_w = int(img.width * ratio)
+                new_h = int(img.height * ratio)
+                img = img.resize((new_w, new_h), Image.LANCZOS)
 
-            self._watermark_base_image = new_img
-            self._watermark_size = (new_w, new_h)
+            self._watermark_base_image = img
+            self._watermark_size = (img.width, img.height)
 
             # 0% alphaval indul (fade-in-hez)
-            transparent = new_img.copy()
+            transparent = img.copy()
             alpha = transparent.split()[3]
             alpha = alpha.point(lambda p: 0)
             transparent.putalpha(alpha)
@@ -1303,34 +1319,43 @@ class BotManagerApp(
             return ctk.CTkImage(
                 light_image=transparent,
                 dark_image=transparent,
-                size=(new_w, new_h),
+                size=(img.width, img.height),
             )
         except Exception as e:
             print(f"[LOG] Watermark hiba: {e}")
             return None
 
-    def _remove_solid_background(self, img):
-        """Eltávolítja a szürke hátteret (ahol R≈G≈B)."""
+    def _remove_solid_background(self, img, tolerance=30):
+        """Háttéreltávolítás: sötét ÉS telítetlen (szürkés/feketés) pixeleket tüntet el.
+
+        Megtartja a sötét, de SZÍNES részeket (pl. sötétkék pajzs).
+        """
         try:
             img = img.convert("RGBA")
             pixels = img.load()
-            width, height = img.size
+            w, h = img.size
 
-            for y in range(height):
-                for x in range(width):
+            # Sötétség küszöb: a legvilágosabb csatorna ennél kisebb
+            dark_threshold = 90
+            # Telítettség küszöb: a legvilágosabb - legdarkabb csatorna különbsége
+            saturation_threshold = 40
+
+            removed = 0
+
+            for y in range(h):
+                for x in range(w):
                     r, g, b, a = pixels[x, y]
 
-                    # Szürke detektálás: R, G, B közel egyenlő ÉS világos
-                    is_gray = (
-                        abs(r - g) < 18 and
-                        abs(g - b) < 18 and
-                        abs(r - b) < 18
-                    )
-                    is_light = r > 140 and g > 140 and b > 140
+                    max_ch = max(r, g, b)
+                    min_ch = min(r, g, b)
+                    saturation = max_ch - min_ch
 
-                    if is_gray and is_light:
+                    # Sötét ÉS telítetlen (szürkés/feketés) → háttér
+                    if max_ch < dark_threshold and saturation < saturation_threshold:
                         pixels[x, y] = (r, g, b, 0)
+                        removed += 1
 
+            print(f"[LOG] Eltávolított pixelek: {removed} / {w*h}")
             return img
         except Exception as e:
             print(f"[LOG] Háttéreltávolítás hiba: {e}")
@@ -1450,9 +1475,25 @@ class BotManagerApp(
         animate(0)
 
     def _update_log_empty_state(self):
-        """A vízjel megjelenítése/elrejtése a napló tartalma alapján."""
-        if not hasattr(self, "log_textbox"):
-            return
+        """Debounce: 150 ms után ellenőrzi a napló állapotát.
+
+        Nem indít új animációt, ha már a helyes állapotban van.
+        """
+        # Előző debounce törlése
+        if getattr(self, "_watermark_debounce_id", None):
+            try:
+                self.after_cancel(self._watermark_debounce_id)
+            except Exception:
+                pass
+            self._watermark_debounce_id = None
+
+        # Új debounce ütemezése
+        self._watermark_debounce_id = self.after(150, self._do_update_log_empty_state)
+
+    def _do_update_log_empty_state(self):
+        """Tényleges watermark állapot ellenőrzés (debounce után)."""
+        self._watermark_debounce_id = None
+
         if not hasattr(self, "log_watermark_label") or self.log_watermark_label is None:
             return
 
@@ -1460,11 +1501,20 @@ class BotManagerApp(
             content = self.log_textbox.get("1.0", "end").strip()
             has_content = bool(content)
         except Exception:
-            has_content = False
+            return
 
-        if has_content:
+        # Közvetlen ellenőrzés: látszik-e a vízjel?
+        try:
+            currently_visible = self.log_watermark_label.winfo_ismapped()
+        except Exception:
+            currently_visible = False
+
+        # Tartalom van ÉS látszik a vízjel → elrejtés
+        if has_content and currently_visible:
             self._fade_out_log_watermark()
-        else:
+
+        # Nincs tartalom ÉS nem látszik → megjelenítés
+        elif not has_content and not currently_visible:
             self._fade_in_log_watermark()
 
     def _create_stat_card(self, title, default_val, text_color=None, icon=""):
@@ -2313,7 +2363,7 @@ class BotManagerApp(
         for entry in self.bots[self.active_bot_key]["raw_logs"]:
             if cat == "ALL" or entry["type"] == cat:
                 self._write_to_textbox(entry)
-            self._update_log_empty_state()
+        self._update_log_empty_state()
 
     def apply_log_search_and_filter(self):
         query = self.search_entry.get().strip().lower()
@@ -2321,7 +2371,7 @@ class BotManagerApp(
         for entry in self.bots[self.active_bot_key]["raw_logs"]:
             if not query or query in entry["msg"].lower() or query in entry["type"].lower() or query in entry["time"].lower():
                 self._write_to_textbox(entry)
-            self._update_log_empty_state()   
+        self._update_log_empty_state()      
 
     def clear_logs(self):
         bot = self.bots[self.active_bot_key]
