@@ -269,8 +269,27 @@ class WindowGithubMixin:
     #  Frissítés ablak
     # ==================================================================
     def show_update_dialog(self, remote_version, local_version, section, all_sections):
+        # AFK screen bezárása, hogy ne takarja ki az update ablakot
+        try:
+            if hasattr(self, "_close_afk_screen"):
+                self._close_afk_screen()
+            if hasattr(self, "_afk_last_activity"):
+                import time as _t
+                self._afk_last_activity = _t.time()
+        except Exception:
+            pass
+
+        # Flag: ne jelenjen meg az AFK screen, amíg ez az ablak nyitva van
+        self._update_dialog_open = True
+
         win = ctk.CTkToplevel(self)
         win.title("🚀 Frissítés elérhető")
+        try:
+            win.attributes("-topmost", True)
+            win.lift()
+            win.focus_force()
+        except Exception:
+            pass
         win.geometry("720x780")
         win.minsize(640, 600)
         win.grab_set()
@@ -379,9 +398,9 @@ class WindowGithubMixin:
             btn_frame, text="⏰   Később",
             fg_color="#f39c12", hover_color="#e67e22",
             width=130, height=46, font=("Arial", 13),
-            corner_radius=8, command=win.destroy
+            corner_radius=8,
+            command=lambda: (setattr(self, "_update_dialog_open", False), win.destroy())
         )
-        later_btn.pack(side="left", padx=4)
 
         skip_btn = ctk.CTkButton(
             btn_frame, text="❌   Kihagyás",
@@ -415,6 +434,7 @@ class WindowGithubMixin:
         ):
             return
         self.skipped_version = version
+        self._update_dialog_open = False
         self.log_event("EVENT", f"[UPDATE] Kihagyott verzió: {version}")
         win.destroy()
 
