@@ -2258,17 +2258,6 @@ class BotManagerApp(
                 python_exe = sys.executable.lower().replace("pythonw.exe", "python.exe")
                 env = os.environ.copy()
                 env["PYTHONUNBUFFERED"] = "1"
-                env["PYTHONIOENCODING"] = "utf-8"        
-                env["PYTHONUTF8"] = "1"                   
-                creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
-
-        bot = self.bots[self.active_bot_key]
-        if not bot["is_running"]:
-            try:
-                bot_dir = os.path.dirname(script_path)
-                python_exe = sys.executable.lower().replace("pythonw.exe", "python.exe")
-                env = os.environ.copy()
-                env["PYTHONUNBUFFERED"] = "1"
                 creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
 
                 bot["process"] = subprocess.Popen(
