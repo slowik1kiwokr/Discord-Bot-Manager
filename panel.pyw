@@ -945,79 +945,234 @@ class BotManagerApp(
         )
         self.main_frame.pack(side="right", fill="both", expand=True, padx=10, pady=10)
 
+        # ============================================================
+        #  FELSŐ SÁV — 3 KÁRTYA
+        # ============================================================
         self.settings_box = ctk.CTkFrame(
-            self.main_frame, fg_color=self.theme_colors.get("card_bg", "#1a1d24"), corner_radius=10, border_width=1, border_color=self.theme_colors.get("border", "#2f3542"),)
+            self.main_frame, fg_color="transparent",
+        )
         self.settings_box.pack(fill="x", padx=10, pady=(10, 5))
 
-        self.lbl_path_title = ctk.CTkLabel(self.settings_box, text=self.tr("bot_script"), font=("Arial", 12, "bold"))
-        self.lbl_path_title.grid(row=0, column=0, padx=10, pady=(10, 5), sticky="w")
+        card_bg = self.theme_colors.get("card_bg", "#1e2330")
 
-        self.entry_path = ctk.CTkEntry(self.settings_box, placeholder_text=self.tr("browse_placeholder"), width=270)
-        self.entry_path.grid(row=0, column=1, padx=5, pady=(10, 5), sticky="ew")
+        # Segédfüggvény: kártya fejléc
+        def card_header(parent, icon, title, accent):
+            header = ctk.CTkFrame(parent, fg_color="transparent")
+            header.pack(fill="x", padx=14, pady=(10, 4))
+            ctk.CTkLabel(
+                header,
+                text=f"{icon}   {title}",
+                font=("Arial", 11, "bold"),
+                text_color=accent,
+                anchor="w",
+            ).pack(side="left")
+            ctk.CTkFrame(
+                parent, height=1,
+                fg_color=self.theme_colors.get("border", "#3a4258"),
+            ).pack(fill="x", padx=12, pady=(0, 8))
 
-        self.lbl_env_status = ctk.CTkLabel(self.settings_box, text=self.tr("env_na"), font=("Arial", 10, "bold"), text_color="#e74c3c")
-        self.lbl_env_status.grid(row=0, column=2, padx=5, pady=(10, 5))
+        # ---------- 1. KÁRTYA — BOT FÁJLOK ----------
+        self.card_files = ctk.CTkFrame(
+            self.settings_box,
+            fg_color=card_bg,
+            corner_radius=10,
+            border_width=2,
+            border_color="#3498db",
+        )
+        self.card_files.pack(side="left", fill="both", expand=True, padx=(0, 5))
 
-        self.btn_save_path = ctk.CTkButton(self.settings_box, text=self.tr("save"), width=60, fg_color=self.theme_colors["save_btn"], hover_color=self.theme_colors["save_hover"], command=self.manual_save_path)
-        self.btn_save_path.grid(row=0, column=3, padx=2, pady=(10, 5))
+        card_header(self.card_files, "📁", "BOT FÁJLOK", "#3498db")
 
-        self.btn_browse = ctk.CTkButton(self.settings_box, text=self.tr("browse"), width=60, command=self.browse_file)
-        self.btn_browse.grid(row=0, column=4, padx=2, pady=(10, 5))
+        files_content = ctk.CTkFrame(self.card_files, fg_color="transparent")
+        files_content.pack(fill="x", padx=14, pady=(0, 12))
 
-        self.btn_servers = ctk.CTkButton(self.settings_box, text=self.tr("servers"), width=80, fg_color="#16a085", hover_color="#1abc9c", command=self.open_servers_window)
-        self.btn_servers.grid(row=0, column=5, padx=8, pady=(10, 5))
+        ctk.CTkLabel(
+            files_content, text="Fő bot fájl:",
+            font=("Arial", 10),
+            text_color=self.theme_colors.get("subtext", "#8a8e98"),
+            anchor="w",
+        ).pack(fill="x", pady=(0, 2))
 
-        self.btn_bot_info = ctk.CTkButton(self.settings_box, text=self.tr("bot_info"), width=90, fg_color="#8e44ad", hover_color="#9b59b6", command=self.open_bot_info_editor)
-        self.btn_bot_info.grid(row=0, column=6, padx=4, pady=(10, 5))
+        self.entry_path = ctk.CTkEntry(
+            files_content,
+            placeholder_text=self.tr("browse_placeholder"),
+            height=32,
+        )
+        self.entry_path.pack(fill="x", pady=(0, 6))
 
-        self.btn_activity = ctk.CTkButton(self.settings_box, text=self.tr("activity"), width=80, fg_color="#5865F2", hover_color="#4752C4", command=self.open_activity_editor)
-        self.btn_activity.grid(row=0, column=7, padx=4, pady=(10, 5))
+        self.lbl_env_status = ctk.CTkLabel(
+            files_content,
+            text=self.tr("env_na"),
+            font=("Arial", 10, "bold"),
+            text_color="#e74c3c",
+            anchor="w",
+        )
+        self.lbl_env_status.pack(fill="x", pady=(0, 8))
+
+        files_btns = ctk.CTkFrame(files_content, fg_color="transparent")
+        files_btns.pack(fill="x")
+
+        self.btn_save_path = ctk.CTkButton(
+            files_btns, text="💾  " + self.tr("save"),
+            width=100, height=32,
+            fg_color=self.theme_colors.get("save_btn", "#27ae60"),
+            hover_color=self.theme_colors.get("save_hover", "#2ecc71"),
+            font=("Arial", 11, "bold"),
+            command=self.manual_save_path,
+        )
+        self.btn_save_path.pack(side="left", padx=(0, 4))
+
+        self.btn_browse = ctk.CTkButton(
+            files_btns, text="📂  " + self.tr("browse"),
+            width=110, height=32,
+            fg_color="#3498db", hover_color="#5dade2",
+            font=("Arial", 11, "bold"),
+            command=self.browse_file,
+        )
+        self.btn_browse.pack(side="left", padx=4)
+
+        # ---------- 2. KÁRTYA — PANEL VISELKEDÉS ----------
+        self.card_behavior = ctk.CTkFrame(
+            self.settings_box,
+            fg_color=card_bg,
+            corner_radius=10,
+            border_width=2,
+            border_color="#2ecc71",
+        )
+        self.card_behavior.pack(side="left", fill="both", expand=True, padx=5)
+
+        card_header(self.card_behavior, "⚙️", "PANEL VISELKEDÉS", "#2ecc71")
+
+        behavior_content = ctk.CTkFrame(self.card_behavior, fg_color="transparent")
+        behavior_content.pack(fill="x", padx=14, pady=(0, 12))
 
         self.autostart_var = ctk.BooleanVar(value=False)
         self.sound_var = ctk.BooleanVar(value=False)
         self.midnight_var = ctk.BooleanVar(value=False)
-        self.test_mode_var = ctk.BooleanVar(value=False)
 
-        self.chk_autostart = ctk.CTkSwitch(self.settings_box, text=self.tr("autostart"), variable=self.autostart_var, command=self.save_config)
-        self.chk_autostart.grid(row=1, column=0, padx=10, pady=5, sticky="w")
+        self.chk_autostart = ctk.CTkSwitch(
+            behavior_content, text="  " + self.tr("autostart"),
+            variable=self.autostart_var,
+            command=self.save_config,
+            font=("Arial", 11),
+        )
+        self.chk_autostart.pack(anchor="w", pady=2)
 
-        sound_main_frame = ctk.CTkFrame(self.settings_box, fg_color="transparent")
-        sound_main_frame.grid(row=1, column=1, padx=5, pady=5, sticky="w")
-
-        self.chk_sound = ctk.CTkSwitch(sound_main_frame, text=self.tr("error_sound"), variable=self.sound_var, command=self.save_config)
-        self.chk_sound.pack(side="left", padx=(0, 10))
-
-        vol_sub_frame = ctk.CTkFrame(sound_main_frame, fg_color="transparent")
-        vol_sub_frame.pack(side="left")
-        ctk.CTkLabel(vol_sub_frame, text="🔊", font=("Arial", 11)).pack(side="left", padx=(0, 2))
-        self.slider_volume = ctk.CTkSlider(vol_sub_frame, from_=0, to=100, number_of_steps=10, width=90, command=lambda v: self.on_volume_change())
+        sound_row = ctk.CTkFrame(behavior_content, fg_color="transparent")
+        sound_row.pack(fill="x", pady=2)
+        self.chk_sound = ctk.CTkSwitch(
+            sound_row, text="  " + self.tr("error_sound"),
+            variable=self.sound_var,
+            command=self.save_config,
+            font=("Arial", 11),
+        )
+        self.chk_sound.pack(side="left")
+        ctk.CTkLabel(sound_row, text="🔊", font=("Arial", 11)).pack(side="left", padx=(8, 2))
+        self.slider_volume = ctk.CTkSlider(
+            sound_row, from_=0, to=100, number_of_steps=10, width=80,
+            command=lambda v: self.on_volume_change(),
+        )
         self.slider_volume.pack(side="left")
 
-        self.chk_test_mode = ctk.CTkSwitch(self.settings_box, text=self.tr("test_mode"), variable=self.test_mode_var, progress_color="#e67e22", command=self.on_test_mode_toggle)
-        self.chk_test_mode.grid(row=1, column=2, padx=5, pady=5, sticky="w")
+        self.chk_midnight = ctk.CTkSwitch(
+            behavior_content, text="  " + self.tr("midnight_restart"),
+            variable=self.midnight_var,
+            command=self.on_midnight_toggle,
+            font=("Arial", 11),
+        )
+        self.chk_midnight.pack(anchor="w", pady=2)
 
-        self.chk_midnight = ctk.CTkSwitch(self.settings_box, text=self.tr("midnight_restart"), variable=self.midnight_var, command=self.on_midnight_toggle)
-        self.chk_midnight.grid(row=1, column=3, padx=5, pady=5, sticky="w")
+        ctk.CTkLabel(
+            behavior_content, text=self.tr("auto_restart_label"),
+            font=("Arial", 10, "bold"),
+            text_color=self.theme_colors.get("subtext", "#8a8e98"),
+            anchor="w",
+        ).pack(fill="x", pady=(8, 2))
 
-        restart_frame = ctk.CTkFrame(self.settings_box, fg_color="transparent")
-        restart_frame.grid(row=2, column=0, columnspan=6, padx=5, pady=5, sticky="ew")
+        restart_row = ctk.CTkFrame(behavior_content, fg_color="transparent")
+        restart_row.pack(fill="x")
 
-        ctk.CTkLabel(restart_frame, text=self.tr("auto_restart_label"), font=("Arial", 11, "bold")).pack(side="left", padx=5)
+        col1 = ctk.CTkFrame(restart_row, fg_color="transparent")
+        col1.pack(side="left", padx=2)
+        self.slider_r_days = ctk.CTkSlider(
+            col1, from_=0, to=7, number_of_steps=7, width=60,
+            command=lambda v: self.on_restart_slider_change(),
+        )
+        self.slider_r_days.pack()
+        self.lbl_r_days = ctk.CTkLabel(col1, text="0d", font=("Arial", 9))
+        self.lbl_r_days.pack()
 
-        self.slider_r_days = ctk.CTkSlider(restart_frame, from_=0, to=7, number_of_steps=7, width=50, command=lambda v: self.on_restart_slider_change())
-        self.slider_r_days.pack(side="left", padx=2)
-        self.lbl_r_days = ctk.CTkLabel(restart_frame, text="0d", font=("Arial", 10), width=20)
-        self.lbl_r_days.pack(side="left")
+        col2 = ctk.CTkFrame(restart_row, fg_color="transparent")
+        col2.pack(side="left", padx=2)
+        self.slider_r_hours = ctk.CTkSlider(
+            col2, from_=0, to=24, number_of_steps=24, width=60,
+            command=lambda v: self.on_restart_slider_change(),
+        )
+        self.slider_r_hours.pack()
+        self.lbl_r_hours = ctk.CTkLabel(col2, text="0h", font=("Arial", 9))
+        self.lbl_r_hours.pack()
 
-        self.slider_r_hours = ctk.CTkSlider(restart_frame, from_=0, to=24, number_of_steps=24, width=50, command=lambda v: self.on_restart_slider_change())
-        self.slider_r_hours.pack(side="left", padx=2)
-        self.lbl_r_hours = ctk.CTkLabel(restart_frame, text="0h", font=("Arial", 10), width=20)
-        self.lbl_r_hours.pack(side="left")
+        col3 = ctk.CTkFrame(restart_row, fg_color="transparent")
+        col3.pack(side="left", padx=2)
+        self.slider_r_mins = ctk.CTkSlider(
+            col3, from_=0, to=60, number_of_steps=60, width=60,
+            command=lambda v: self.on_restart_slider_change(),
+        )
+        self.slider_r_mins.pack()
+        self.lbl_r_mins = ctk.CTkLabel(col3, text="0m", font=("Arial", 9))
+        self.lbl_r_mins.pack()
 
-        self.slider_r_mins = ctk.CTkSlider(restart_frame, from_=0, to=60, number_of_steps=60, width=50, command=lambda v: self.on_restart_slider_change())
-        self.slider_r_mins.pack(side="left", padx=2)
-        self.lbl_r_mins = ctk.CTkLabel(restart_frame, text="0m", font=("Arial", 10), width=20)
-        self.lbl_r_mins.pack(side="left")
+        # ---------- 3. KÁRTYA — BOT INFO ----------
+        self.card_botinfo = ctk.CTkFrame(
+            self.settings_box,
+            fg_color=card_bg,
+            corner_radius=10,
+            border_width=2,
+            border_color="#9b59b6",
+        )
+        self.card_botinfo.pack(side="left", fill="both", expand=True, padx=(5, 0))
+
+        card_header(self.card_botinfo, "🤖", "BOT INFO", "#9b59b6")
+
+        botinfo_content = ctk.CTkFrame(self.card_botinfo, fg_color="transparent")
+        botinfo_content.pack(fill="x", padx=14, pady=(0, 12))
+
+        row1 = ctk.CTkFrame(botinfo_content, fg_color="transparent")
+        row1.pack(fill="x", pady=(0, 4))
+
+        self.btn_servers = ctk.CTkButton(
+            row1, text="🌐  " + self.tr("servers"),
+            height=32, fg_color="#16a085", hover_color="#1abc9c",
+            font=("Arial", 11, "bold"),
+            command=self.open_servers_window,
+        )
+        self.btn_servers.pack(side="left", fill="x", expand=True, padx=(0, 2))
+
+        self.btn_bot_info = ctk.CTkButton(
+            row1, text="🤖  " + self.tr("bot_info"),
+            height=32, fg_color="#8e44ad", hover_color="#9b59b6",
+            font=("Arial", 11, "bold"),
+            command=self.open_bot_info_editor,
+        )
+        self.btn_bot_info.pack(side="left", fill="x", expand=True, padx=2)
+
+        self.btn_activity = ctk.CTkButton(
+            botinfo_content, text="🎭  " + self.tr("activity"),
+            height=32, fg_color="#5865F2", hover_color="#4752C4",
+            font=("Arial", 11, "bold"),
+            command=self.open_activity_editor,
+        )
+        self.btn_activity.pack(fill="x", pady=4)
+
+        self.test_mode_var = ctk.BooleanVar(value=False)
+        self.chk_test_mode = ctk.CTkSwitch(
+            botinfo_content, text="  " + self.tr("test_mode"),
+            variable=self.test_mode_var,
+            progress_color="#e67e22",
+            command=self.on_test_mode_toggle,
+            font=("Arial", 11),
+        )
+        self.chk_test_mode.pack(anchor="w", pady=(6, 0))
 
         self.middle_frame = ctk.CTkFrame(
             self.main_frame, fg_color="transparent",)
