@@ -110,17 +110,42 @@ AUTHOR_NAME = "slowik1kiwokr"
 # ============================================================
 #  Segédfüggvények
 # ============================================================
+def log_debug(msg):
+    """Egyszerű debug log a Temp mappába."""
+    try:
+        import tempfile, datetime
+        p = os.path.join(tempfile.gettempdir(), "dbm_installer.log")
+        with open(p, "a", encoding="utf-8") as f:
+            ts = datetime.datetime.now().strftime("%H:%M:%S")
+            f.write(f"[{ts}] {msg}\n")
+    except Exception:
+        pass
+
+
 def source_dir():
-    """A panel forrásmappája (a DBM mappa, ha létezik)."""
+    """A panel forrásmappája — megkeresi a DBM mappát."""
     if getattr(sys, "frozen", False):
         base = os.path.dirname(sys.executable)
     else:
         base = os.path.dirname(os.path.abspath(__file__))
 
-    # Ha van DBM mappa, azt használjuk forrásként
-    dbm_dir = os.path.join(base, "DBM")
-    if os.path.isdir(dbm_dir):
-        return dbm_dir
+    log_debug(f"source_dir() base = {base}")
+    log_debug(f"  tartalom: {os.listdir(base)}")
+
+    # 1) DBM (kis-nagybetű mindegy)
+    for entry in os.listdir(base):
+        if entry.lower() == "dbm":
+            full = os.path.join(base, entry)
+            if os.path.isdir(full):
+                log_debug(f"  → DBM mappa megtalálva: {full}")
+                return full
+
+    # 2) Ha közvetlenül itt van a panel.pyw
+    if os.path.isfile(os.path.join(base, "panel.pyw")):
+        log_debug(f"  → panel.pyw a gyökérben")
+        return base
+
+    log_debug(f"  → WARNING: se DBM, se panel.pyw — gyökér marad")
     return base
 
 
@@ -253,27 +278,50 @@ def get_pythonw():
 
 
 def copy_panel_files(src, dst, log_cb=None):
-    """A panel összes fájljának másolása (installer és pycache kihagyva)."""
-    skip = {"installer.pyw", "__pycache__", "update.zip", "update_extract",
-            ".git", ".github", ".idea", ".vscode", "venv", ".venv"}
+    """A panel összes fájljának másolása."""
+    log_debug(f"copy_panel_files: {src} → {dst}")
 
-    items = [i for i in os.listdir(src) if i not in skip]
+    if not os.path.isdir(src):
+        log_debug(f"  HIBA: forrás nem létezik: {src}")
+        raise FileNotFoundError(f"Forrásmappa nem található: {src}")
+
+    skip = {"installer.pyw", "__pycache__", "update.zip", "update_extract",
+            ".git", ".github", ".gitignore", ".idea", ".vscode",
+            "venv", ".venv", "README.md"}
+
+    try:
+        items = [i for i in os.listdir(src) if i not in skip]
+    except Exception as e:
+        log_debug(f"  HIBA listázáskor: {e}")
+        raise
+
+    log_debug(f"  Másolandó elemek ({len(items)}): {items}")
     total = len(items)
+    if total == 0:
+        log_debug(f"  HIBA: nincs mit másolni!")
+        raise RuntimeError("A forrásmappa üres!")
 
     for idx, item in enumerate(items, 1):
         s = os.path.join(src, item)
         d = os.path.join(dst, item)
 
-        if os.path.isdir(s):
-            if os.path.exists(d):
-                shutil.rmtree(d, ignore_errors=True)
-            shutil.copytree(s, d)
-        else:
-            shutil.copy2(s, d)
+        try:
+            if os.path.isdir(s):
+                if os.path.exists(d):
+                    shutil.rmtree(d, ignore_errors=True)
+                shutil.copytree(s, d)
+                log_debug(f"  [{idx}/{total}] Mappa: {item}")
+            else:
+                shutil.copy2(s, d)
+                log_debug(f"  [{idx}/{total}] Fájl: {item}")
+        except Exception as e:
+            log_debug(f"  HIBA {item}: {e}")
+            raise
 
         if log_cb:
             log_cb(item, idx / total)
 
+    log_debug(f"  ✅ Másolás kész: {total} elem")
     return True
 
 
@@ -448,6 +496,7 @@ class InstallerApp(ctk.CTk):
         rows = [
             (L[self.lang]["info_version"], self.version),
             (L[self.lang]["info_author"], AUTHOR_NAME),
+            ("Forrás", self.src),
             (L[self.lang]["info_github"], GITHUB_URL),
             (L[self.lang]["info_support"], SUPPORT_URL),
         ]
@@ -595,7 +644,16 @@ class InstallerApp(ctk.CTk):
 
     def _install_worker(self, target):
         try:
-            self._log(f"\n▶ Cél: {target}")
+            log_debug("=" * 60)
+            log_debug(f"TELEPÍTÉS INDUL")
+            log_debug(f"  src: {self.src}")
+            log_debug(f"  dst: {target}")
+            log_debug(f"  src létezik: {os.path.isdir(self.src)}")
+            if os.path.isdir(self.src):
+                log_debug(f"  src tartalom: {os.listdir(self.src)}")
+
+            self._log(f"\n▶ Forrás: {self.src}")
+            self._log(f"▶ Cél: {target}")
             self._set_status(L[self.lang]["installing"], 0.05)
 
             os.makedirs(target, exist_ok=True)
