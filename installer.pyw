@@ -111,10 +111,17 @@ AUTHOR_NAME = "slowik1kiwokr"
 #  Segédfüggvények
 # ============================================================
 def source_dir():
-    """A telepítő mappája (a panel forrásfájljai)."""
+    """A panel forrásmappája (a DBM mappa, ha létezik)."""
     if getattr(sys, "frozen", False):
-        return os.path.dirname(sys.executable)
-    return os.path.dirname(os.path.abspath(__file__))
+        base = os.path.dirname(sys.executable)
+    else:
+        base = os.path.dirname(os.path.abspath(__file__))
+
+    # Ha van DBM mappa, azt használjuk forrásként
+    dbm_dir = os.path.join(base, "DBM")
+    if os.path.isdir(dbm_dir):
+        return dbm_dir
+    return base
 
 
 def shell_folder(csidl):
