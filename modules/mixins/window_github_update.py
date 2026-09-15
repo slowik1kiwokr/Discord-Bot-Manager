@@ -9,6 +9,7 @@ import datetime
 import json
 import re
 from tkinter import messagebox
+import queue
 
 import customtkinter as ctk
 
@@ -174,53 +175,77 @@ class WindowGithubMixin:
     # ==================================================================
     #  Frissítés keresés (auto + manuális)
     # ==================================================================
-    def check_for_updates(self, silent=True):
+def check_for_updates(self, silent=True):
+    if not silent:
+        self.log_event("EVENT", self.tr("update_log_manual_check"))
+
+    # Queue inicializálás (egyszer fut le)
+    if not hasattr(self, "_update_check_queue"):
+        self._update_check_queue = queue.Queue()
+        self._poll_update_queue()
+
+    def worker():
+        remote = self.fetch_remote_version()
+        local = self.get_local_version()
+        # Az eredményt a queue-ba tesszük, NEM hívunk Tk-t közvetlenül
+        self._update_check_queue.put(("result", remote, local, silent))
+
+    threading.Thread(target=worker, daemon=True).start()
+
+
+def _poll_update_queue(self):
+    """A main thread-en fut, 500ms-enként ellenőrzi a queue-t."""
+    if hasattr(self, "_update_check_queue"):
+        try:
+            while True:
+                msg = self._update_check_queue.get_nowait()
+                if msg[0] == "result":
+                    _, remote, local, silent = msg
+                    self._process_update_result(remote, local, silent)
+        except queue.Empty:
+            pass
+    try:
+        self.after(500, self._poll_update_queue)
+    except Exception:
+        pass
+
+
+def _process_update_result(self, remote, local, silent):
+    """A main thread-en fut — itt már biztonságos Tk-t hívni."""
+    if remote is None:
         if not silent:
-            self.log_event("EVENT", self.tr("update_log_manual_check"))
+            messagebox.showerror(
+                self.tr("update_title"),
+                self.tr("update_conn_error")
+            )
+        return
 
-        def worker():
-            remote = self.fetch_remote_version()
-            local = self.get_local_version()
+    skipped = getattr(self, "skipped_version", None)
+    if skipped and skipped == remote:
+        return
 
-            if remote is None:
-                if not silent:
-                    self.after(0, lambda: messagebox.showerror(
-                        self.tr("update_title"),
-                        self.tr("update_conn_error")
-                    ))
-                return
+    if remote == local:
+        if not silent:
+            messagebox.showinfo(
+                self.tr("update_title"),
+                self.tr("update_up_to_date", version=local)
+            )
+        return
 
-            skipped = getattr(self, "skipped_version", None)
-            if skipped and skipped == remote:
-                return
+    # ÚJ VERZIÓ VAN!
+    changelog = self.fetch_changelog()
+    sections = self._parse_changelog(changelog)
 
-            if remote == local:
-                if not silent:
-                    self.after(0, lambda: messagebox.showinfo(
-                        self.tr("update_title"),
-                        self.tr("update_up_to_date", version=local)
-                    ))
-                return
+    current_section = None
+    for s in sections:
+        if s["version"] == remote or s["version"].lstrip("v") == remote.lstrip("v"):
+            current_section = s
+            break
 
-            # ÚJ VERZIÓ VAN!
-            changelog = self.fetch_changelog()
-            sections = self._parse_changelog(changelog)
+    if not current_section and sections:
+        current_section = sections[0]
 
-            # Megkeressük az aktuális frissítés szekcióját
-            current_section = None
-            for s in sections:
-                if s["version"] == remote or s["version"].lstrip("v") == remote.lstrip("v"):
-                    current_section = s
-                    break
-
-            if not current_section and sections:
-                current_section = sections[0]
-
-            self.after(0, lambda: self.show_update_dialog(
-                remote, local, current_section, sections
-            ))
-
-        threading.Thread(target=worker, daemon=True).start()
+    self.show_update_dialog(remote, local, current_section, sections)
 
     def schedule_update_check(self, interval_minutes=None, run_now=True):
         """Automatikus frissítés-ellenőrzés ütemezése.
