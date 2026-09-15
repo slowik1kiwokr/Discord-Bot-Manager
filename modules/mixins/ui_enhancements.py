@@ -9,19 +9,20 @@ BOT_EMOJIS = ["🤖", "🎵", "🎮", "⚙️", "🎨", "📚", "🛠️", "🎯
               "🌟", "💎", "🔥", "🎬", "🎤", "📡", "🧠", "🎲", "🏆",
               "🐍", "🦊", "🐺", "⚡", "🌙", "☀️"]
 
+# (name_key, hex) — a nevek a languages.py-ból jönnek
 BOT_COLORS = [
-    ("Blurple", "#5865F2"),
-    ("Kék", "#3498db"),
-    ("Zöld", "#2ecc71"),
-    ("Piros", "#e74c3c"),
-    ("Narancs", "#f39c12"),
-    ("Lila", "#9b59b6"),
-    ("Türkiz", "#1abc9c"),
-    ("Rózsa", "#e91e63"),
-    ("Cián", "#00bcd4"),
-    ("Arany", "#f1c40f"),
-    ("Mályva", "#8e44ad"),
-    ("Grafit", "#7f8c8d"),
+    ("color_blurple", "#5865F2"),
+    ("color_blue",    "#3498db"),
+    ("color_green",   "#2ecc71"),
+    ("color_red",     "#e74c3c"),
+    ("color_orange",  "#f39c12"),
+    ("color_purple",  "#9b59b6"),
+    ("color_teal",    "#1abc9c"),
+    ("color_rose",    "#e91e63"),
+    ("color_cyan",    "#00bcd4"),
+    ("color_gold",    "#f1c40f"),
+    ("color_mauve",   "#8e44ad"),
+    ("color_graphite","#7f8c8d"),
 ]
 
 # Spinner karakterek a futó bot jelzéséhez
@@ -68,7 +69,7 @@ class UIEnhancementsMixin:
 
             self._bot_search_entry = ctk.CTkEntry(
                 self._bot_search_frame,
-                placeholder_text="🔍 Bot keresés...",
+                placeholder_text=self.tr("ui_search_placeholder"),
                 width=180, height=30,
                 font=("Arial", 11),
             )
@@ -113,7 +114,7 @@ class UIEnhancementsMixin:
             bot = self.bots.get(self.active_bot_key)
             if bot and bot.get("is_running") and hasattr(self, "lbl_status"):
                 self.lbl_status.configure(
-                    text=f"{char} ONLINE",
+                    text=self.tr("ui_status_online_spinner", char=char),
                     text_color="#2ecc71"
                 )
         except Exception:
@@ -138,7 +139,7 @@ class UIEnhancementsMixin:
             try:
                 self.switch_bot(keys[idx])
                 try:
-                    self.notify(f"🔄 Váltás: {keys[idx]}", "info", 1200)
+                    self.notify(self.tr("ui_switch_toast", name=keys[idx]), "info", 1200)
                 except Exception:
                     pass
             except Exception as e:
@@ -158,7 +159,7 @@ class UIEnhancementsMixin:
         current_color = bot.get("color", "#5865F2")
 
         win = ctk.CTkToplevel(self)
-        win.title(f"🎨 Megjelenés — {bot_key}")
+        win.title(self.tr("ui_appearance_title", name=bot_key))
         win.geometry("520x580")
         win.resizable(False, False)
         win.grab_set()
@@ -172,7 +173,7 @@ class UIEnhancementsMixin:
         header.pack(fill="x")
         header.pack_propagate(False)
         ctk.CTkLabel(
-            header, text=f"🎨  {bot_key} megjelenése",
+            header, text=self.tr("ui_appearance_header", name=bot_key),
             font=("Arial", 17, "bold"), text_color="white"
         ).pack(pady=14)
 
@@ -192,7 +193,7 @@ class UIEnhancementsMixin:
 
         # --- Emoji választó ---
         ctk.CTkLabel(
-            win, text="Emoji:",
+            win, text=self.tr("ui_emoji_lbl"),
             font=("Arial", 13, "bold"), anchor="w"
         ).pack(fill="x", padx=20, pady=(12, 4))
 
@@ -216,7 +217,7 @@ class UIEnhancementsMixin:
 
         # --- Szín választó ---
         ctk.CTkLabel(
-            win, text="Szín:",
+            win, text=self.tr("ui_color_lbl"),
             font=("Arial", 13, "bold"), anchor="w"
         ).pack(fill="x", padx=20, pady=(16, 4))
 
@@ -229,7 +230,7 @@ class UIEnhancementsMixin:
             selected_color[0] = hexcode
             preview_label.configure(fg_color=hexcode)
 
-        for i, (name, hexcode) in enumerate(BOT_COLORS):
+        for i, (name_key, hexcode) in enumerate(BOT_COLORS):
             btn = ctk.CTkButton(
                 color_grid, text="", width=42, height=32,
                 fg_color=hexcode, hover_color=hexcode,
@@ -243,7 +244,7 @@ class UIEnhancementsMixin:
         custom_frame.pack(fill="x", padx=20, pady=(10, 4))
 
         ctk.CTkLabel(
-            custom_frame, text="Egyéni hex:",
+            custom_frame, text=self.tr("ui_custom_hex_lbl"),
             font=("Arial", 11), text_color="#aaaaaa"
         ).pack(side="left")
 
@@ -258,7 +259,7 @@ class UIEnhancementsMixin:
                 pick_color(value)
 
         ctk.CTkButton(
-            custom_frame, text="Alkalmaz", width=90,
+            custom_frame, text=self.tr("ui_apply_btn"), width=90,
             fg_color="#2980b9", command=apply_custom_color
         ).pack(side="left")
 
@@ -270,23 +271,23 @@ class UIEnhancementsMixin:
                 self.save_config()
                 self.render_tabs()  # újraépíti a füleket
                 try:
-                    self.notify(f"🎨 Megjelenés mentve: {bot_key}", "success")
+                    self.notify(self.tr("ui_appearance_saved", name=bot_key), "success")
                 except Exception:
                     pass
             except Exception as e:
-                messagebox.showerror("Hiba", str(e), parent=win)
+                messagebox.showerror(self.tr("common_error_title"), str(e), parent=win)
                 return
             win.destroy()
 
         btns = ctk.CTkFrame(win, fg_color="transparent")
         btns.pack(fill="x", padx=20, pady=18)
         ctk.CTkButton(
-            btns, text="💾 Mentés", fg_color="#27ae60",
+            btns, text=self.tr("ui_save_btn"), fg_color="#27ae60",
             hover_color="#2ecc71", width=160, height=40,
             font=("Arial", 13, "bold"), command=save
         ).pack(side="left")
         ctk.CTkButton(
-            btns, text="Mégse", fg_color="#555555",
+            btns, text=self.tr("ui_cancel_btn"), fg_color="#555555",
             hover_color="#666666", width=100, height=40,
             command=win.destroy
         ).pack(side="right")

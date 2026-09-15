@@ -9,112 +9,127 @@ from tkinter import messagebox, filedialog
 
 import modules.config as config
 from modules.config import BROADCAST_REQUESTS_FILE
-from modules.languages import LANGUAGES
 
 
 # =====================================================================
-#  BROADCAST SABLONOK
+#  BROADCAST SABLONOK (minden szöveg kulcs!)
 # =====================================================================
 BROADCAST_TEMPLATES = {
-    "💬  Egyszerű szöveges": {
+    "simple": {
+        "name_key": "bc_tpl_simple_name",
         "type": "message",
-        "content": "📢 **FIGYELEM!**\n\nEz egy fontos bejelentés minden szerveren.",
-        "embed": {"title": "", "description": "", "color": "#5865F2",
-                   "footer": "", "thumbnail": "", "fields": []},
+        "content_key": "bc_tpl_simple_content",
+        "embed": {},
     },
-    "🔧  Karbantartás": {
+    "maintenance": {
+        "name_key": "bc_tpl_maintenance_name",
         "type": "embed",
-        "content": "",
+        "content_key": None,
         "embed": {
-            "title": "🔧 Karbantartás",
-            "description": "Kedves tagok!\n\nHamarosan **karbantartás** lesz a boton.\n"
-                            "Ez alatt a bot nem lesz elérhető.\n\n"
-                            "Köszönjük a türelmeteket! 🛠️",
+            "title_key": "bc_tpl_maintenance_title",
+            "description_key": "bc_tpl_maintenance_desc",
             "color": "#f39c12",
-            "footer": "Várható időtartam: 30 perc",
+            "footer_key": "bc_tpl_maintenance_footer",
             "thumbnail": "",
             "fields": [],
         },
     },
-    "🚀  Új verzió": {
+    "new_version": {
+        "name_key": "bc_tpl_new_version_name",
         "type": "embed",
-        "content": "",
+        "content_key": None,
         "embed": {
-            "title": "🚀 Új verzió érkezett!",
-            "description": "A bot új verzióra frissült!\n\n"
-                            "Nézd meg az új funkciókat a `/help` paranccsal.",
+            "title_key": "bc_tpl_new_version_title",
+            "description_key": "bc_tpl_new_version_desc",
             "color": "#2ecc71",
-            "footer": "Kösz hogy használod!",
+            "footer_key": "bc_tpl_new_version_footer",
             "thumbnail": "",
             "fields": [],
         },
     },
-    "🎉  Esemény": {
+    "event": {
+        "name_key": "bc_tpl_event_name",
         "type": "embed",
-        "content": "",
+        "content_key": None,
         "embed": {
-            "title": "🎉 Esemény hamarosan!",
-            "description": "Ne maradj le a közelgő eseményről!\n\n"
-                            "Részletek a szerver csatornáin.",
+            "title_key": "bc_tpl_event_title",
+            "description_key": "bc_tpl_event_desc",
             "color": "#e91e63",
-            "footer": "Várunk szeretettel!",
+            "footer_key": "bc_tpl_event_footer",
             "thumbnail": "",
             "fields": [],
         },
     },
-    "⚠️  Figyelmeztetés": {
+    "warning": {
+        "name_key": "bc_tpl_warning_name",
         "type": "embed",
-        "content": "",
+        "content_key": None,
         "embed": {
-            "title": "⚠️ Figyelem!",
-            "description": "Kérlek olvasd el figyelmesen az alábbi üzenetet.",
+            "title_key": "bc_tpl_warning_title",
+            "description_key": "bc_tpl_warning_desc",
             "color": "#e74c3c",
-            "footer": "Fontos információ",
+            "footer_key": "bc_tpl_warning_footer",
             "thumbnail": "",
             "fields": [],
         },
     },
-    "❌  Szolgáltatás leállás": {
+    "outage": {
+        "name_key": "bc_tpl_outage_name",
         "type": "embed",
-        "content": "",
+        "content_key": None,
         "embed": {
-            "title": "❌ Szolgáltatás szünetel",
-            "description": "A bot átmenetileg nem elérhető.\n\n"
-                            "Dolgozunk a hiba elhárításán! 🔧",
+            "title_key": "bc_tpl_outage_title",
+            "description_key": "bc_tpl_outage_desc",
             "color": "#c0392b",
-            "footer": "Kérjük várj!",
+            "footer_key": "bc_tpl_outage_footer",
             "thumbnail": "",
             "fields": [],
         },
     },
-    "💜  Egyedi üzenet": {
+    "custom": {
+        "name_key": "bc_tpl_custom_name",
         "type": "embed",
-        "content": "",
+        "content_key": None,
         "embed": {
-            "title": "💜 Cím",
-            "description": "Ide jön a szöveg...",
+            "title_key": "bc_tpl_custom_title",
+            "description_key": "bc_tpl_custom_desc",
             "color": "#9b59b6",
-            "footer": "",
+            "footer_key": None,
             "thumbnail": "",
             "fields": [],
         },
     },
-    "📊  Rendszer info": {
+    "sysinfo": {
+        "name_key": "bc_tpl_sysinfo_name",
         "type": "embed",
-        "content": "",
+        "content_key": None,
         "embed": {
-            "title": "📊 Rendszer Információk",
-            "description": "Aktuális állapot:",
+            "title_key": "bc_tpl_sysinfo_title",
+            "description_key": "bc_tpl_sysinfo_desc",
             "color": "#3498db",
-            "footer": "Automatikus értesítés",
+            "footer_key": "bc_tpl_sysinfo_footer",
             "thumbnail": "",
             "fields": [
-                {"name": "🟢 Státusz", "value": "Minden rendszer üzemel", "inline": False},
-                {"name": "⚡ Ping", "value": "Alacsony", "inline": False},
+                {"name_key": "bc_tpl_sysinfo_field1_name",
+                 "value_key": "bc_tpl_sysinfo_field1_value", "inline": False},
+                {"name_key": "bc_tpl_sysinfo_field2_name",
+                 "value_key": "bc_tpl_sysinfo_field2_value", "inline": False},
             ],
         },
     },
 }
+
+
+# Időzítés opciók: (fordítási kulcs, másodpercek)
+SCHEDULE_OPTIONS = [
+    ("sched_1min", 60),
+    ("sched_5min", 300),
+    ("sched_10min", 600),
+    ("sched_30min", 1800),
+    ("sched_1hour", 3600),
+    ("sched_6hour", 21600),
+    ("sched_24hour", 86400),
+]
 
 
 class WindowBroadcastMixin:
@@ -142,6 +157,39 @@ class WindowBroadcastMixin:
         except (OSError, json.JSONDecodeError):
             return []
 
+    def _resolve_template(self, tpl_key):
+        """A sablon kulcsait a jelenlegi nyelvre fordítja."""
+        tpl = BROADCAST_TEMPLATES.get(tpl_key)
+        if not tpl:
+            return None
+
+        content = self.tr(tpl["content_key"]) if tpl.get("content_key") else ""
+
+        emb = {}
+        raw_emb = tpl.get("embed", {}) or {}
+        if raw_emb:
+            fields = []
+            for f in raw_emb.get("fields", []):
+                fields.append({
+                    "name": self.tr(f.get("name_key", "")),
+                    "value": self.tr(f.get("value_key", "")),
+                    "inline": f.get("inline", False),
+                })
+            emb = {
+                "title": self.tr(raw_emb.get("title_key", "")) if raw_emb.get("title_key") else "",
+                "description": self.tr(raw_emb.get("description_key", "")) if raw_emb.get("description_key") else "",
+                "color": raw_emb.get("color", "#5865F2"),
+                "footer": self.tr(raw_emb.get("footer_key", "")) if raw_emb.get("footer_key") else "",
+                "thumbnail": raw_emb.get("thumbnail", ""),
+                "fields": fields,
+            }
+
+        return {
+            "type": tpl["type"],
+            "content": content,
+            "embed": emb,
+        }
+
     # ==================================================================
     #  Fő ablak
     # ==================================================================
@@ -149,15 +197,25 @@ class WindowBroadcastMixin:
         bot_dir = self._bot_dir()
         if not bot_dir:
             messagebox.showwarning(
-                "Figyelem",
-                "Előbb tallózd be a bot fő .py fájlját!"
+                self.tr("warning_title"),
+                self.tr("broadcast_need_bot_msg")
             )
             return
 
         channels_data = self._load_channels()
 
+        # Fordított sablon-név → kulcs mapping
+        tpl_name_to_key = {
+            self.tr(t["name_key"]): k for k, t in BROADCAST_TEMPLATES.items()
+        }
+        tpl_display_names = list(tpl_name_to_key.keys())
+        default_tpl_display = self.tr(BROADCAST_TEMPLATES["simple"]["name_key"])
+
+        # Időzítés opciók fordítva
+        sched_display_values = [self.tr(k) for k, _ in SCHEDULE_OPTIONS]
+
         win = ctk.CTkToplevel(self)
-        win.title("📢  Broadcast")
+        win.title(self.tr("broadcast_title"))
         win.geometry("1100x780")
         win.minsize(900, 560)
         win.grab_set()
@@ -171,11 +229,11 @@ class WindowBroadcastMixin:
         header.pack(fill="x")
         header.pack_propagate(False)
         ctk.CTkLabel(
-            header, text="📢   Broadcast — Üzenet minden szerverre",
+            header, text=self.tr("broadcast_header"),
             font=("Arial", 18, "bold"), text_color="white"
         ).pack(side="left", padx=24, pady=16)
         ctk.CTkLabel(
-            header, text=f"Szerverek: {len(channels_data)}",
+            header, text=self.tr("broadcast_servers_count", count=len(channels_data)),
             font=("Arial", 11), text_color="#ffd0d0"
         ).pack(side="right", padx=20)
 
@@ -190,13 +248,12 @@ class WindowBroadcastMixin:
         left.pack(side="left", fill="y", padx=(0, 8))
         left.pack_propagate(False)
 
-        ctk.CTkLabel(left, text="📋  Szerverek és csatornák",
+        ctk.CTkLabel(left, text=self.tr("broadcast_servers_section"),
                       font=("Arial", 13, "bold")).pack(pady=(8, 4))
 
         ctk.CTkLabel(
             left,
-            text="Pipáld be, mely csatornákra menjen az üzenet.\n"
-                 "A szürke csatornákra a bot NEM tud írni.",
+            text=self.tr("broadcast_channels_hint"),
             font=("Arial", 10), text_color="#8a8e98",
             justify="left",
         ).pack(padx=8, pady=(0, 8))
@@ -210,9 +267,7 @@ class WindowBroadcastMixin:
         if not channels_data:
             ctk.CTkLabel(
                 ch_scroll,
-                text="⚠️  Még nincs csatorna adat.\n\n"
-                     "Indítsd el a botot egyszer, hogy elküldje a\n"
-                     "szerverek és csatornák listáját.",
+                text=self.tr("broadcast_no_channels_msg"),
                 font=("Arial", 11), text_color="#e67e22",
                 justify="center",
             ).pack(pady=30)
@@ -270,15 +325,15 @@ class WindowBroadcastMixin:
             for var in channel_vars.values():
                 var.set(False)
 
-        ctk.CTkButton(quick_btns, text="✅ Összes",
+        ctk.CTkButton(quick_btns, text=self.tr("broadcast_select_all_btn"),
                        fg_color="#27ae60", hover_color="#2ecc71",
                        width=100, height=30, font=("Arial", 11),
                        command=select_all).pack(side="left", padx=2, expand=True, fill="x")
-        ctk.CTkButton(quick_btns, text="❌ Egyik sem",
+        ctk.CTkButton(quick_btns, text=self.tr("broadcast_deselect_all_btn"),
                        fg_color="#7f8c8d", hover_color="#95a5a6",
                        width=100, height=30, font=("Arial", 11),
                        command=deselect_all).pack(side="left", padx=2, expand=True, fill="x")
-        ctk.CTkButton(quick_btns, text="🔄 Frissítés",
+        ctk.CTkButton(quick_btns, text=self.tr("refresh_btn"),
                        fg_color="#3498db", hover_color="#5dade2",
                        width=110, height=30, font=("Arial", 11),
                        command=lambda: (win.destroy(), self.open_broadcast_window())
@@ -294,10 +349,10 @@ class WindowBroadcastMixin:
         top_bar = ctk.CTkFrame(right, fg_color="transparent")
         top_bar.pack(fill="x", pady=(0, 8))
 
-        ctk.CTkLabel(top_bar, text="🎨  Sablon:",
+        ctk.CTkLabel(top_bar, text=self.tr("broadcast_template_lbl"),
                       font=("Arial", 11, "bold")).pack(side="left", padx=(0, 6))
 
-        template_var = ctk.StringVar(value="💬  Egyszerű szöveges")
+        template_var = ctk.StringVar(value=default_tpl_display)
 
         # Alsó mentés sáv
         bottom = ctk.CTkFrame(right, fg_color="transparent")
@@ -308,15 +363,20 @@ class WindowBroadcastMixin:
         content_scroll.pack(fill="both", expand=True)
 
         # Típus
-        ctk.CTkLabel(content_scroll, text="Típus:",
+        ctk.CTkLabel(content_scroll, text=self.tr("common_type_lbl"),
                       font=("Arial", 11, "bold"), anchor="w").pack(fill="x", pady=(4, 2))
-        type_var = ctk.StringVar(value="Üzenet")
-        ctk.CTkComboBox(content_scroll, values=["Üzenet", "Embed"],
+
+        # Fix belső értékek
+        TYPE_MESSAGE_LABEL = self.tr("common_type_message")
+        TYPE_EMBED_LABEL = self.tr("common_type_embed")
+        type_var = ctk.StringVar(value=TYPE_MESSAGE_LABEL)
+        ctk.CTkComboBox(content_scroll,
+                         values=[TYPE_MESSAGE_LABEL, TYPE_EMBED_LABEL],
                          variable=type_var, width=180, height=34).pack(anchor="w")
 
         # Üzenet frame
         msg_frame = ctk.CTkFrame(content_scroll, fg_color="transparent")
-        ctk.CTkLabel(msg_frame, text="Üzenet tartalma:",
+        ctk.CTkLabel(msg_frame, text=self.tr("common_content_lbl"),
                       font=("Arial", 11), anchor="w").pack(fill="x", pady=(0, 2))
         content_box = ctk.CTkTextbox(msg_frame, height=140, font=("Consolas", 11))
         content_box.pack(fill="x")
@@ -324,12 +384,12 @@ class WindowBroadcastMixin:
         # Embed frame
         embed_frame = ctk.CTkFrame(content_scroll, fg_color="transparent")
 
-        ctk.CTkLabel(embed_frame, text="Embed cím:",
+        ctk.CTkLabel(embed_frame, text=self.tr("common_embed_title_lbl"),
                       font=("Arial", 11), anchor="w").pack(fill="x", pady=(0, 2))
         emb_title = ctk.CTkEntry(embed_frame, width=500, height=34)
         emb_title.pack(anchor="w")
 
-        ctk.CTkLabel(embed_frame, text="Embed leírás:",
+        ctk.CTkLabel(embed_frame, text=self.tr("common_embed_desc_lbl"),
                       font=("Arial", 11), anchor="w").pack(fill="x", pady=(8, 2))
         emb_desc = ctk.CTkTextbox(embed_frame, height=120, font=("Arial", 11))
         emb_desc.pack(fill="x")
@@ -338,7 +398,7 @@ class WindowBroadcastMixin:
         color_row = ctk.CTkFrame(embed_frame, fg_color="transparent")
         color_row.pack(fill="x", pady=(8, 0))
 
-        ctk.CTkLabel(color_row, text="Szín:",
+        ctk.CTkLabel(color_row, text=self.tr("common_color_lbl"),
                       font=("Arial", 11)).pack(side="left")
         emb_color = ctk.CTkEntry(color_row, width=120, height=32)
         emb_color.insert(0, "#5865F2")
@@ -359,18 +419,21 @@ class WindowBroadcastMixin:
 
         emb_color.bind("<KeyRelease>", update_color)
 
-        # Gyors színek
+        # Gyors színek — meglévő color_* kulcsokat használjuk
         quick_colors = [
-            ("Blurple", "#5865F2"), ("Zöld", "#2ecc71"), ("Piros", "#e74c3c"),
-            ("Narancs", "#f39c12"), ("Kék", "#3498db"),
+            ("color_blurple", "#5865F2"),
+            ("color_green",   "#2ecc71"),
+            ("color_red",     "#e74c3c"),
+            ("color_orange",  "#f39c12"),
+            ("color_blue",    "#3498db"),
         ]
         color_quick = ctk.CTkFrame(embed_frame, fg_color="transparent")
         color_quick.pack(fill="x", pady=(4, 0))
-        ctk.CTkLabel(color_quick, text="Gyors:",
+        ctk.CTkLabel(color_quick, text=self.tr("common_quick_colors_lbl"),
                       font=("Arial", 10)).pack(side="left", padx=(0, 4))
-        for name, hexcode in quick_colors:
+        for name_key, hexcode in quick_colors:
             ctk.CTkButton(
-                color_quick, text=name, width=64, height=24,
+                color_quick, text=self.tr(name_key), width=64, height=24,
                 fg_color=hexcode, hover_color=hexcode,
                 text_color="white", font=("Arial", 10),
                 command=lambda h=hexcode: (
@@ -380,12 +443,12 @@ class WindowBroadcastMixin:
                 ),
             ).pack(side="left", padx=2)
 
-        ctk.CTkLabel(embed_frame, text="Footer (alcím):",
+        ctk.CTkLabel(embed_frame, text=self.tr("common_embed_footer_lbl"),
                       font=("Arial", 11), anchor="w").pack(fill="x", pady=(8, 2))
         emb_footer = ctk.CTkEntry(embed_frame, width=500, height=34)
         emb_footer.pack(anchor="w")
 
-        ctk.CTkLabel(embed_frame, text="Thumbnail URL (kép):",
+        ctk.CTkLabel(embed_frame, text=self.tr("common_embed_thumb_lbl"),
                       font=("Arial", 11), anchor="w").pack(fill="x", pady=(8, 2))
         emb_thumb = ctk.CTkEntry(embed_frame, width=500, height=34,
                                    placeholder_text="https://...")
@@ -393,7 +456,7 @@ class WindowBroadcastMixin:
 
         # Szeckiók ki/be
         def toggle_sections(*_):
-            if type_var.get() == "Embed":
+            if type_var.get() == TYPE_EMBED_LABEL:
                 msg_frame.pack_forget()
                 embed_frame.pack(fill="x", pady=(10, 0))
             else:
@@ -405,13 +468,20 @@ class WindowBroadcastMixin:
 
         # Sablon alkalmazó
         def apply_template(choice):
-            tpl = BROADCAST_TEMPLATES.get(choice)
-            if not tpl:
+            tpl_key = tpl_name_to_key.get(choice)
+            if not tpl_key:
                 return
-            type_var.set("Embed" if tpl["type"] == "embed" else "Üzenet")
+            resolved = self._resolve_template(tpl_key)
+            if not resolved:
+                return
+
+            type_var.set(
+                TYPE_EMBED_LABEL if resolved["type"] == "embed" else TYPE_MESSAGE_LABEL
+            )
             content_box.delete("1.0", "end")
-            content_box.insert("1.0", tpl.get("content", ""))
-            emb = tpl.get("embed", {})
+            content_box.insert("1.0", resolved.get("content", ""))
+
+            emb = resolved.get("embed", {})
             emb_title.delete(0, "end")
             emb_title.insert(0, emb.get("title", ""))
             emb_desc.delete("1.0", "end")
@@ -426,7 +496,7 @@ class WindowBroadcastMixin:
             toggle_sections()
 
         template_combo = ctk.CTkComboBox(
-            top_bar, values=list(BROADCAST_TEMPLATES.keys()),
+            top_bar, values=tpl_display_names,
             variable=template_var, width=280, height=32,
             command=apply_template,
         )
@@ -434,14 +504,14 @@ class WindowBroadcastMixin:
 
         # Időzítés
         ctk.CTkLabel(
-            content_scroll, text="⏰  Időzítés (opcionális)",
+            content_scroll, text=self.tr("broadcast_schedule_section"),
             font=("Arial", 12, "bold"), anchor="w"
         ).pack(fill="x", pady=(16, 4))
 
         schedule_var = ctk.BooleanVar(value=False)
         ctk.CTkCheckBox(
             content_scroll,
-            text="  Késleltetett küldés",
+            text=self.tr("broadcast_schedule_check"),
             variable=schedule_var,
             font=("Arial", 11),
         ).pack(anchor="w", pady=2)
@@ -449,19 +519,17 @@ class WindowBroadcastMixin:
         sched_row = ctk.CTkFrame(content_scroll, fg_color="transparent")
         sched_row.pack(fill="x", pady=(6, 0))
 
-        ctk.CTkLabel(sched_row, text="Küldés:",
+        ctk.CTkLabel(sched_row, text=self.tr("broadcast_when_lbl"),
                       font=("Arial", 11)).pack(side="left")
-        when_var = ctk.StringVar(value="5 perc múlva")
+        when_var = ctk.StringVar(value=sched_display_values[1])  # 5 perc
         ctk.CTkComboBox(
             sched_row,
-            values=["1 perc múlva", "5 perc múlva", "10 perc múlva",
-                    "30 perc múlva", "1 óra múlva", "6 óra múlva",
-                    "24 óra múlva"],
+            values=sched_display_values,
             variable=when_var, width=180, height=32,
         ).pack(side="left", padx=8)
 
         # Alkalmazás inicializálás (sablont alkalmazunk)
-        apply_template("💬  Egyszerű szöveges")
+        apply_template(default_tpl_display)
 
         # ============================================================
         #  KÜLDÉS
@@ -476,20 +544,21 @@ class WindowBroadcastMixin:
 
             if not selected:
                 messagebox.showwarning(
-                    "Figyelem",
-                    "Nincs kiválasztva csatorna!\n\n"
-                    "Pipálj be legalább egy csatornát a bal oldalon.",
+                    self.tr("warning_title"),
+                    self.tr("broadcast_no_channel_msg"),
                     parent=win,
                 )
                 return
 
             # Üzenet vagy embed tartalom
-            msg_type = "embed" if type_var.get() == "Embed" else "message"
+            is_embed = (type_var.get() == TYPE_EMBED_LABEL)
+            msg_type = "embed" if is_embed else "message"
+
             if msg_type == "message":
                 content = content_box.get("1.0", "end-1c").strip()
                 if not content:
-                    messagebox.showwarning("Figyelem",
-                                             "Az üzenet tartalma üres!",
+                    messagebox.showwarning(self.tr("warning_title"),
+                                             self.tr("broadcast_msg_empty_msg"),
                                              parent=win)
                     return
                 message_payload = {"type": "message", "content": content}
@@ -503,25 +572,20 @@ class WindowBroadcastMixin:
                     "fields": [],
                 }
                 if not embed_data["title"] and not embed_data["description"]:
-                    messagebox.showwarning("Figyelem",
-                                             "Az embed címe és leírása is üres!",
+                    messagebox.showwarning(self.tr("warning_title"),
+                                             self.tr("broadcast_embed_empty_msg"),
                                              parent=win)
                     return
                 message_payload = {"type": "embed", "embed": embed_data}
 
-            # Időzítés
+            # Időzítés — index alapján
             delay_seconds = 0
             if schedule_var.get():
-                mapping = {
-                    "1 perc múlva": 60,
-                    "5 perc múlva": 300,
-                    "10 perc múlva": 600,
-                    "30 perc múlva": 1800,
-                    "1 óra múlva": 3600,
-                    "6 óra múlva": 21600,
-                    "24 óra múlva": 86400,
-                }
-                delay_seconds = mapping.get(when_var.get(), 0)
+                try:
+                    idx = sched_display_values.index(when_var.get())
+                    delay_seconds = SCHEDULE_OPTIONS[idx][1]
+                except (ValueError, IndexError):
+                    delay_seconds = 0
                 scheduled_time = (datetime.datetime.now()
                                     + datetime.timedelta(seconds=delay_seconds))
             else:
@@ -552,11 +616,7 @@ class WindowBroadcastMixin:
                         except json.JSONDecodeError:
                             pending = []
 
-                # Ha időzített, van külön lista
-                if delay_seconds > 0:
-                    pending.append(request)
-                else:
-                    pending.append(request)
+                pending.append(request)
 
                 tmp = BROADCAST_REQUESTS_FILE + ".tmp"
                 with open(tmp, "w", encoding="utf-8") as f:
@@ -565,41 +625,47 @@ class WindowBroadcastMixin:
 
                 if delay_seconds > 0:
                     self.notify(
-                        f"⏰ Broadcast beütemezve: {delay_seconds // 60} perc múlva",
+                        self.tr("broadcast_scheduled_toast",
+                                minutes=delay_seconds // 60),
                         "success", 3000
                     )
                     self.log_event("EVENT",
-                                   f"[BROADCAST] Ütemezve {self.active_bot_key} → {len(selected)} szerver")
+                                   self.tr("broadcast_scheduled_log",
+                                           bot=self.active_bot_key,
+                                           count=len(selected)))
                 else:
                     self.notify(
-                        f"📢 Broadcast elküldve: {len(selected)} szerver",
+                        self.tr("broadcast_sent_toast", count=len(selected)),
                         "success", 3000
                     )
                     self.log_event("EVENT",
-                                   f"[BROADCAST] Elküldve {self.active_bot_key} → {len(selected)} szerver")
+                                   self.tr("broadcast_sent_log",
+                                           bot=self.active_bot_key,
+                                           count=len(selected)))
 
                 win.destroy()
 
             except (OSError, json.JSONDecodeError) as e:
-                messagebox.showerror("Hiba",
-                                       f"Nem sikerült elküldeni:\n{e}",
+                messagebox.showerror(self.tr("error_title"),
+                                       self.tr("broadcast_send_error_msg", error=e),
                                        parent=win)
 
         # Előnézet gomb
         ctk.CTkButton(
             bottom,
-            text="👁  Előnézet",
+            text=self.tr("broadcast_preview_btn"),
             fg_color="#7f8c8d", hover_color="#95a5a6",
             width=140, height=44, font=("Arial", 12),
             command=lambda: self._broadcast_preview(
                 type_var.get(), content_box, emb_title, emb_desc,
-                emb_color, emb_footer, emb_thumb, win
+                emb_color, emb_footer, emb_thumb, win,
+                TYPE_EMBED_LABEL,
             ),
         ).pack(side="left", padx=4)
 
         ctk.CTkButton(
             bottom,
-            text="📢  Broadcast indítása",
+            text=self.tr("broadcast_send_btn"),
             fg_color="#c0392b", hover_color="#e74c3c",
             width=220, height=44, font=("Arial", 13, "bold"),
             command=send_broadcast,
@@ -609,9 +675,10 @@ class WindowBroadcastMixin:
     #  Előnézet ablak
     # ==================================================================
     def _broadcast_preview(self, msg_type, content_box, emb_title, emb_desc,
-                            emb_color, emb_footer, emb_thumb, parent):
+                            emb_color, emb_footer, emb_thumb, parent,
+                            type_embed_label):
         preview = ctk.CTkToplevel(parent)
-        preview.title("👁  Broadcast előnézet")
+        preview.title(self.tr("broadcast_preview_title"))
         preview.geometry("560x460")
         preview.grab_set()
         preview.update_idletasks()
@@ -625,16 +692,15 @@ class WindowBroadcastMixin:
         ctk.CTkLabel(header, text="🤖  MainBot",
                       font=("Arial", 12, "bold"),
                       text_color="#5865F2").pack(anchor="w", padx=12, pady=(8, 0))
-        ctk.CTkLabel(header, text="Ma 15:30",
+        ctk.CTkLabel(header, text=self.tr("broadcast_preview_time"),
                       font=("Arial", 9), text_color="#888").pack(anchor="w", padx=12, pady=(0, 8))
 
         body = ctk.CTkFrame(preview, fg_color="#2b2d31", corner_radius=8)
         body.pack(fill="both", expand=True, padx=14, pady=(0, 14))
 
-        if msg_type == "Embed":
+        if msg_type == type_embed_label:
             color = emb_color.get().strip() or "#5865F2"
             try:
-                # Színes csík bal oldalon
                 stripe = ctk.CTkFrame(body, width=5, fg_color=color, corner_radius=2)
                 stripe.pack(side="left", fill="y", padx=(10, 0), pady=10)
             except Exception:
@@ -667,13 +733,13 @@ class WindowBroadcastMixin:
                               anchor="w").pack(fill="x", pady=(10, 0))
         else:
             content = content_box.get("1.0", "end-1c").strip()
-            ctk.CTkLabel(body, text=content or "(üres üzenet)",
+            ctk.CTkLabel(body, text=content or self.tr("broadcast_empty_msg"),
                           font=("Arial", 11),
                           text_color="#dcddde",
                           anchor="w", justify="left",
                           wraplength=490).pack(fill="both", expand=True, padx=14, pady=14)
 
-        ctk.CTkButton(preview, text="Bezárás",
+        ctk.CTkButton(preview, text=self.tr("close_btn"),
                        fg_color="#555555", hover_color="#666666",
                        width=120, height=36,
                        command=preview.destroy).pack(pady=(0, 14))

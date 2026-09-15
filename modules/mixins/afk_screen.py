@@ -5,13 +5,19 @@ import datetime
 import customtkinter as ctk
 
 
-HET_NAPJAI = ["hétfő", "kedd", "szerda", "csütörtök", "péntek", "szombat", "vasárnap"]
-HONAPOK = ["január", "február", "március", "április", "május", "június",
-           "július", "augusztus", "szeptember", "október", "november", "december"]
-
-
 class AfkScreenMixin:
     """AFK képernyő — tétlenség után megjelenő bot-állapot nézet."""
+
+    # Nyelvi kulcsok a napokhoz / hónapokhoz
+    _DAY_KEYS = [
+        "day_monday", "day_tuesday", "day_wednesday", "day_thursday",
+        "day_friday", "day_saturday", "day_sunday",
+    ]
+    _MONTH_KEYS = [
+        "month_january", "month_february", "month_march", "month_april",
+        "month_may", "month_june", "month_july", "month_august",
+        "month_september", "month_october", "month_november", "month_december",
+    ]
 
     # ------------------------------------------------------------------
     #  Inicializálás
@@ -130,13 +136,13 @@ class AfkScreenMixin:
         summary_frame.pack(pady=(0, 8))
 
         self._afk_widgets["running_count"] = self._make_afk_stat(
-            summary_frame, "🟢", "FUT", "#2ecc71", "0"
+            summary_frame, "🟢", self.tr("afk_stat_running"), "#2ecc71", "0"
         )
         self._afk_widgets["stopped_count"] = self._make_afk_stat(
-            summary_frame, "🔴", "LEÁLLT", "#e74c3c", "0"
+            summary_frame, "🔴", self.tr("afk_stat_stopped"), "#e74c3c", "0"
         )
         self._afk_widgets["error_count"] = self._make_afk_stat(
-            summary_frame, "⚠️", "HIBA", "#f39c12", "0"
+            summary_frame, "⚠️", self.tr("afk_stat_error"), "#f39c12", "0"
         )
 
         ctk.CTkFrame(border, height=1, fg_color="#2f3542").pack(fill="x", padx=60, pady=(10, 10))
@@ -154,7 +160,7 @@ class AfkScreenMixin:
 
         ctk.CTkLabel(
             border,
-            text="💡  Mozgasd meg az egeret, vagy nyomj meg egy gombot a visszatéréshez",
+            text=self.tr("afk_hint"),
             font=("Segoe UI", 10), text_color="#6a6e78",
         ).pack(pady=(0, 20))
 
@@ -256,7 +262,7 @@ class AfkScreenMixin:
         bots = list(self.bots.items())
         if not bots:
             ctk.CTkLabel(
-                parent, text="Nincs regisztrált bot.",
+                parent, text=self.tr("afk_no_bots"),
                 font=("Segoe UI", 12), text_color="#6a6e78",
             ).pack(pady=30)
             return
@@ -326,9 +332,15 @@ class AfkScreenMixin:
 
         try:
             self._afk_widgets["clock"].configure(text=now.strftime("%H:%M:%S"))
-            day_name = HET_NAPJAI[now.weekday()]
-            month_name = HONAPOK[now.month - 1]
-            date_text = f"{now.year}. {month_name} {now.day}., {day_name}"
+            day_name = self.tr(self._DAY_KEYS[now.weekday()])
+            month_name = self.tr(self._MONTH_KEYS[now.month - 1])
+            date_text = self.tr(
+                "afk_date_format",
+                year=now.year,
+                month=month_name,
+                day=now.day,
+                day_name=day_name,
+            )
             self._afk_widgets["date"].configure(text=date_text)
         except Exception:
             pass
@@ -360,7 +372,7 @@ class AfkScreenMixin:
                 status_text = f"🟢  ⏱  {h:02d}:{m:02d}:{s:02d}"
                 status_color = "#2ecc71"
             else:
-                status_text = "🔴  leállt"
+                status_text = f"🔴  {self.tr('afk_status_stopped')}"
                 status_color = "#e74c3c"
 
             try:

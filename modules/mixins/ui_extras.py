@@ -138,13 +138,13 @@ class UIExtrasMixin:
                     except Exception:
                         pass
                 self._sidebar_collapsed = False
-                self.notify("📂 Menü kinyitva", "info", 1500)
+                self.notify(self.tr("ui_sidebar_opened"), "info", 1500)
             else:
                 # Összecsukás
                 self.sidebar.configure(width=60)
                 self.sidebar.pack_propagate(False)
                 self._sidebar_collapsed = True
-                self.notify("📁 Menü összecsukva", "info", 1500)
+                self.notify(self.tr("ui_sidebar_collapsed"), "info", 1500)
         except Exception as e:
             print(f"[UI] Sidebar toggle hiba: {e}")
 

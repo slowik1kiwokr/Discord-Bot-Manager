@@ -8,7 +8,6 @@ import customtkinter as ctk
 from tkinter import filedialog, messagebox
 
 import modules.config as config
-from modules.languages import LANGUAGES
 from modules.templates import (
     VERSION_FILE_TEMPLATE,
     BOT_PY_TEMPLATE,
@@ -16,20 +15,20 @@ from modules.templates import (
 )
 
 
-# --- Szükséges csomagok ---
+# --- Szükséges csomagok (pip_név, import_név, desc_kulcs) ---
 REQUIRED_PACKAGES = [
-    ("customtkinter", "customtkinter", "Modern UI keretrendszer"),
-    ("psutil", "psutil", "Rendszer erőforrás figyelés"),
-    ("matplotlib", "matplotlib", "Grafikonok"),
-    ("pystray", "pystray", "Rendszertálca ikon"),
-    ("Pillow", "PIL", "Képkezelés"),
-    ("pypresence", "pypresence", "Discord Rich Presence"),
-    ("discord.py", "discord", "Discord API"),
+    ("customtkinter", "customtkinter", "dep_customtkinter_desc"),
+    ("psutil", "psutil", "dep_psutil_desc"),
+    ("matplotlib", "matplotlib", "dep_matplotlib_desc"),
+    ("pystray", "pystray", "dep_pystray_desc"),
+    ("Pillow", "PIL", "dep_pillow_desc"),
+    ("pypresence", "pypresence", "dep_pypresence_desc"),
+    ("discord.py", "discord", "dep_discord_desc"),
 ]
 
 OPTIONAL_PACKAGES = [
-    ("wmi", "wmi", "Windows hőmérséklet olvasás"),
-    ("requests", "requests", "HTTP kérések"),
+    ("wmi", "wmi", "dep_wmi_desc"),
+    ("requests", "requests", "dep_requests_desc"),
 ]
 
 
@@ -40,7 +39,7 @@ class WindowIntegrationMixin:
     # ==================================================================
     def open_alapok_window(self):
         win = ctk.CTkToplevel(self)
-        win.title("📌 Alapok / Integráció")
+        win.title(self.tr("integration_title"))
         win.geometry("900x760")
         win.minsize(780, 560)
         win.grab_set()
@@ -54,13 +53,13 @@ class WindowIntegrationMixin:
         header.pack(fill="x")
         header.pack_propagate(False)
         ctk.CTkLabel(
-            header, text="📌   Panel Integráció",
+            header, text=self.tr("integration_header"),
             font=("Arial", 20, "bold"), text_color="white"
         ).pack(side="left", padx=24, pady=18)
 
         # Függőségek gomb
         ctk.CTkButton(
-            header, text="🔧  Függőségek",
+            header, text=self.tr("integration_deps_btn"),
             fg_color="#2c3e50", hover_color="#34495e",
             width=140, height=36,
             command=lambda: self._open_dependencies_window(win)
@@ -72,22 +71,19 @@ class WindowIntegrationMixin:
 
         # --- Választó ---
         ctk.CTkLabel(
-            scroll, text="Üdvözlünk a panel integrációban! 🎉",
+            scroll, text=self.tr("integration_welcome"),
             font=("Arial", 18, "bold"), anchor="w"
         ).pack(fill="x", pady=(10, 4))
 
         ctk.CTkLabel(
             scroll,
-            text="A panel 3 fájlt használ a bot oldalán:\n"
-                 "   • bot.py — a bot fő fájlja\n"
-                 "   • panel_integrity.py — a panel összes funkciója\n"
-                 "   • version.py — bot név, verzió, token",
+            text=self.tr("integration_intro"),
             font=("Arial", 11), text_color="#8a8e98",
             justify="left", anchor="w",
         ).pack(fill="x", pady=(0, 16))
 
         ctk.CTkLabel(
-            scroll, text="Van már működő botod?",
+            scroll, text=self.tr("integration_have_bot_q"),
             font=("Arial", 14, "bold"), anchor="w"
         ).pack(fill="x", pady=(0, 8))
 
@@ -96,7 +92,7 @@ class WindowIntegrationMixin:
 
         ctk.CTkButton(
             choice_frame,
-            text="✅  Van már botom\n(csak integrációt adok hozzá)",
+            text=self.tr("integration_btn_existing"),
             fg_color="#27ae60", hover_color="#2ecc71",
             height=70, width=380,
             font=("Arial", 13, "bold"),
@@ -105,7 +101,7 @@ class WindowIntegrationMixin:
 
         ctk.CTkButton(
             choice_frame,
-            text="🆕  Új botot készítek\n(teljes sablon)",
+            text=self.tr("integration_btn_new"),
             fg_color="#3498db", hover_color="#5dade2",
             height=70, width=380,
             font=("Arial", 13, "bold"),
@@ -117,7 +113,7 @@ class WindowIntegrationMixin:
     # ==================================================================
     def _show_existing_flow(self, parent):
         win = ctk.CTkToplevel(parent)
-        win.title("✅  Integráció hozzáadása")
+        win.title(self.tr("integration_existing_title"))
         win.geometry("820x700")
         win.grab_set()
         win.update_idletasks()
@@ -129,7 +125,7 @@ class WindowIntegrationMixin:
         header.pack(fill="x")
         header.pack_propagate(False)
         ctk.CTkLabel(
-            header, text="✅   Integráció hozzáadása meglévő bothoz",
+            header, text=self.tr("integration_existing_header"),
             font=("Arial", 16, "bold"), text_color="white"
         ).pack(side="left", padx=24, pady=16)
 
@@ -138,13 +134,14 @@ class WindowIntegrationMixin:
 
         # Lépések
         ctk.CTkLabel(
-            scroll, text="📋  Lépések", font=("Arial", 15, "bold"), anchor="w"
+            scroll, text=self.tr("integration_steps_title"),
+            font=("Arial", 15, "bold"), anchor="w"
         ).pack(fill="x", pady=(0, 8))
 
         steps = [
-            ("1.", "Tallózd be a botod fő .py fájlját a panelen (📁 Tallózás)."),
-            ("2.", "Kattints az alábbi „📥 Panel integráció hozzáadása” gombra — létrejön a panel_integrity.py a bot mappájában."),
-            ("3.", "Nyisd meg a bot.py fájlt, és az on_ready() függvényben add hozzá:"),
+            ("1.", self.tr("integration_step1")),
+            ("2.", self.tr("integration_step2")),
+            ("3.", self.tr("integration_step3")),
         ]
         for num, text in steps:
             row = ctk.CTkFrame(scroll, fg_color="transparent")
@@ -166,15 +163,15 @@ class WindowIntegrationMixin:
         code_box.configure(state="disabled")
 
         for text in [
-            "4.  Indítsd újra a botot.",
-            "5.  Discordban írd be: /connect panel_id:<a panel azonosítója>",
+            self.tr("integration_step4"),
+            self.tr("integration_step5"),
         ]:
             ctk.CTkLabel(scroll, text=text, font=("Arial", 12),
                           anchor="w", justify="left").pack(fill="x", pady=2)
 
         # panel_integrity.py kód
         ctk.CTkLabel(
-            scroll, text="📄  panel_integrity.py tartalma",
+            scroll, text=self.tr("integration_code_title"),
             font=("Arial", 14, "bold"), anchor="w"
         ).pack(fill="x", pady=(18, 6))
 
@@ -188,14 +185,14 @@ class WindowIntegrationMixin:
         btns.pack(fill="x", padx=16, pady=(0, 14))
 
         ctk.CTkButton(
-            btns, text="📥  Panel integráció hozzáadása",
+            btns, text=self.tr("integration_add_btn"),
             fg_color="#27ae60", hover_color="#2ecc71",
             height=44, width=280, font=("Arial", 13, "bold"),
             command=lambda: self._save_panel_integrity(win),
         ).pack(side="left", padx=4)
 
         ctk.CTkButton(
-            btns, text="Bezárás",
+            btns, text=self.tr("common_close_btn"),
             fg_color="#555555", hover_color="#666666",
             height=44, width=120,
             command=win.destroy,
@@ -206,7 +203,7 @@ class WindowIntegrationMixin:
     # ==================================================================
     def _show_new_flow(self, parent):
         win = ctk.CTkToplevel(parent)
-        win.title("🆕  Új bot készítése")
+        win.title(self.tr("integration_new_title"))
         win.geometry("820x760")
         win.grab_set()
         win.update_idletasks()
@@ -218,7 +215,7 @@ class WindowIntegrationMixin:
         header.pack(fill="x")
         header.pack_propagate(False)
         ctk.CTkLabel(
-            header, text="🆕   Új bot készítése — teljes sablon",
+            header, text=self.tr("integration_new_header"),
             font=("Arial", 16, "bold"), text_color="white"
         ).pack(side="left", padx=24, pady=16)
 
@@ -227,14 +224,13 @@ class WindowIntegrationMixin:
 
         ctk.CTkLabel(
             scroll,
-            text="A panel 3 fájlt generál a számodra. Válaszd ki a célmappát,\n"
-                 "és a gombokkal külön-külön is mentheted őket.",
+            text=self.tr("integration_new_intro"),
             font=("Arial", 11), text_color="#8a8e98",
             justify="left", anchor="w",
         ).pack(fill="x", pady=(0, 12))
 
         # 1) bot.py
-        ctk.CTkLabel(scroll, text="📄  1. bot.py — a bot fő fájlja",
+        ctk.CTkLabel(scroll, text=self.tr("integration_file_bot_lbl"),
                       font=("Arial", 13, "bold"), anchor="w").pack(fill="x", pady=(8, 4))
         box_bot = ctk.CTkTextbox(scroll, height=200, font=("Consolas", 10))
         box_bot.pack(fill="x", pady=(0, 8))
@@ -242,7 +238,7 @@ class WindowIntegrationMixin:
         box_bot.configure(state="disabled")
 
         # 2) panel_integrity.py
-        ctk.CTkLabel(scroll, text="📄  2. panel_integrity.py — a panel összes funkciója",
+        ctk.CTkLabel(scroll, text=self.tr("integration_file_panel_lbl"),
                       font=("Arial", 13, "bold"), anchor="w").pack(fill="x", pady=(8, 4))
         box_panel = ctk.CTkTextbox(scroll, height=200, font=("Consolas", 10))
         box_panel.pack(fill="x", pady=(0, 8))
@@ -250,7 +246,7 @@ class WindowIntegrationMixin:
         box_panel.configure(state="disabled")
 
         # 3) version.py
-        ctk.CTkLabel(scroll, text="📄  3. version.py — bot név, verzió, token",
+        ctk.CTkLabel(scroll, text=self.tr("integration_file_version_lbl"),
                       font=("Arial", 13, "bold"), anchor="w").pack(fill="x", pady=(8, 4))
         box_version = ctk.CTkTextbox(scroll, height=80, font=("Consolas", 10))
         box_version.pack(fill="x", pady=(0, 8))
@@ -269,7 +265,7 @@ class WindowIntegrationMixin:
 
         ctk.CTkLabel(
             token_card,
-            text="🔑  Bot Token beállítása",
+            text=self.tr("integration_token_card_title"),
             font=("Arial", 13, "bold"),
             text_color="#e67e22",
             anchor="w",
@@ -277,9 +273,7 @@ class WindowIntegrationMixin:
 
         ctk.CTkLabel(
             token_card,
-            text="A bot tokent a „Bot adatai” ablakban tudod beállítani.\n"
-                 "Ott a nevet, verziót és a tokent is szerkesztheted — a panel\n"
-                 "automatikusan elmenti a version.py fájlba.",
+            text=self.tr("integration_token_card_hint"),
             font=("Arial", 11),
             text_color="#b8bcc6",
             justify="left",
@@ -288,7 +282,7 @@ class WindowIntegrationMixin:
 
         ctk.CTkButton(
             token_card,
-            text="🔑  Bot adatai szerkesztése",
+            text=self.tr("integration_token_edit_btn"),
             fg_color="#e67e22", hover_color="#d35400",
             height=38, width=240,
             font=("Arial", 12, "bold"),
@@ -300,14 +294,14 @@ class WindowIntegrationMixin:
         btns.pack(fill="x", padx=16, pady=(0, 14))
 
         ctk.CTkButton(
-            btns, text="📁  Összes fájl generálása egy mappába",
+            btns, text=self.tr("integration_generate_all_btn"),
             fg_color="#2980b9", hover_color="#3498db",
             height=44, width=320, font=("Arial", 13, "bold"),
             command=lambda: self._generate_full_template(win),
         ).pack(side="left", padx=4)
 
         ctk.CTkButton(
-            btns, text="Bezárás",
+            btns, text=self.tr("common_close_btn"),
             fg_color="#555555", hover_color="#666666",
             height=44, width=120,
             command=win.destroy,
@@ -321,8 +315,8 @@ class WindowIntegrationMixin:
         script_path = self.entry_path.get().strip()
         if not script_path or not os.path.exists(script_path):
             messagebox.showwarning(
-                "Figyelem",
-                "Előbb tallózd be a bot fő .py fájlját a panelen (📁 Tallózás)!",
+                self.tr("common_warning_title"),
+                self.tr("integration_need_bot"),
                 parent=parent,
             )
             return None
@@ -337,19 +331,18 @@ class WindowIntegrationMixin:
             with open(target, "w", encoding="utf-8") as f:
                 f.write(PANEL_INTEGRITY_CODE)
             messagebox.showinfo(
-                "✅ Siker",
-                f"panel_integrity.py elkészült:\n{bot_dir}\n\n"
-                "Ne felejtsd el a bot.py on_ready() függvényébe:\n"
-                '    await bot.load_extension("panel_integrity")',
+                self.tr("integration_saved_title"),
+                self.tr("integration_saved_msg", dir=bot_dir),
                 parent=parent,
             )
-            self.log_event("EVENT", f"[INTEGRATION] panel_integrity.py mentve: {target}")
-            self.notify("✅ Panel integráció hozzáadva", "success")
+            self.log_event("EVENT", self.tr("integration_log_saved", path=target))
+            self.notify(self.tr("integration_saved_toast"), "success")
         except OSError as e:
-            messagebox.showerror("Hiba", str(e), parent=parent)
+            messagebox.showerror(self.tr("common_error_title"), str(e), parent=parent)
 
     def _generate_full_template(self, parent):
-        folder = filedialog.askdirectory(parent=parent, title="Válaszd ki a célmappát")
+        folder = filedialog.askdirectory(parent=parent,
+                                          title=self.tr("integration_choose_folder"))
         if not folder:
             return
         try:
@@ -360,28 +353,22 @@ class WindowIntegrationMixin:
             with open(os.path.join(folder, "version.py"), "w", encoding="utf-8") as f:
                 f.write(VERSION_FILE_TEMPLATE)
             messagebox.showinfo(
-                "✅ Siker",
-                f"3 fájl elkészült:\n{folder}\n\n"
-                "  • bot.py\n"
-                "  • panel_integrity.py\n"
-                "  • version.py\n\n"
-                "⚠️ Ne felejtsd el a BOT_TOKEN-t kitölteni!",
+                self.tr("integration_saved_title"),
+                self.tr("integration_generated_msg", folder=folder),
                 parent=parent,
             )
-            self.log_event("EVENT", f"[INTEGRATION] Teljes sablon generálva: {folder}")
-            self.notify("✅ Sablon generálva", "success")
+            self.log_event("EVENT", self.tr("integration_log_generated", folder=folder))
+            self.notify(self.tr("integration_generated_toast"), "success")
         except OSError as e:
-            messagebox.showerror("Hiba", str(e), parent=parent)
+            messagebox.showerror(self.tr("common_error_title"), str(e), parent=parent)
 
     def _open_token_editor(self):
         """Megnyitja a Bot adatai szerkesztőt, és figyelmeztet, ha nincs tallózva bot."""
         script_path = self.entry_path.get().strip()
         if not script_path or not os.path.exists(script_path):
             messagebox.showwarning(
-                "Figyelem",
-                "Előbb tallózd be a bot fő .py fájlját a panelen (📁 Tallózás)!\n\n"
-                "A Bot adatai szerkesztő a bot mappájából olvassa a version.py-t,\n"
-                "ezért tudnia kell, hol van a bot.",
+                self.tr("common_warning_title"),
+                self.tr("integration_token_need_bot"),
             )
             return
         # Megnyitja a Bot adatai szerkesztőt
@@ -392,7 +379,7 @@ class WindowIntegrationMixin:
     # ==================================================================
     def _open_dependencies_window(self, parent):
         win = ctk.CTkToplevel(parent)
-        win.title("🔧  Függőségek")
+        win.title(self.tr("deps_title"))
         win.geometry("700x700")
         win.grab_set()
         win.update_idletasks()
@@ -404,14 +391,13 @@ class WindowIntegrationMixin:
         header.pack(fill="x")
         header.pack_propagate(False)
         ctk.CTkLabel(
-            header, text="🔧   Panel függőségek",
+            header, text=self.tr("deps_header"),
             font=("Arial", 16, "bold"), text_color="white"
         ).pack(side="left", padx=24, pady=16)
 
         ctk.CTkLabel(
             win,
-            text="Ellenőrizd, hogy minden szükséges Python csomag telepítve van-e.\n"
-                 "A hiányzó csomagokat egy kattintással telepítheted.",
+            text=self.tr("deps_intro"),
             font=("Arial", 11), text_color="#8a8e98", justify="center",
         ).pack(pady=(12, 6))
 
@@ -442,7 +428,7 @@ class WindowIntegrationMixin:
             all_pkgs = [(p, i, d, "required") for p, i, d in REQUIRED_PACKAGES]
             all_pkgs += [(p, i, d, "optional") for p, i, d in OPTIONAL_PACKAGES]
 
-            for pip_name, import_name, desc, category in all_pkgs:
+            for pip_name, import_name, desc_key, category in all_pkgs:
                 row = ctk.CTkFrame(list_frame, fg_color="#252932", corner_radius=8)
                 row.pack(fill="x", padx=4, pady=3)
 
@@ -457,10 +443,12 @@ class WindowIntegrationMixin:
                 info.pack(side="left", fill="x", expand=True, pady=8)
                 ctk.CTkLabel(info, text=pip_name, font=("Consolas", 12, "bold"),
                               text_color=color, anchor="w").pack(fill="x")
-                ctk.CTkLabel(info, text=desc, font=("Arial", 10),
+                ctk.CTkLabel(info, text=self.tr(desc_key), font=("Arial", 10),
                               text_color="#888", anchor="w").pack(fill="x")
 
-                ctk.CTkLabel(row, text=f"v{version}" if installed else "hiányzik",
+                version_text = (self.tr("deps_version", version=version)
+                                 if installed else self.tr("deps_missing"))
+                ctk.CTkLabel(row, text=version_text,
                               font=("Consolas", 10, "bold"),
                               text_color=color, width=100).pack(side="right", padx=10)
 
@@ -475,7 +463,7 @@ class WindowIntegrationMixin:
 
         output = ctk.CTkTextbox(win, height=110, font=("Consolas", 10))
         output.pack(fill="x", padx=14, pady=(0, 10))
-        output.insert("1.0", "Kattints az „Ellenőrzés” gombra.\n")
+        output.insert("1.0", self.tr("deps_output_hint"))
         output.configure(state="disabled")
 
         def log(text):
@@ -491,20 +479,23 @@ class WindowIntegrationMixin:
             total = len(REQUIRED_PACKAGES)
             if req_ok == total:
                 status_lbl.configure(
-                    text=f"✅ Minden szükséges csomag telepítve ({req_ok}/{total})",
+                    text=self.tr("deps_all_ok", ok=req_ok, total=total),
                     text_color="#2ecc71")
             else:
                 status_lbl.configure(
-                    text=f"❌ {total - req_ok} szükséges csomag hiányzik ({req_ok}/{total})",
+                    text=self.tr("deps_some_missing",
+                                  missing=total - req_ok, ok=req_ok, total=total),
                     text_color="#e74c3c")
 
         def install(packages, reinstall=False):
             if not packages:
-                messagebox.showinfo("Info", "Minden csomag telepítve van!", parent=win)
+                messagebox.showinfo(self.tr("deps_info_title"),
+                                     self.tr("deps_all_installed"), parent=win)
                 return
-            log(f"\n{'='*60}\n📦 Telepítés indul: {len(packages)} csomag\n{'='*60}\n")
+            log(self.tr("deps_log_start", count=len(packages)))
             progress.set(0)
-            status_lbl.configure(text="⏳ Telepítés folyamatban...", text_color="#f39c12")
+            status_lbl.configure(text=self.tr("deps_status_installing"),
+                                  text_color="#f39c12")
 
             def worker():
                 total = len(packages)
@@ -515,9 +506,10 @@ class WindowIntegrationMixin:
                     cmd.append(pkg)
 
                     self.after(0, lambda p=pkg, idx=i, t=total: (
-                        log(f"\n[{idx}/{t}] {p}\n"),
+                        log(self.tr("deps_log_item", idx=idx, total=t, pkg=p)),
                         progress.set(idx / t),
-                        status_lbl.configure(text=f"⏳ [{idx}/{t}] {p}...")
+                        status_lbl.configure(
+                            text=self.tr("deps_status_item", idx=idx, total=t, pkg=p))
                     ))
 
                     try:
@@ -529,12 +521,14 @@ class WindowIntegrationMixin:
                             self.after(0, lambda l=line: log(l))
                         proc.wait()
                     except Exception as e:
-                        self.after(0, lambda e=e, p=pkg: log(f"❌ {p}: {e}\n"))
+                        self.after(0, lambda e=e, p=pkg: log(
+                            self.tr("deps_log_error", pkg=p, error=e)))
 
                 self.after(0, lambda: (
                     progress.set(1.0),
-                    log(f"\n✅ Telepítés befejezve.\n"),
-                    status_lbl.configure(text="✅ Kész", text_color="#2ecc71"),
+                    log(self.tr("deps_log_done")),
+                    status_lbl.configure(text=self.tr("deps_status_done"),
+                                          text_color="#2ecc71"),
                     refresh()
                 ))
 
@@ -545,13 +539,14 @@ class WindowIntegrationMixin:
             missing = [p for p, _, _ in REQUIRED_PACKAGES
                         if not dep_rows.get(p, {}).get("installed")]
             if not missing:
-                messagebox.showinfo("Info", "Minden szükséges csomag telepítve van!", parent=win)
+                messagebox.showinfo(self.tr("deps_info_title"),
+                                     self.tr("deps_all_installed"), parent=win)
                 return
             install(missing)
 
         def reinstall_all():
-            if not messagebox.askyesno("Újratelepítés",
-                                         "Újratelepíti az összes csomagot?",
+            if not messagebox.askyesno(self.tr("deps_reinstall_title"),
+                                         self.tr("deps_reinstall_confirm"),
                                          parent=win):
                 return
             install([p for p, _, _ in REQUIRED_PACKAGES], reinstall=True)
@@ -559,11 +554,11 @@ class WindowIntegrationMixin:
         btns = ctk.CTkFrame(win, fg_color="transparent")
         btns.pack(fill="x", padx=14, pady=(0, 12))
 
-        ctk.CTkButton(btns, text="🔍  Ellenőrzés", fg_color="#3498db",
+        ctk.CTkButton(btns, text=self.tr("deps_check_btn"), fg_color="#3498db",
                        width=130, height=38, command=refresh).pack(side="left", padx=4)
-        ctk.CTkButton(btns, text="📥  Hiányzók telepítése", fg_color="#27ae60",
+        ctk.CTkButton(btns, text=self.tr("deps_install_missing_btn"), fg_color="#27ae60",
                        width=180, height=38, command=install_missing).pack(side="left", padx=4)
-        ctk.CTkButton(btns, text="🔄  Újratelepít", fg_color="#e67e22",
+        ctk.CTkButton(btns, text=self.tr("deps_reinstall_btn"), fg_color="#e67e22",
                        width=140, height=38, command=reinstall_all).pack(side="left", padx=4)
 
         refresh()

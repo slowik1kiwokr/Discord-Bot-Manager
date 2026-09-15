@@ -41,7 +41,7 @@ class HotkeysMixin:
         # Gyorsgombok súgó
         self.bind("<F2>", self._hk_show_help)
 
-        self.log_event("EVENT", "[HOTKEYS] Gyorsgombok regisztrálva.")
+        self.log_event("EVENT", self.tr("hotkeys_registered_log"))
 
     # ------------------------------------------------------------------
     #  Segédfüggvény: beviteli mezőben vagyunk-e?
@@ -68,9 +68,9 @@ class HotkeysMixin:
             return
         try:
             self.save_config()
-            self.notify("💾 Beállítások mentve", "success")
+            self.notify(self.tr("hotkeys_saved"), "success")
         except Exception as e:
-            self.notify(f"Mentési hiba: {e}", "error")
+            self.notify(self.tr("hotkeys_save_error", error=e), "error")
         return "break"
 
     def _hk_backup(self, event=None):
@@ -78,24 +78,24 @@ class HotkeysMixin:
             return
         try:
             self.create_backup(show_message=False)
-            self.notify("💾 Biztonsági mentés elkészült", "success")
+            self.notify(self.tr("hotkeys_backup_done"), "success")
         except Exception as e:
-            self.notify(f"Mentési hiba: {e}", "error")
+            self.notify(self.tr("hotkeys_save_error", error=e), "error")
         return "break"
 
     def _hk_restart_all(self, event=None):
         if self._in_text_input():
             return
         if not messagebox.askyesno(
-            "Megerősítés",
-            "Biztosan újraindítod az ÖSSZES botot?"
+            self.tr("hotkeys_confirm_title"),
+            self.tr("hotkeys_restart_all_confirm")
         ):
             return
         try:
             self.restart_all_bots()
-            self.notify("🔄 Összes bot újraindítva", "info")
+            self.notify(self.tr("hotkeys_restart_all_done"), "info")
         except Exception as e:
-            self.notify(f"Hiba: {e}", "error")
+            self.notify(self.tr("hotkeys_error", error=e), "error")
         return "break"
 
     def _hk_focus_search(self, event=None):
@@ -109,7 +109,7 @@ class HotkeysMixin:
         if self._in_text_input():
             return
         self.clear_logs()
-        self.notify("🧹 Naplók törölve", "info")
+        self.notify(self.tr("hotkeys_logs_cleared"), "info")
         return "break"
 
     def _hk_tutorial(self, event=None):
@@ -135,19 +135,6 @@ class HotkeysMixin:
 
     def _hk_show_help(self, event=None):
         """F2 — gyorsgombok listája."""
-        help_text = (
-            "⌨️  Gyorsgombok\n\n"
-            "Ctrl + S     Beállítások mentése\n"
-            "Ctrl + B     Biztonsági mentés készítése\n"
-            "Ctrl + R     Összes bot újraindítása\n"
-            "Ctrl + F     Keresés a naplókban\n"
-            "Ctrl + L     Naplók törlése\n"
-            "Ctrl + T     Tutorial megnyitása\n"
-            "Ctrl + ,     Beállítások megnyitása\n"
-            "Ctrl + W     Panel bezárása\n"
-            "F1           Tutorial\n"
-            "F2           Ez a súgó\n"
-            "F5           Statisztikák frissítése\n"
-        )
-        messagebox.showinfo("⌨️ Gyorsgombok", help_text)
+        help_text = self.tr("hotkeys_help_text")
+        messagebox.showinfo(self.tr("hotkeys_help_title"), help_text)
         return "break"

@@ -95,6 +95,7 @@ class WindowGithubMixin:
         current = None
 
         version_pattern = re.compile(r"^[vV]?\s*(\d+\.\d+(?:\.\d+)?)", re.IGNORECASE)
+        general_title = self.tr("update_changelog_general")
 
         for line in lines:
             stripped = line.strip()
@@ -120,7 +121,7 @@ class WindowGithubMixin:
                     if not sections and current is None:
                         current = {
                             "version": "",
-                            "title": "Általános",
+                            "title": general_title,
                             "content": line + "\n",
                         }
 
@@ -156,7 +157,7 @@ class WindowGithubMixin:
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 return r.read().decode("utf-8").strip()
         except Exception as e:
-            print(f"[UPDATE] Verzió lekérdezési hiba: {e}")
+            print(self.tr("update_log_version_fetch_error", error=e))
             return None
 
     def fetch_changelog(self, timeout=8):
@@ -175,7 +176,7 @@ class WindowGithubMixin:
     # ==================================================================
     def check_for_updates(self, silent=True):
         if not silent:
-            self.log_event("EVENT", "[UPDATE] Manuális frissítésellenőrzés indítva.")
+            self.log_event("EVENT", self.tr("update_log_manual_check"))
 
         def worker():
             remote = self.fetch_remote_version()
@@ -184,9 +185,8 @@ class WindowGithubMixin:
             if remote is None:
                 if not silent:
                     self.after(0, lambda: messagebox.showerror(
-                        "Frissítés",
-                        "Nem sikerült kapcsolódni a GitHubhoz.\n"
-                        "Ellenőrizd az internetkapcsolatot!"
+                        self.tr("update_title"),
+                        self.tr("update_conn_error")
                     ))
                 return
 
@@ -197,8 +197,8 @@ class WindowGithubMixin:
             if remote == local:
                 if not silent:
                     self.after(0, lambda: messagebox.showinfo(
-                        "Frissítés",
-                        f"A panel naprakész!\n\nJelenlegi verzió: {local}"
+                        self.tr("update_title"),
+                        self.tr("update_up_to_date", version=local)
                     ))
                 return
 
@@ -244,7 +244,7 @@ class WindowGithubMixin:
             interval_minutes = getattr(self, "update_check_interval_minutes", 60)
 
         if interval_minutes <= 0:
-            self.log_event("EVENT", "[UPDATE] Auto-ellenőrzés kikapcsolva.")
+            self.log_event("EVENT", self.tr("update_log_auto_disabled"))
             return
 
         # Induláskor rögtön ellenőrzünk (ha kell)
@@ -283,7 +283,7 @@ class WindowGithubMixin:
         self._update_dialog_open = True
 
         win = ctk.CTkToplevel(self)
-        win.title("🚀 Frissítés elérhető")
+        win.title(self.tr("update_window_title"))
         try:
             win.attributes("-topmost", True)
             win.lift()
@@ -306,7 +306,7 @@ class WindowGithubMixin:
         header.pack_propagate(False)
 
         ctk.CTkLabel(
-            header, text="🚀  Új verzió érhető el!",
+            header, text=self.tr("update_header"),
             font=("Arial", 22, "bold"), text_color="white"
         ).pack(pady=(18, 2))
 
@@ -316,7 +316,7 @@ class WindowGithubMixin:
         ).pack(pady=(0, 12))
 
         # --- Changelog cím ---
-        title_text = "📝  Újdonságok"
+        title_text = self.tr("update_news_default")
         if section and section.get("title"):
             title_text = f"📝  {section['title']}"
 
@@ -342,11 +342,7 @@ class WindowGithubMixin:
             content = content.replace("  • ", "  ▸  ").replace("  - ", "  ▸  ")
             changelog_box.insert("1.0", content)
         else:
-            changelog_box.insert(
-                "1.0",
-                "ℹ️  Ehhez a verzióhoz nincs changelog bejegyzés.\n\n"
-                "A frissítés a legújabb kódot tölti le a GitHub-ról."
-            )
+            changelog_box.insert("1.0", self.tr("update_no_changelog"))
         changelog_box.configure(state="disabled")
 
         # --- Info ---
@@ -356,7 +352,7 @@ class WindowGithubMixin:
 
         ctk.CTkLabel(
             info,
-            text="ℹ️   A mentések, pluginok, beállítások és botok megmaradnak.",
+            text=self.tr("update_safe_info"),
             font=("Arial", 11), text_color="#b8bcc6"
         ).pack(padx=14, pady=10)
 
@@ -387,7 +383,7 @@ class WindowGithubMixin:
             ).start()
 
         yes_btn = ctk.CTkButton(
-            btn_frame, text="✅   Frissítés letöltése",
+            btn_frame, text=self.tr("update_download_btn"),
             fg_color="#27ae60", hover_color="#2ecc71",
             width=200, height=46, font=("Arial", 13, "bold"),
             corner_radius=8, command=start_download
@@ -395,7 +391,7 @@ class WindowGithubMixin:
         yes_btn.pack(side="left", padx=4)
 
         later_btn = ctk.CTkButton(
-            btn_frame, text="⏰   Később",
+            btn_frame, text=self.tr("update_later_btn"),
             fg_color="#f39c12", hover_color="#e67e22",
             width=130, height=46, font=("Arial", 13),
             corner_radius=8,
@@ -403,7 +399,7 @@ class WindowGithubMixin:
         )
 
         skip_btn = ctk.CTkButton(
-            btn_frame, text="❌   Kihagyás",
+            btn_frame, text=self.tr("update_skip_btn"),
             fg_color="#7f8c8d", hover_color="#95a5a6",
             width=130, height=46, font=("Arial", 13),
             corner_radius=8,
@@ -413,7 +409,7 @@ class WindowGithubMixin:
 
         # --- Előző frissítések gomb ---
         history_btn = ctk.CTkButton(
-            win, text="📜   Előző frissítések megtekintése",
+            win, text=self.tr("update_history_btn"),
             fg_color="transparent", hover_color="#2f3542",
             text_color="#8a8e98", border_width=1, border_color="#2f3542",
             width=300, height=34, font=("Arial", 11),
@@ -427,15 +423,14 @@ class WindowGithubMixin:
     # ==================================================================
     def _skip_this_version(self, version, win):
         if not messagebox.askyesno(
-            "Verzió kihagyása",
-            f"Biztosan kihagyod a(z) {version} verziót?\n\n"
-            f"Amíg újra nem indítod a panelt, nem fogod látni ezt a jelzést.",
+            self.tr("update_skip_title"),
+            self.tr("update_skip_confirm", version=version),
             parent=win
         ):
             return
         self.skipped_version = version
         self._update_dialog_open = False
-        self.log_event("EVENT", f"[UPDATE] Kihagyott verzió: {version}")
+        self.log_event("EVENT", self.tr("update_log_skipped", version=version))
         win.destroy()
 
     # ==================================================================
@@ -443,7 +438,7 @@ class WindowGithubMixin:
     # ==================================================================
     def open_update_history_window(self, all_sections=None):
         win = ctk.CTkToplevel(self)
-        win.title("📜 Frissítések története")
+        win.title(self.tr("update_history_window_title"))
         win.geometry("760x720")
         win.minsize(640, 500)
         win.grab_set()
@@ -457,12 +452,13 @@ class WindowGithubMixin:
         header.pack(fill="x")
         header.pack_propagate(False)
         ctk.CTkLabel(
-            header, text="📜   Frissítések története",
+            header, text=self.tr("update_history_header"),
             font=("Arial", 18, "bold"), text_color="white"
         ).pack(side="left", padx=24, pady=18)
 
         ctk.CTkLabel(
-            header, text=f"Jelenlegi: v{self.get_local_version()}",
+            header,
+            text=self.tr("update_history_current", version=self.get_local_version()),
             font=("Arial", 11), text_color="#e0c0f0"
         ).pack(side="right", padx=24)
 
@@ -480,7 +476,7 @@ class WindowGithubMixin:
 
         if not sections and not local_history:
             ctk.CTkLabel(
-                scroll, text="Nincs elérhető frissítési előzmény.",
+                scroll, text=self.tr("update_history_empty"),
                 font=("Arial", 13), text_color="#6a6e78"
             ).pack(pady=60)
         else:
@@ -523,7 +519,7 @@ class WindowGithubMixin:
 
                 if is_current:
                     ctk.CTkLabel(
-                        title_row, text="JELENLEGI",
+                        title_row, text=self.tr("update_history_current_badge"),
                         font=("Arial", 9, "bold"),
                         text_color="#2ecc71",
                     ).pack(side="right", padx=4)
@@ -535,7 +531,7 @@ class WindowGithubMixin:
                 )
                 content_box.pack(fill="x", padx=14, pady=(0, 12))
 
-                content = section.get("content", "").strip() or "(nincs leírás)"
+                content = section.get("content", "").strip() or self.tr("update_history_no_desc")
                 content = content.replace("  • ", "  ▸  ").replace("  - ", "  ▸  ")
                 content_box.insert("1.0", content)
                 content_box.configure(state="disabled")
@@ -560,14 +556,14 @@ class WindowGithubMixin:
         btns.pack(fill="x", padx=12, pady=(0, 12))
 
         ctk.CTkButton(
-            btns, text="🔄   Frissítés a GitHubról",
+            btns, text=self.tr("update_history_refresh_btn"),
             fg_color="#3498db", hover_color="#5dade2",
             width=220, height=40, font=("Arial", 12, "bold"),
             command=lambda: (win.destroy(), self.check_for_updates(silent=False))
         ).pack(side="left", padx=4)
 
         ctk.CTkButton(
-            btns, text="Bezárás",
+            btns, text=self.tr("common_close_btn"),
             fg_color="#555555", hover_color="#666666",
             width=120, height=40, font=("Arial", 12),
             command=win.destroy
@@ -594,7 +590,7 @@ class WindowGithubMixin:
                 if value is not None:
                     self.after(0, lambda: progress.set(value))
 
-            set_status("📥 ZIP letöltése a GitHub-ról...", 0.1)
+            set_status(self.tr("update_status_downloading"), 0.1)
 
             temp_zip = os.path.join(config.SCRIPT_DIR, "update.zip")
             extract_dir = os.path.join(config.SCRIPT_DIR, "update_extract")
@@ -607,11 +603,11 @@ class WindowGithubMixin:
                         os.remove(path)
 
             urllib.request.urlretrieve(ZIP_URL, temp_zip)
-            set_status("📦 Kicsomagolás...", 0.4)
+            set_status(self.tr("update_status_extracting"), 0.4)
 
             with zipfile.ZipFile(temp_zip, "r") as zf:
                 zf.extractall(extract_dir)
-            set_status("🔍 Fájlok előkészítése...", 0.55)
+            set_status(self.tr("update_status_preparing"), 0.55)
 
             root_folder = os.listdir(extract_dir)[0]
             full_root = os.path.join(extract_dir, root_folder)
@@ -621,7 +617,7 @@ class WindowGithubMixin:
             if os.path.isdir(candidate):
                 panel_folder = candidate
 
-            set_status("🛑 Futó botok leállítása...", 0.65)
+            set_status(self.tr("update_status_stopping_bots"), 0.65)
             for bot in self.bots.values():
                 if bot.get("is_running") and bot.get("process"):
                     try:
@@ -629,7 +625,7 @@ class WindowGithubMixin:
                     except Exception:
                         pass
 
-            set_status("💾 Fájlok frissítése...", 0.75)
+            set_status(self.tr("update_status_updating_files"), 0.75)
             for item in os.listdir(panel_folder):
                 if item in PROTECTED_ITEMS:
                     continue
@@ -643,14 +639,14 @@ class WindowGithubMixin:
                 else:
                     shutil.copy2(src, dst)
 
-            set_status("🏷️ Verziószám frissítése...", 0.9)
+            set_status(self.tr("update_status_version"), 0.9)
 
             try:
                 with open(os.path.join(config.SCRIPT_DIR, "version.py"),
                           "w", encoding="utf-8") as vf:
                     vf.write(f'version = "{remote_version}"\n')
             except Exception as e:
-                print(f"[UPDATE] version.py írási hiba: {e}")
+                print(self.tr("update_log_version_write_error", error=e))
 
             # Changelog mentése a history-be
             try:
@@ -673,21 +669,20 @@ class WindowGithubMixin:
             except Exception:
                 pass
 
-            set_status("✅ Telepítés kész!", 1.0)
+            set_status(self.tr("update_status_done"), 1.0)
             self.log_event("EVENT",
-                           f"[UPDATE] Telepítve: {remote_version}. Újraindítás...")
+                           self.tr("update_log_installed", version=remote_version))
 
             self.after(800, lambda: self._ask_restart(win, remote_version))
 
         except Exception as error:
             error_msg = str(error)
             self.after(0, lambda: messagebox.showerror(
-                "Frissítési hiba",
-                f"Nem sikerült a frissítés:\n\n{error_msg}\n\n"
-                f"Ellenőrizd az internetkapcsolatot, vagy próbáld újra később.",
+                self.tr("update_error_title"),
+                self.tr("update_error_msg", error=error_msg),
                 parent=win
             ))
-            set_status("❌ Hiba történt", 0)
+            set_status(self.tr("update_status_error"), 0)
 
     # ==================================================================
     #  Újraindítás kérdés
@@ -700,7 +695,7 @@ class WindowGithubMixin:
             pass
 
         restart_dialog = ctk.CTkToplevel(self)
-        restart_dialog.title("Újraindítás szükséges")
+        restart_dialog.title(self.tr("update_restart_title"))
         restart_dialog.geometry("480x340")
         restart_dialog.resizable(False, False)
         restart_dialog.grab_set()
@@ -710,19 +705,19 @@ class WindowGithubMixin:
         restart_dialog.geometry(f"480x340+{x}+{y}")
 
         ctk.CTkLabel(
-            restart_dialog, text="✅  Frissítés sikeres!",
+            restart_dialog, text=self.tr("update_restart_success"),
             font=("Arial", 20, "bold"), text_color="#2ecc71"
         ).pack(pady=(24, 4))
 
         ctk.CTkLabel(
             restart_dialog,
-            text=f"A panel a(z) v{new_version} verzióra frissült.",
+            text=self.tr("update_restart_version", version=new_version),
             font=("Arial", 12)
         ).pack(pady=4)
 
         ctk.CTkLabel(
             restart_dialog,
-            text="Újra kell indítani a panelt, hogy életbe lépjenek a változások.",
+            text=self.tr("update_restart_msg"),
             font=("Arial", 11), text_color="#8a8e98",
             wraplength=420,
         ).pack(pady=(4, 10))
@@ -731,7 +726,7 @@ class WindowGithubMixin:
         info.pack(fill="x", padx=24, pady=6)
         ctk.CTkLabel(
             info,
-            text="💡   A mentések, pluginok és botok megmaradnak.",
+            text=self.tr("update_restart_safe_info"),
             font=("Arial", 11), text_color="#b8bcc6"
         ).pack(pady=8)
 
@@ -743,14 +738,14 @@ class WindowGithubMixin:
             self._perform_restart()
 
         ctk.CTkButton(
-            btn_frame, text="🔄   Újraindítás most",
+            btn_frame, text=self.tr("update_restart_now_btn"),
             fg_color="#27ae60", hover_color="#2ecc71",
             width=180, height=44, font=("Arial", 13, "bold"),
             command=do_restart
         ).pack(side="left", padx=6)
 
         ctk.CTkButton(
-            btn_frame, text="🚪   Kilépés",
+            btn_frame, text=self.tr("update_restart_exit_btn"),
             fg_color="#c0392b", hover_color="#e74c3c",
             width=130, height=44, font=("Arial", 13),
             command=lambda: (restart_dialog.destroy(), self.perform_exit())
@@ -760,7 +755,7 @@ class WindowGithubMixin:
     #  Újraindítás végrehajtása
     # ==================================================================
     def _perform_restart(self):
-        self.log_event("EVENT", "[UPDATE] Panel újraindítás...")
+        self.log_event("EVENT", self.tr("update_log_restart"))
 
         try:
             self.save_config()
@@ -785,7 +780,7 @@ class WindowGithubMixin:
         try:
             subprocess.Popen([python_exe, script_path], cwd=config.SCRIPT_DIR)
         except Exception as e:
-            messagebox.showerror("Újraindítási hiba", str(e))
+            messagebox.showerror(self.tr("update_restart_error_title"), str(e))
             return
 
         try:

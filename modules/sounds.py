@@ -1,4 +1,9 @@
-"""Hang effektek a panelhez."""
+"""Hang effektek a panelhez.
+
+A hangok fix kulcsokkal azonosíthatók (pl. "beep", "double_beep").
+A UI a languages.py-ból fordítja le a megjelenítendő neveket.
+Így új nyelv hozzáadásakor NEM kell módosítani ezt a fájlt.
+"""
 import time
 import threading
 
@@ -9,44 +14,72 @@ except ImportError:
     WINSOUND_AVAILABLE = False
 
 
-# A választható hangok listája (a sorrend számít, ez jelenik meg a legördülőben)
-ERROR_SOUNDS = [
-    "Alap (Beep)",
-    "Dupla Pittyogás",
-    "Mély Hiba (Buzz)",
-    "Hármas Sípjel",
-    "Lassú Búgás",
-    "Gyors Dupla",
-    "Hosszú Sírás",
-    "Nincs hang",
+# =====================================================================
+#  HANG KULCSOK — ezek a fix azonosítók, NEM fordítjuk őket!
+#  A megjelenítendő nevek a languages.py-ban vannak:
+#    sound_beep, sound_double_beep, sound_buzz, ...
+# =====================================================================
+SOUND_KEYS = [
+    "beep",
+    "double_beep",
+    "buzz",
+    "triple_beep",
+    "slow_buzz",
+    "fast_double",
+    "long_cry",
+    "none",
 ]
 
+# Alapértelmezett hang
+DEFAULT_SOUND_KEY = "beep"
 
-def _play_sequence(sequence):
-    """Egy (freq, duration_ms) tuple-lista lejátszása."""
-    if not WINSOUND_AVAILABLE:
-        return
-    for freq, duration in sequence:
-        try:
-            winsound.Beep(freq, duration)
-        except Exception:
-            pass
-
-
-# Minden hang leírása tuple-listaként: (frekvencia Hz, hossz ms)
-_SOUND_MAP = {
-    "Alap (Beep)":        [(1000, 200)],
-    "Dupla Pittyogás":    [(1200, 100), (0, 50), (1200, 100)],   # 0 = szünet
-    "Mély Hiba (Buzz)":   [(400, 350)],
-    "Hármas Sípjel":      [(1500, 80), (0, 50), (1500, 80), (0, 50), (1500, 80)],
-    "Lassú Búgás":        [(300, 600)],
-    "Gyors Dupla":        [(2000, 60), (0, 30), (2000, 60)],
-    "Hosszú Sírás":       [(800, 200), (0, 100), (600, 200), (0, 100), (400, 400)],
-    "Nincs hang":         [],
+# Régi magyar nevek → új kulcs (visszafele kompatibilitás)
+_LEGACY_NAME_MAP = {
+    "Alap (Beep)": "beep",
+    "Dupla Pittyogás": "double_beep",
+    "Mély Hiba (Buzz)": "buzz",
+    "Hármas Sípjel": "triple_beep",
+    "Lassú Búgás": "slow_buzz",
+    "Gyors Dupla": "fast_double",
+    "Hosszú Sírás": "long_cry",
+    "Nincs hang": "none",
 }
 
 
+# =====================================================================
+#  Hang szekvenciák: (frekvencia Hz, hossz ms)
+#  0 Hz = szünet
+# =====================================================================
+_SOUND_MAP = {
+    "beep":         [(1000, 200)],
+    "double_beep":  [(1200, 100), (0, 50), (1200, 100)],
+    "buzz":         [(400, 350)],
+    "triple_beep":  [(1500, 80), (0, 50), (1500, 80), (0, 50), (1500, 80)],
+    "slow_buzz":    [(300, 600)],
+    "fast_double":  [(2000, 60), (0, 30), (2000, 60)],
+    "long_cry":     [(800, 200), (0, 100), (600, 200), (0, 100), (400, 400)],
+    "none":         [],
+}
+
+
+# =====================================================================
+#  Segédfüggvények
+# =====================================================================
+def _normalize_key(name_or_key):
+    """Ha régi magyar nevet kap, átalakítja kulcsra.
+
+    Ha már kulcs, visszaadja változatlanul.
+    Ha ismeretlen, az alapértelmezettet adja vissza.
+    """
+    if name_or_key in _SOUND_MAP:
+        return name_or_key
+    if name_or_key in _LEGACY_NAME_MAP:
+        return _LEGACY_NAME_MAP[name_or_key]
+    return DEFAULT_SOUND_KEY
+
+
 def _play_sequence_blocking(sequence):
+    """Egy (freq, duration_ms) tuple-lista lejátszása (blokkoló)."""
     if not WINSOUND_AVAILABLE:
         return
     for freq, duration in sequence:
@@ -59,14 +92,20 @@ def _play_sequence_blocking(sequence):
                 pass
 
 
-def play_error_sound_by_name(name, async_play=True):
-    """Lejátssza a megadott nevű hangot.
+# =====================================================================
+#  Publikus API
+# =====================================================================
+def play_error_sound_by_key(key, async_play=True):
+    """Lejátssza a megadott kulcsú hangot.
 
-    async_play=True esetén háttérszálban szólal meg, hogy a UI ne fagyjon le.
+    key: fix kulcs (pl. "beep", "double_beep") VAGY régi magyar név
+         (pl. "Alap (Beep)") — visszafele kompatibilitás miatt.
+    async_play: True esetén háttérszálban szólal meg.
     """
-    if name not in _SOUND_MAP or name == "Nincs hang":
+    normalized = _normalize_key(key)
+    if normalized == "none":
         return
-    sequence = _SOUND_MAP[name]
+    sequence = _SOUND_MAP.get(normalized)
     if not sequence:
         return
 
@@ -76,3 +115,14 @@ def play_error_sound_by_name(name, async_play=True):
         ).start()
     else:
         _play_sequence_blocking(sequence)
+
+
+# Régi név megtartása visszafele kompatibilitás miatt
+def play_error_sound_by_name(name, async_play=True):
+    """[DEPRECATED] Használd a play_error_sound_by_key()-t helyette."""
+    return play_error_sound_by_key(name, async_play=async_play)
+
+
+def get_all_sound_keys():
+    """Visszaadja az összes elérhető hang kulcsát."""
+    return list(SOUND_KEYS)

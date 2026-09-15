@@ -135,9 +135,9 @@ class WindowStatsMixin:
     def open_performance_charts_window(self):
         if not MATPLOTLIB_AVAILABLE:
             messagebox.showerror(
-                "Hiányzó könyvtár",
-                f"A grafikon nem indítható.\n{MATPLOTLIB_ERROR}\n\n"
-                f"Telepítés: py -m pip install matplotlib"
+                self.tr("missing_library_title"),
+                f"{self.tr('missing_library_msg')}\n{MATPLOTLIB_ERROR}\n\n"
+                f"{self.tr('install_instruction')}: py -m pip install matplotlib"
             )
             return
 
@@ -146,18 +146,27 @@ class WindowStatsMixin:
         win.geometry("900x550")
         win.grab_set()
 
-        range_var = ctk.StringVar(value="Utolsó 1 óra")
+        range_var = ctk.StringVar(value=self.tr("last_1_hour"))
         control_frame = ctk.CTkFrame(win, fg_color="transparent")
         control_frame.pack(fill="x", padx=10, pady=(8, 0))
         ctk.CTkLabel(control_frame, text=self.tr("time_range") + ":").pack(side="left", padx=4)
-        ctk.CTkComboBox(
+        
+        range_options = [self.tr("last_10_mins"), self.tr("last_1_hour"), self.tr("last_24_hours")]
+        range_combo = ctk.CTkComboBox(
             control_frame, variable=range_var,
-            values=["Utolsó 10 perc", "Utolsó 1 óra", "Utolsó 24 óra"], width=150
-        ).pack(side="left", padx=4)
+            values=range_options, width=150
+        )
+        range_combo.pack(side="left", padx=4)
 
         def history_for_range():
-            values = {"Utolsó 10 perc": 120, "Utolsó 1 óra": 720, "Utolsó 24 óra": 17280}
-            limit = values[range_var.get()]
+            current_val = range_var.get()
+            if current_val == self.tr("last_10_mins"):
+                limit = 120
+            elif current_val == self.tr("last_24_hours"):
+                limit = 17280
+            else:
+                limit = 720
+                
             current_bot = self.bots.get(self.active_bot_key)
             if not current_bot:
                 return [], [], []
@@ -208,7 +217,7 @@ class WindowStatsMixin:
         def export_png():
             target = filedialog.asksaveasfilename(
                 parent=win, defaultextension=".png",
-                filetypes=[("PNG kép", "*.png")],
+                filetypes=[(self.tr("png_filter"), "*.png")],
                 initialfile="%s_%s.png" % (
                     self.active_bot_key,
                     datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -216,7 +225,7 @@ class WindowStatsMixin:
             )
             if target:
                 fig.savefig(target, dpi=160, facecolor=fig.get_facecolor(), bbox_inches="tight")
-                messagebox.showinfo("Export", "A grafikon elmentve:\n%s" % target, parent=win)
+                messagebox.showinfo(self.tr("export_title"), self.tr("export_success_msg").format(target=target), parent=win)
 
         ctk.CTkButton(control_frame, text=self.tr("save_png"),
                       command=export_png).pack(side="right", padx=4)

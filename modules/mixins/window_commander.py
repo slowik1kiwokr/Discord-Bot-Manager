@@ -6,7 +6,6 @@ from tkinter import filedialog, messagebox, simpledialog, ttk
 import customtkinter as ctk
 
 import modules.config as config
-from modules.languages import LANGUAGES
 
 
 COMMANDER_FILE_NAME = "commander_commands.json"
@@ -14,309 +13,326 @@ EXTENSIONS_FILE_NAME = "bot_extensions.txt"
 
 
 # =====================================================================
-#  PARANCS SABLONOK
+#  PARANCS SABLONOK (minden szöveg kulcs!)
 # =====================================================================
 COMMAND_TEMPLATES = {
-    "💬  Egyszerű szöveges üzenet": {
+    "simple_message": {
+        "name_key": "cmd_tpl_simple_name",
         "type": "message",
-        "description": "Egyszerű szöveges válasz",
-        "content": "👋 Szia! Ez egy egyedi parancs válasza.",
-        "embed": {"title": "", "description": "", "color": "#5865F2",
-                   "footer": "", "thumbnail": "", "fields": []},
+        "description_key": "cmd_tpl_simple_desc",
+        "content_key": "cmd_tpl_simple_content",
+        "embed": {},
         "ephemeral": False,
     },
-    "🎉  Üdvözlő üzenet": {
+    "welcome": {
+        "name_key": "cmd_tpl_welcome_name",
         "type": "message",
-        "description": "Új tagok üdvözlése",
-        "content": "🎉 Üdv a szerveren! Jó szórakozást kívánunk!",
-        "embed": {"title": "", "description": "", "color": "#5865F2",
-                   "footer": "", "thumbnail": "", "fields": []},
+        "description_key": "cmd_tpl_welcome_desc",
+        "content_key": "cmd_tpl_welcome_content",
+        "embed": {},
         "ephemeral": False,
     },
-    "📢  Bejelentés (szöveg)": {
+    "announcement": {
+        "name_key": "cmd_tpl_announcement_name",
         "type": "message",
-        "description": "Fontos bejelentés mindenkinek",
-        "content": "📢 **FIGYELEM!**\n\nHamarosan karbantartás lesz a szerveren.",
-        "embed": {"title": "", "description": "", "color": "#5865F2",
-                   "footer": "", "thumbnail": "", "fields": []},
+        "description_key": "cmd_tpl_announcement_desc",
+        "content_key": "cmd_tpl_announcement_content",
+        "embed": {},
         "ephemeral": False,
     },
-    "📌  Egyszerű embed": {
+    "simple_embed": {
+        "name_key": "cmd_tpl_simple_embed_name",
         "type": "embed",
-        "description": "Szép embed üzenet",
-        "content": "",
+        "description_key": "cmd_tpl_simple_embed_desc",
+        "content_key": None,
         "embed": {
-            "title": "📌 Cím",
-            "description": "Ez egy egyszerű embed üzenet. Ide jön a részletes szöveg.",
+            "title_key": "cmd_tpl_simple_embed_title",
+            "description_key": "cmd_tpl_simple_embed_description",
             "color": "#5865F2",
-            "footer": "Bot által generálva",
+            "footer_key": "cmd_tpl_simple_embed_footer",
             "thumbnail": "",
             "fields": [],
         },
         "ephemeral": False,
     },
-    "❌  Hiba embed (piros)": {
+    "error_embed": {
+        "name_key": "cmd_tpl_error_embed_name",
         "type": "embed",
-        "description": "Hibaüzenet formázva",
-        "content": "",
+        "description_key": "cmd_tpl_error_embed_desc",
+        "content_key": None,
         "embed": {
-            "title": "❌ Hiba történt",
-            "description": "Valami hiba történt. Kérlek próbáld újra később.",
+            "title_key": "cmd_tpl_error_embed_title",
+            "description_key": "cmd_tpl_error_embed_description",
             "color": "#e74c3c",
-            "footer": "Hiba kód: 500",
+            "footer_key": "cmd_tpl_error_embed_footer",
             "thumbnail": "",
             "fields": [],
         },
         "ephemeral": True,
     },
-    "✅  Siker embed (zöld)": {
+    "success_embed": {
+        "name_key": "cmd_tpl_success_embed_name",
         "type": "embed",
-        "description": "Sikeres művelet visszajelzés",
-        "content": "",
+        "description_key": "cmd_tpl_success_embed_desc",
+        "content_key": None,
         "embed": {
-            "title": "✅ Siker!",
-            "description": "A művelet sikeresen végrehajtva!",
+            "title_key": "cmd_tpl_success_embed_title",
+            "description_key": "cmd_tpl_success_embed_description",
             "color": "#2ecc71",
-            "footer": "",
+            "footer_key": None,
             "thumbnail": "",
             "fields": [],
         },
         "ephemeral": True,
     },
-    "⚠️  Figyelmeztetés (sárga)": {
+    "warning_embed": {
+        "name_key": "cmd_tpl_warning_embed_name",
         "type": "embed",
-        "description": "Figyelmeztető üzenet",
-        "content": "",
+        "description_key": "cmd_tpl_warning_embed_desc",
+        "content_key": None,
         "embed": {
-            "title": "⚠️ Figyelem!",
-            "description": "Ez egy figyelmeztetés. Kérlek olvasd el figyelmesen!",
+            "title_key": "cmd_tpl_warning_embed_title",
+            "description_key": "cmd_tpl_warning_embed_description",
             "color": "#f39c12",
-            "footer": "",
+            "footer_key": None,
             "thumbnail": "",
             "fields": [],
         },
         "ephemeral": False,
     },
-    "❓  Segítség menü (több mezővel)": {
+    "help_menu": {
+        "name_key": "cmd_tpl_help_name",
         "type": "embed",
-        "description": "Több mezős segítség panel",
-        "content": "",
+        "description_key": "cmd_tpl_help_desc",
+        "content_key": None,
         "embed": {
-            "title": "❓ Segítség",
-            "description": "Az elérhető parancsok listája:",
+            "title_key": "cmd_tpl_help_title",
+            "description_key": "cmd_tpl_help_description",
             "color": "#3498db",
-            "footer": "További info: /help",
+            "footer_key": "cmd_tpl_help_footer",
             "thumbnail": "",
             "fields": [
-                {"name": "🎮 Játék", "value": "/játék - Játék indítása", "inline": False},
-                {"name": "🎵 Zene", "value": "/play - Zene lejátszása", "inline": False},
-                {"name": "⚙️ Beállítások", "value": "/config - Bot beállítások", "inline": False},
+                {"name_key": "cmd_tpl_help_f1_name", "value_key": "cmd_tpl_help_f1_value", "inline": False},
+                {"name_key": "cmd_tpl_help_f2_name", "value_key": "cmd_tpl_help_f2_value", "inline": False},
+                {"name_key": "cmd_tpl_help_f3_name", "value_key": "cmd_tpl_help_f3_value", "inline": False},
             ],
         },
         "ephemeral": False,
     },
-    "📜  Szerver szabályok": {
+    "server_rules": {
+        "name_key": "cmd_tpl_rules_name",
         "type": "embed",
-        "description": "Szerver szabályok listája",
-        "content": "",
+        "description_key": "cmd_tpl_rules_desc",
+        "content_key": None,
         "embed": {
-            "title": "📜 Szerver Szabályok",
-            "description": "Kérlek olvasd el figyelmesen a szabályokat!",
+            "title_key": "cmd_tpl_rules_title",
+            "description_key": "cmd_tpl_rules_description",
             "color": "#9b59b6",
-            "footer": "Az utolsó frissítés: 2025",
+            "footer_key": "cmd_tpl_rules_footer",
             "thumbnail": "",
             "fields": [
-                {"name": "1️⃣ Tiszteld a többieket", "value": "Légy kedves mindenkivel!", "inline": False},
-                {"name": "2️⃣ Ne spam-elj", "value": "Tilos a spam és a reklám.", "inline": False},
-                {"name": "3️⃣ NSFW tartalom tilos", "value": "Csak családbarát tartalom.", "inline": False},
-                {"name": "4️⃣ Hallgass a moderátorokra", "value": "A döntéseik véglegesek.", "inline": False},
+                {"name_key": "cmd_tpl_rules_f1_name", "value_key": "cmd_tpl_rules_f1_value", "inline": False},
+                {"name_key": "cmd_tpl_rules_f2_name", "value_key": "cmd_tpl_rules_f2_value", "inline": False},
+                {"name_key": "cmd_tpl_rules_f3_name", "value_key": "cmd_tpl_rules_f3_value", "inline": False},
+                {"name_key": "cmd_tpl_rules_f4_name", "value_key": "cmd_tpl_rules_f4_value", "inline": False},
             ],
         },
         "ephemeral": False,
     },
-    "📊  Információs embed": {
+    "info_embed": {
+        "name_key": "cmd_tpl_info_name",
         "type": "embed",
-        "description": "Szerver információk",
-        "content": "",
+        "description_key": "cmd_tpl_info_desc",
+        "content_key": None,
         "embed": {
-            "title": "📊 Szerver Információk",
-            "description": "Minden, amit a szerverről tudni érdemes.",
+            "title_key": "cmd_tpl_info_title",
+            "description_key": "cmd_tpl_info_description",
             "color": "#3498db",
-            "footer": "Kösz hogy itt vagy!",
+            "footer_key": "cmd_tpl_info_footer",
             "thumbnail": "",
             "fields": [
-                {"name": "👑 Tulajdonos", "value": "@tulajdonos", "inline": True},
-                {"name": "👥 Tagok", "value": "100+", "inline": True},
-                {"name": "📅 Létrehozva", "value": "2024", "inline": True},
+                {"name_key": "cmd_tpl_info_f1_name", "value_key": "cmd_tpl_info_f1_value", "inline": True},
+                {"name_key": "cmd_tpl_info_f2_name", "value_key": "cmd_tpl_info_f2_value", "inline": True},
+                {"name_key": "cmd_tpl_info_f3_name", "value_key": "cmd_tpl_info_f3_value", "inline": True},
             ],
         },
         "ephemeral": False,
     },
-    "🎁  Giveaway bejelentés": {
+    "giveaway": {
+        "name_key": "cmd_tpl_giveaway_name",
         "type": "embed",
-        "description": "Nyereményjáték bejelentés",
-        "content": "",
+        "description_key": "cmd_tpl_giveaway_desc",
+        "content_key": None,
         "embed": {
-            "title": "🎁 NYEREMÉNYJÁTÉK!",
-            "description": "Reagálj 🎉-tal a részvételhez!",
+            "title_key": "cmd_tpl_giveaway_title",
+            "description_key": "cmd_tpl_giveaway_description",
             "color": "#e91e63",
-            "footer": "Sok szerencsét!",
+            "footer_key": "cmd_tpl_giveaway_footer",
             "thumbnail": "",
             "fields": [
-                {"name": "🎁 Nyeremény", "value": "Nitro Classic", "inline": True},
-                {"name": "⏰ Lejárat", "value": "24 óra múlva", "inline": True},
-                {"name": "📋 Feltétel", "value": "Nincs", "inline": True},
+                {"name_key": "cmd_tpl_giveaway_f1_name", "value_key": "cmd_tpl_giveaway_f1_value", "inline": True},
+                {"name_key": "cmd_tpl_giveaway_f2_name", "value_key": "cmd_tpl_giveaway_f2_value", "inline": True},
+                {"name_key": "cmd_tpl_giveaway_f3_name", "value_key": "cmd_tpl_giveaway_f3_value", "inline": True},
             ],
         },
         "ephemeral": False,
     },
-    "🎫  Ticket nyitás": {
+    "ticket": {
+        "name_key": "cmd_tpl_ticket_name",
         "type": "embed",
-        "description": "Ticket rendszer nyitás",
-        "content": "",
+        "description_key": "cmd_tpl_ticket_desc",
+        "content_key": None,
         "embed": {
-            "title": "🎫 Ticket Rendszer",
-            "description": "Kattints az alábbi reakcióra, hogy ticketet nyiss.",
+            "title_key": "cmd_tpl_ticket_title",
+            "description_key": "cmd_tpl_ticket_description",
             "color": "#16a085",
-            "footer": "Csak vészhelyzetben használd!",
+            "footer_key": "cmd_tpl_ticket_footer",
             "thumbnail": "",
             "fields": [
-                {"name": "📩 Segítség", "value": "Reagálj 📩-tal", "inline": False},
-                {"name": "🐛 Bug jelentés", "value": "Reagálj 🐛-tal", "inline": False},
-                {"name": "❓ Egyéb", "value": "Reagálj ❓-tal", "inline": False},
+                {"name_key": "cmd_tpl_ticket_f1_name", "value_key": "cmd_tpl_ticket_f1_value", "inline": False},
+                {"name_key": "cmd_tpl_ticket_f2_name", "value_key": "cmd_tpl_ticket_f2_value", "inline": False},
+                {"name_key": "cmd_tpl_ticket_f3_name", "value_key": "cmd_tpl_ticket_f3_value", "inline": False},
             ],
         },
         "ephemeral": False,
     },
-    "📅  Esemény bejelentés": {
+    "event": {
+        "name_key": "cmd_tpl_event_name",
         "type": "embed",
-        "description": "Esemény részletei",
-        "content": "",
+        "description_key": "cmd_tpl_event_desc",
+        "content_key": None,
         "embed": {
-            "title": "📅 Esemény hamarosan!",
-            "description": "Ne maradj le a közelgő eseményről!",
+            "title_key": "cmd_tpl_event_title",
+            "description_key": "cmd_tpl_event_description",
             "color": "#f39c12",
-            "footer": "Jelentkezz időben!",
+            "footer_key": "cmd_tpl_event_footer",
             "thumbnail": "",
             "fields": [
-                {"name": "🎮 Esemény", "value": "Minecraft verseny", "inline": True},
-                {"name": "🕐 Időpont", "value": "Szombat 18:00", "inline": True},
-                {"name": "🏆 Nyeremény", "value": "Discord Nitro", "inline": True},
+                {"name_key": "cmd_tpl_event_f1_name", "value_key": "cmd_tpl_event_f1_value", "inline": True},
+                {"name_key": "cmd_tpl_event_f2_name", "value_key": "cmd_tpl_event_f2_value", "inline": True},
+                {"name_key": "cmd_tpl_event_f3_name", "value_key": "cmd_tpl_event_f3_value", "inline": True},
             ],
         },
         "ephemeral": False,
     },
-    "🤖  Bot info embed": {
+    "bot_info": {
+        "name_key": "cmd_tpl_botinfo_name",
         "type": "embed",
-        "description": "Bot információk",
-        "content": "",
+        "description_key": "cmd_tpl_botinfo_desc",
+        "content_key": None,
         "embed": {
-            "title": "🤖 Bot Információk",
-            "description": "A botról minden fontos adat.",
+            "title_key": "cmd_tpl_botinfo_title",
+            "description_key": "cmd_tpl_botinfo_description",
             "color": "#5865F2",
-            "footer": "Kösz hogy használod!",
+            "footer_key": "cmd_tpl_botinfo_footer",
             "thumbnail": "",
             "fields": [
-                {"name": "📛 Név", "value": "Main Bot", "inline": True},
-                {"name": "🔢 Verzió", "value": "1.0.0", "inline": True},
-                {"name": "📡 Szerverek", "value": "5", "inline": True},
+                {"name_key": "cmd_tpl_botinfo_f1_name", "value_key": "cmd_tpl_botinfo_f1_value", "inline": True},
+                {"name_key": "cmd_tpl_botinfo_f2_name", "value_key": "cmd_tpl_botinfo_f2_value", "inline": True},
+                {"name_key": "cmd_tpl_botinfo_f3_name", "value_key": "cmd_tpl_botinfo_f3_value", "inline": True},
             ],
         },
         "ephemeral": False,
     },
-    "🎵  Zene parancs lista": {
+    "music_list": {
+        "name_key": "cmd_tpl_music_name",
         "type": "embed",
-        "description": "Zene bot parancsok",
-        "content": "",
+        "description_key": "cmd_tpl_music_desc",
+        "content_key": None,
         "embed": {
-            "title": "🎵 Zene Parancsok",
-            "description": "Az összes elérhető zenei parancs.",
+            "title_key": "cmd_tpl_music_title",
+            "description_key": "cmd_tpl_music_description",
             "color": "#e91e63",
-            "footer": "",
+            "footer_key": None,
             "thumbnail": "",
             "fields": [
-                {"name": "▶️ /play", "value": "Zene indítása", "inline": False},
-                {"name": "⏸️ /pause", "value": "Zene szüneteltetése", "inline": False},
-                {"name": "⏭️ /skip", "value": "Következő dal", "inline": False},
-                {"name": "🔊 /volume", "value": "Hangerő állítás", "inline": False},
+                {"name_key": "cmd_tpl_music_f1_name", "value_key": "cmd_tpl_music_f1_value", "inline": False},
+                {"name_key": "cmd_tpl_music_f2_name", "value_key": "cmd_tpl_music_f2_value", "inline": False},
+                {"name_key": "cmd_tpl_music_f3_name", "value_key": "cmd_tpl_music_f3_value", "inline": False},
+                {"name_key": "cmd_tpl_music_f4_name", "value_key": "cmd_tpl_music_f4_value", "inline": False},
             ],
         },
         "ephemeral": False,
     },
-    "🔒  Moderáció embed": {
+    "moderation": {
+        "name_key": "cmd_tpl_moderation_name",
         "type": "embed",
-        "description": "Moderációs intézkedés",
-        "content": "",
+        "description_key": "cmd_tpl_moderation_desc",
+        "content_key": None,
         "embed": {
-            "title": "🔒 Felhasználó némítva",
-            "description": "A felhasználó némítva lett.",
+            "title_key": "cmd_tpl_moderation_title",
+            "description_key": "cmd_tpl_moderation_description",
             "color": "#c0392b",
-            "footer": "Moderátor: @mod",
+            "footer_key": "cmd_tpl_moderation_footer",
             "thumbnail": "",
             "fields": [
-                {"name": "👤 Felhasználó", "value": "@user", "inline": True},
-                {"name": "⏰ Időtartam", "value": "10 perc", "inline": True},
-                {"name": "📝 Indok", "value": "Spam", "inline": False},
+                {"name_key": "cmd_tpl_moderation_f1_name", "value_key": "cmd_tpl_moderation_f1_value", "inline": True},
+                {"name_key": "cmd_tpl_moderation_f2_name", "value_key": "cmd_tpl_moderation_f2_value", "inline": True},
+                {"name_key": "cmd_tpl_moderation_f3_name", "value_key": "cmd_tpl_moderation_f3_value", "inline": False},
             ],
         },
         "ephemeral": False,
     },
-    "🎨  Színes értesítő": {
+    "notification": {
+        "name_key": "cmd_tpl_notification_name",
         "type": "embed",
-        "description": "Színes értesítés mindenkinek",
-        "content": "",
+        "description_key": "cmd_tpl_notification_desc",
+        "content_key": None,
         "embed": {
-            "title": "🔔 Értesítés",
-            "description": "Ez egy fontos értesítés, amit mindenkinek látnia kell.",
+            "title_key": "cmd_tpl_notification_title",
+            "description_key": "cmd_tpl_notification_description",
             "color": "#f39c12",
-            "footer": "Automatikus értesítés",
+            "footer_key": "cmd_tpl_notification_footer",
             "thumbnail": "",
             "fields": [],
         },
         "ephemeral": False,
     },
-    "💜  Egyedi szín": {
+    "custom_color": {
+        "name_key": "cmd_tpl_custom_color_name",
         "type": "embed",
-        "description": "Saját színű embed",
-        "content": "",
+        "description_key": "cmd_tpl_custom_color_desc",
+        "content_key": None,
         "embed": {
-            "title": "💜 Egyedi cím",
-            "description": "Ide jön a szöveg.",
+            "title_key": "cmd_tpl_custom_color_title",
+            "description_key": "cmd_tpl_custom_color_description",
             "color": "#9b59b6",
-            "footer": "",
+            "footer_key": None,
             "thumbnail": "",
             "fields": [],
         },
         "ephemeral": False,
     },
-    "🖼️  Képes embed": {
+    "image_embed": {
+        "name_key": "cmd_tpl_image_name",
         "type": "embed",
-        "description": "Embed thumbnail képpel",
-        "content": "",
+        "description_key": "cmd_tpl_image_desc",
+        "content_key": None,
         "embed": {
-            "title": "🖼️ Képes embed",
-            "description": "Ez egy embed, amihez kép tartozik a jobb felső sarokban.",
+            "title_key": "cmd_tpl_image_title",
+            "description_key": "cmd_tpl_image_description",
             "color": "#3498db",
-            "footer": "",
+            "footer_key": None,
             "thumbnail": "https://via.placeholder.com/150",
             "fields": [],
         },
         "ephemeral": False,
     },
-    "🔗  Link gyűjtemény": {
+    "links": {
+        "name_key": "cmd_tpl_links_name",
         "type": "embed",
-        "description": "Hasznos linkek listája",
-        "content": "",
+        "description_key": "cmd_tpl_links_desc",
+        "content_key": None,
         "embed": {
-            "title": "🔗 Hasznos Linkek",
-            "description": "Az összes fontos link egy helyen.",
+            "title_key": "cmd_tpl_links_title",
+            "description_key": "cmd_tpl_links_description",
             "color": "#3498db",
-            "footer": "",
+            "footer_key": None,
             "thumbnail": "",
             "fields": [
-                {"name": "🌐 Weboldal", "value": "[Katt ide](https://example.com)", "inline": False},
-                {"name": "📱 Discord", "value": "[Csatlakozz](https://discord.gg/example)", "inline": False},
-                {"name": "📺 YouTube", "value": "[Feliratkozás](https://youtube.com/example)", "inline": False},
+                {"name_key": "cmd_tpl_links_f1_name", "value_key": "cmd_tpl_links_f1_value", "inline": False},
+                {"name_key": "cmd_tpl_links_f2_name", "value_key": "cmd_tpl_links_f2_value", "inline": False},
+                {"name_key": "cmd_tpl_links_f3_name", "value_key": "cmd_tpl_links_f3_value", "inline": False},
             ],
         },
         "ephemeral": False,
@@ -345,6 +361,42 @@ class WindowCommanderMixin:
         d = self._bot_dir()
         return os.path.join(d, EXTENSIONS_FILE_NAME) if d else None
 
+    def _resolve_command_template(self, tpl_key):
+        """A parancs sablon kulcsait a jelenlegi nyelvre fordítja."""
+        tpl = COMMAND_TEMPLATES.get(tpl_key)
+        if not tpl:
+            return None
+
+        content = self.tr(tpl["content_key"]) if tpl.get("content_key") else ""
+
+        emb = {}
+        raw_emb = tpl.get("embed", {}) or {}
+        if raw_emb:
+            fields = []
+            for f in raw_emb.get("fields", []):
+                fields.append({
+                    "name": self.tr(f.get("name_key", "")),
+                    "value": self.tr(f.get("value_key", "")),
+                    "inline": f.get("inline", False),
+                })
+            emb = {
+                "title": self.tr(raw_emb.get("title_key", "")) if raw_emb.get("title_key") else "",
+                "description": self.tr(raw_emb.get("description_key", "")) if raw_emb.get("description_key") else "",
+                "color": raw_emb.get("color", "#5865F2"),
+                "footer": self.tr(raw_emb.get("footer_key", "")) if raw_emb.get("footer_key") else "",
+                "thumbnail": raw_emb.get("thumbnail", ""),
+                "fields": fields,
+            }
+
+        return {
+            "name": self.tr(tpl["name_key"]),
+            "type": tpl["type"],
+            "description": self.tr(tpl.get("description_key", "")),
+            "content": content,
+            "embed": emb,
+            "ephemeral": tpl.get("ephemeral", False),
+        }
+
     # ==================================================================
     #  FŐ ABLAK
     # ==================================================================
@@ -352,8 +404,8 @@ class WindowCommanderMixin:
         bot_dir = self._bot_dir()
         if not bot_dir:
             messagebox.showwarning(
-                "Figyelem",
-                "Előbb tallózd be a bot fő .py fájlját a fő panelen!"
+                self.tr("warning_title"),
+                self.tr("commander_need_bot_msg")
             )
             return
 
@@ -361,7 +413,7 @@ class WindowCommanderMixin:
         self._extensions = self._load_extensions()
 
         win = ctk.CTkToplevel(self)
-        win.title("⚡ Commander & Fájlkezelő")
+        win.title(self.tr("commander_title"))
         win.geometry("1100x740")
         win.minsize(900, 560)
         win.grab_set()
@@ -375,7 +427,7 @@ class WindowCommanderMixin:
         header.pack(fill="x")
         header.pack_propagate(False)
         ctk.CTkLabel(
-            header, text="⚡  Commander & Fájlkezelő",
+            header, text=self.tr("commander_header"),
             font=("Arial", 18, "bold"), text_color="white"
         ).pack(side="left", padx=24, pady=16)
         ctk.CTkLabel(
@@ -394,7 +446,7 @@ class WindowCommanderMixin:
         left.pack(side="left", fill="y", padx=(0, 8))
         left.pack_propagate(False)
 
-        ctk.CTkLabel(left, text="📁 Bot mappa",
+        ctk.CTkLabel(left, text=self.tr("commander_bot_folder_lbl"),
                       font=("Arial", 13, "bold")).pack(pady=(8, 4))
 
         tree_frame = ctk.CTkFrame(left, fg_color="transparent")
@@ -421,11 +473,11 @@ class WindowCommanderMixin:
         # Fájl műveletek
         btns1 = ctk.CTkFrame(left, fg_color="transparent")
         btns1.pack(fill="x", padx=4, pady=(0, 4))
-        ctk.CTkButton(btns1, text="➕ Fájl", height=28,
+        ctk.CTkButton(btns1, text=self.tr("commander_new_file_btn"), height=28,
                        fg_color="#27ae60", hover_color="#2ecc71",
                        command=lambda: self._new_file(win)
                        ).pack(side="left", padx=2, expand=True, fill="x")
-        ctk.CTkButton(btns1, text="📁 Mappa", height=28,
+        ctk.CTkButton(btns1, text=self.tr("commander_new_folder_btn"), height=28,
                        fg_color="#3498db", hover_color="#5dade2",
                        command=lambda: self._new_folder(win)
                        ).pack(side="left", padx=2, expand=True, fill="x")
@@ -436,11 +488,11 @@ class WindowCommanderMixin:
 
         btns2 = ctk.CTkFrame(left, fg_color="transparent")
         btns2.pack(fill="x", padx=4, pady=(0, 6))
-        ctk.CTkButton(btns2, text="✏️ Átnevez", height=28,
+        ctk.CTkButton(btns2, text=self.tr("commander_rename_btn"), height=28,
                        fg_color="#9b59b6", hover_color="#8e44ad",
                        command=lambda: self._rename_item(win)
                        ).pack(side="left", padx=2, expand=True, fill="x")
-        ctk.CTkButton(btns2, text="🗑️ Törlés", height=28,
+        ctk.CTkButton(btns2, text=self.tr("commander_delete_btn"), height=28,
                        fg_color="#c0392b", hover_color="#e74c3c",
                        command=lambda: self._delete_item(win)
                        ).pack(side="left", padx=2, expand=True, fill="x")
@@ -454,13 +506,13 @@ class WindowCommanderMixin:
         tabs = ctk.CTkTabview(right)
         tabs.pack(fill="both", expand=True)
 
-        tab_editor = tabs.add("📄 Szerkesztő")
-        tab_cmd = tabs.add("⚡ Commander")
-        tab_ext = tabs.add("🔌 Extension")
+        tab_editor = tabs.add(self.tr("commander_tab_editor"))
+        tab_cmd = tabs.add(self.tr("commander_tab_commands"))
+        tab_ext = tabs.add(self.tr("commander_tab_extensions"))
 
         # --- Editor tab ---
         self._editor_label = ctk.CTkLabel(
-            tab_editor, text="Válassz fájlt a bal oldalról",
+            tab_editor, text=self.tr("commander_select_file_lbl"),
             font=("Arial", 12, "bold"), anchor="w",
         )
         self._editor_label.pack(fill="x", padx=8, pady=(8, 4))
@@ -478,14 +530,14 @@ class WindowCommanderMixin:
         )
         self._editor_status.pack(side="left", padx=4)
 
-        ctk.CTkButton(editor_btns, text="💾  Mentés",
+        ctk.CTkButton(editor_btns, text=self.tr("commander_save_editor_btn"),
                        fg_color="#27ae60", hover_color="#2ecc71",
                        width=120, height=34,
                        command=lambda: self._save_editor(win)
                        ).pack(side="right", padx=4)
 
         # --- Commander tab ---
-        ctk.CTkLabel(tab_cmd, text="Egyedi parancsok (commander_commands.json)",
+        ctk.CTkLabel(tab_cmd, text=self.tr("commander_commands_lbl"),
                       font=("Arial", 12, "bold")).pack(anchor="w", padx=8, pady=(8, 4))
 
         self._cmd_list = ctk.CTkScrollableFrame(tab_cmd, fg_color="#1e2129")
@@ -494,23 +546,22 @@ class WindowCommanderMixin:
         cmd_btns = ctk.CTkFrame(tab_cmd, fg_color="transparent")
         cmd_btns.pack(fill="x", padx=8, pady=(4, 8))
 
-        ctk.CTkButton(cmd_btns, text="➕ Új parancs",
+        ctk.CTkButton(cmd_btns, text=self.tr("commander_new_command_btn"),
                        fg_color="#27ae60", hover_color="#2ecc71", width=150,
                        command=self._new_command
                        ).pack(side="left", padx=4)
-        ctk.CTkButton(cmd_btns, text="🔄 Frissítés",
+        ctk.CTkButton(cmd_btns, text=self.tr("refresh_btn"),
                        fg_color="#3498db", hover_color="#5dade2", width=120,
                        command=self._refresh_command_list
                        ).pack(side="left", padx=4)
 
         # --- Extension tab ---
-        ctk.CTkLabel(tab_ext, text="Automatikusan betöltött extension-ök",
+        ctk.CTkLabel(tab_ext, text=self.tr("commander_extensions_lbl"),
                       font=("Arial", 12, "bold")).pack(anchor="w", padx=8, pady=(8, 4))
 
         ctk.CTkLabel(
             tab_ext,
-            text="A bot indulásakor a panel_integrity.py betölti az itt listázott\n"
-                 "extension-öket a bot_extensions.txt fájlból.",
+            text=self.tr("commander_extensions_hint"),
             font=("Arial", 11), text_color="#8a8e98", justify="left",
         ).pack(anchor="w", padx=8, pady=(0, 8))
 
@@ -520,11 +571,11 @@ class WindowCommanderMixin:
         ext_btns = ctk.CTkFrame(tab_ext, fg_color="transparent")
         ext_btns.pack(fill="x", padx=8, pady=(4, 8))
 
-        ctk.CTkButton(ext_btns, text="➕ Hozzáadás",
+        ctk.CTkButton(ext_btns, text=self.tr("commander_add_extension_btn"),
                        fg_color="#27ae60", hover_color="#2ecc71", width=140,
                        command=lambda: self._add_extension(win)
                        ).pack(side="left", padx=4)
-        ctk.CTkButton(ext_btns, text="💾 Mentés",
+        ctk.CTkButton(ext_btns, text=self.tr("commander_save_extensions_btn"),
                        fg_color="#3498db", hover_color="#5dade2", width=120,
                        command=lambda: self._save_extensions(win)
                        ).pack(side="left", padx=4)
@@ -594,12 +645,12 @@ class WindowCommanderMixin:
             with open(path, "r", encoding="utf-8") as f:
                 content = f.read()
         except UnicodeDecodeError:
-            messagebox.showwarning("Figyelem",
-                                    "Ez egy bináris fájl, nem lehet megnyitni.",
+            messagebox.showwarning(self.tr("warning_title"),
+                                    self.tr("commander_binary_file_msg"),
                                     parent=win)
             return
         except OSError as e:
-            messagebox.showerror("Hiba", str(e), parent=win)
+            messagebox.showerror(self.tr("error_title"), str(e), parent=win)
             return
         self._current_edited_file = path
         self._editor_label.configure(text=f"📄 {os.path.basename(path)}")
@@ -610,7 +661,8 @@ class WindowCommanderMixin:
     def _save_editor(self, win):
         path = getattr(self, "_current_edited_file", None)
         if not path:
-            messagebox.showwarning("Figyelem", "Nincs megnyitott fájl!", parent=win)
+            messagebox.showwarning(self.tr("warning_title"),
+                                    self.tr("commander_no_open_file_msg"), parent=win)
             return
         content = self._editor_box.get("1.0", "end-1c")
         if path.endswith(".py"):
@@ -618,8 +670,9 @@ class WindowCommanderMixin:
                 compile(content, os.path.basename(path), "exec")
             except SyntaxError as e:
                 if not messagebox.askyesno(
-                    "Szintaktikai hiba",
-                    f"A fájl hibás:\n\nSor {e.lineno}: {e.msg}\n\nMentse mindenképp?",
+                    self.tr("commander_syntax_error_title"),
+                    self.tr("commander_syntax_error_msg",
+                            line=e.lineno, msg=e.msg),
                     parent=win
                 ):
                     return
@@ -627,16 +680,17 @@ class WindowCommanderMixin:
             with open(path, "w", encoding="utf-8") as f:
                 f.write(content)
             self._editor_status.configure(
-                text=f"✅ Mentve: {os.path.basename(path)}",
+                text=self.tr("commander_saved_status", name=os.path.basename(path)),
                 text_color="#2ecc71"
             )
-            self.notify(f"💾 Mentve: {os.path.basename(path)}", "success", 1500)
+            self.notify(self.tr("commander_saved_toast", name=os.path.basename(path)),
+                        "success", 1500)
         except OSError as e:
-            messagebox.showerror("Hiba", str(e), parent=win)
+            messagebox.showerror(self.tr("error_title"), str(e), parent=win)
 
     def _new_file(self, win):
-        name = simpledialog.askstring("Új fájl",
-                                        "Fájlnév (pl. uj_parancs.py):",
+        name = simpledialog.askstring(self.tr("commander_new_file_title"),
+                                        self.tr("commander_new_file_prompt"),
                                         parent=win)
         if not name:
             return
@@ -652,7 +706,8 @@ class WindowCommanderMixin:
 
         path = os.path.join(base, name)
         if os.path.exists(path):
-            messagebox.showerror("Hiba", "Már létezik ilyen fájl!", parent=win)
+            messagebox.showerror(self.tr("error_title"),
+                                 self.tr("commander_file_exists_msg"), parent=win)
             return
 
         if name.endswith(".py"):
@@ -677,14 +732,13 @@ class WindowCommanderMixin:
             if name.endswith(".py"):
                 ext_name = self._path_to_ext_name(path)
                 if ext_name and messagebox.askyesno(
-                    "Extension hozzáadása",
-                    f"Szeretnéd a(z) '{ext_name}' extension-t hozzáadni\n"
-                    "az automatikusan betöltendő listához?",
+                    self.tr("commander_add_extension_title"),
+                    self.tr("commander_add_extension_confirm", ext=ext_name),
                     parent=win
                 ):
                     self._add_extension_by_name(ext_name, win)
         except OSError as e:
-            messagebox.showerror("Hiba", str(e), parent=win)
+            messagebox.showerror(self.tr("error_title"), str(e), parent=win)
 
     def _path_to_ext_name(self, path):
         bot_dir = self._bot_dir()
@@ -698,7 +752,8 @@ class WindowCommanderMixin:
             return None
 
     def _new_folder(self, win):
-        name = simpledialog.askstring("Új mappa", "Mappa neve:", parent=win)
+        name = simpledialog.askstring(self.tr("commander_new_folder_title"),
+                                       self.tr("commander_new_folder_prompt"), parent=win)
         if not name or "/" in name or "\\" in name:
             return
         base = self._bot_dir()
@@ -715,7 +770,7 @@ class WindowCommanderMixin:
                 f.write("")
             self._refresh_tree(win)
         except OSError as e:
-            messagebox.showerror("Hiba", str(e), parent=win)
+            messagebox.showerror(self.tr("error_title"), str(e), parent=win)
 
     def _rename_item(self, win):
         sel = self._tree.selection()
@@ -726,7 +781,8 @@ class WindowCommanderMixin:
             return
         old = values[0]
         new_name = simpledialog.askstring(
-            "Átnevezés", "Új név:",
+            self.tr("commander_rename_title"),
+            self.tr("commander_rename_prompt"),
             initialvalue=os.path.basename(old), parent=win
         )
         if not new_name or new_name == os.path.basename(old):
@@ -736,7 +792,7 @@ class WindowCommanderMixin:
             os.rename(old, new)
             self._refresh_tree(win)
         except OSError as e:
-            messagebox.showerror("Hiba", str(e), parent=win)
+            messagebox.showerror(self.tr("error_title"), str(e), parent=win)
 
     def _delete_item(self, win):
         sel = self._tree.selection()
@@ -747,8 +803,8 @@ class WindowCommanderMixin:
             return
         path = values[0]
         name = os.path.basename(path)
-        if not messagebox.askyesno("Megerősítés",
-                                     f"Biztosan törlöd: {name}?",
+        if not messagebox.askyesno(self.tr("commander_delete_item_title"),
+                                     self.tr("commander_delete_item_confirm", name=name),
                                      parent=win):
             return
         try:
@@ -758,7 +814,7 @@ class WindowCommanderMixin:
                 os.remove(path)
             self._refresh_tree(win)
         except OSError as e:
-            messagebox.showerror("Hiba", str(e), parent=win)
+            messagebox.showerror(self.tr("error_title"), str(e), parent=win)
 
     # ==================================================================
     #  COMMANDER PARANCSOK
@@ -782,7 +838,7 @@ class WindowCommanderMixin:
                 json.dump(commands, f, ensure_ascii=False, indent=4)
             return True
         except OSError as e:
-            messagebox.showerror("Hiba", str(e))
+            messagebox.showerror(self.tr("error_title"), str(e))
             return False
 
     def _refresh_command_list(self):
@@ -793,15 +849,18 @@ class WindowCommanderMixin:
 
         commands = self._load_commander_commands()
         if not commands:
-            ctk.CTkLabel(self._cmd_list, text="Még nincs egyedi parancs.",
+            ctk.CTkLabel(self._cmd_list, text=self.tr("commander_no_commands_msg"),
                           text_color="#777").pack(pady=20)
             return
+
+        type_message = self.tr("common_type_message")
+        type_embed = self.tr("common_type_embed")
 
         for i, cmd in enumerate(commands):
             card = ctk.CTkFrame(self._cmd_list, fg_color="#252932", corner_radius=8)
             card.pack(fill="x", padx=4, pady=3)
 
-            type_str = "Embed" if cmd.get("type") == "embed" else "Üzenet"
+            type_str = type_embed if cmd.get("type") == "embed" else type_message
             enabled = "✅" if cmd.get("enabled", True) else "⛔"
 
             ctk.CTkLabel(
@@ -832,9 +891,13 @@ class WindowCommanderMixin:
         """Közös parancs szerkesztő (új + meglévő) — sablonokkal."""
         is_new = existing is None
 
+        # Belső típus címkék
+        TYPE_MESSAGE_LABEL = self.tr("common_type_message")
+        TYPE_EMBED_LABEL = self.tr("common_type_embed")
+
         data = existing or {
             "name": "",
-            "description": "Egyedi parancs",
+            "description": self.tr("commander_default_description"),
             "type": "message",
             "content": "",
             "embed": {"title": "", "description": "", "color": "#5865F2",
@@ -844,7 +907,8 @@ class WindowCommanderMixin:
         }
 
         dlg = ctk.CTkToplevel(self)
-        dlg.title("✏️  Parancs szerkesztése" if not is_new else "➕  Új parancs")
+        dlg.title(self.tr("commander_editor_title_new") if is_new
+                   else self.tr("commander_editor_title_edit"))
         dlg.geometry("720x820")
         dlg.minsize(640, 560)
         dlg.grab_set()
@@ -860,7 +924,8 @@ class WindowCommanderMixin:
         header.pack_propagate(False)
         ctk.CTkLabel(
             header,
-            text="➕  Új parancs" if is_new else "✏️  Parancs szerkesztése",
+            text=self.tr("commander_editor_title_new") if is_new
+                 else self.tr("commander_editor_title_edit"),
             font=("Arial", 16, "bold"), text_color="white",
         ).pack(side="left", padx=20, pady=14)
 
@@ -874,16 +939,17 @@ class WindowCommanderMixin:
         # ============================================================
         #  SABLON VÁLASZTÓ (csak új parancs esetén)
         # ============================================================
+        field_refs = {}
+
         if is_new:
             ctk.CTkLabel(
-                scroll, text="🎨  Sablon választása",
+                scroll, text=self.tr("commander_templates_section"),
                 font=("Arial", 13, "bold"), anchor="w",
             ).pack(fill="x", pady=(4, 4))
 
             ctk.CTkLabel(
                 scroll,
-                text="Válassz egy kész sablont — a mezők automatikusan kitöltődnek,\n"
-                     "és utána szabadon módosíthatod őket.",
+                text=self.tr("commander_templates_hint"),
                 font=("Arial", 10), text_color="#8a8e98",
                 justify="left", anchor="w",
             ).pack(fill="x", pady=(0, 8))
@@ -891,17 +957,20 @@ class WindowCommanderMixin:
             template_grid = ctk.CTkFrame(scroll, fg_color="transparent")
             template_grid.pack(fill="x", pady=(0, 12))
 
-            # Előre létrehozott mezők referenciái
-            field_refs = {}
+            tpl_keys = list(COMMAND_TEMPLATES.keys())
 
             def apply_template(tpl_key):
-                tpl = COMMAND_TEMPLATES[tpl_key]
-                field_refs["type_var"].set("Embed" if tpl["type"] == "embed" else "Üzenet")
+                resolved = self._resolve_command_template(tpl_key)
+                if not resolved:
+                    return
+                field_refs["type_var"].set(
+                    TYPE_EMBED_LABEL if resolved["type"] == "embed" else TYPE_MESSAGE_LABEL
+                )
                 desc_entry.delete(0, "end")
-                desc_entry.insert(0, tpl.get("description", ""))
+                desc_entry.insert(0, resolved.get("description", ""))
                 content_box.delete("1.0", "end")
-                content_box.insert("1.0", tpl.get("content", ""))
-                emb = tpl.get("embed", {})
+                content_box.insert("1.0", resolved.get("content", ""))
+                emb = resolved.get("embed", {})
                 emb_title.delete(0, "end")
                 emb_title.insert(0, emb.get("title", ""))
                 emb_desc.delete("1.0", "end")
@@ -912,14 +981,14 @@ class WindowCommanderMixin:
                 emb_footer.insert(0, emb.get("footer", ""))
                 emb_thumb.delete(0, "end")
                 emb_thumb.insert(0, emb.get("thumbnail", ""))
-                field_refs["eph_var"].set(tpl.get("ephemeral", False))
+                field_refs["eph_var"].set(resolved.get("ephemeral", False))
                 field_refs["toggle_sections"]()
 
-            keys = list(COMMAND_TEMPLATES.keys())
-            for i, tpl_key in enumerate(keys):
+            for i, tpl_key in enumerate(tpl_keys):
+                tpl = COMMAND_TEMPLATES[tpl_key]
                 btn = ctk.CTkButton(
                     template_grid,
-                    text=tpl_key,
+                    text=self.tr(tpl["name_key"]),
                     height=38,
                     anchor="w",
                     fg_color="#252932",
@@ -937,34 +1006,36 @@ class WindowCommanderMixin:
         # ============================================================
         #  PARANCS ADATOK
         # ============================================================
-        ctk.CTkLabel(scroll, text="📝  Parancs adatai",
+        ctk.CTkLabel(scroll, text=self.tr("commander_data_section"),
                       font=("Arial", 13, "bold"), anchor="w").pack(fill="x", pady=(4, 8))
 
-        ctk.CTkLabel(scroll, text="Parancs neve (per jel nélkül):",
+        ctk.CTkLabel(scroll, text=self.tr("commander_name_lbl"),
                       font=("Arial", 11), anchor="w").pack(fill="x", pady=(4, 2))
         name_entry = ctk.CTkEntry(scroll, width=460, height=36,
                                     font=("Arial", 12))
         name_entry.insert(0, data.get("name", ""))
         name_entry.pack(anchor="w")
 
-        ctk.CTkLabel(scroll, text="Leírás (megjelenik a Discord / menüben):",
+        ctk.CTkLabel(scroll, text=self.tr("commander_desc_lbl"),
                       font=("Arial", 11), anchor="w").pack(fill="x", pady=(10, 2))
         desc_entry = ctk.CTkEntry(scroll, width=460, height=36,
                                     font=("Arial", 12))
         desc_entry.insert(0, data.get("description", ""))
         desc_entry.pack(anchor="w")
 
-        ctk.CTkLabel(scroll, text="Típus:",
+        ctk.CTkLabel(scroll, text=self.tr("common_type_lbl"),
                       font=("Arial", 11), anchor="w").pack(fill="x", pady=(10, 2))
-        type_var = ctk.StringVar(value="Embed" if data.get("type") == "embed" else "Üzenet")
-        ctk.CTkComboBox(scroll, values=["Üzenet", "Embed"],
+        type_var = ctk.StringVar(
+            value=TYPE_EMBED_LABEL if data.get("type") == "embed" else TYPE_MESSAGE_LABEL
+        )
+        ctk.CTkComboBox(scroll, values=[TYPE_MESSAGE_LABEL, TYPE_EMBED_LABEL],
                         variable=type_var, width=220, height=36).pack(anchor="w")
 
         # ============================================================
         #  ÜZENET SZEKCIÓ
         # ============================================================
         msg_frame = ctk.CTkFrame(scroll, fg_color="transparent")
-        ctk.CTkLabel(msg_frame, text="Üzenet tartalma:",
+        ctk.CTkLabel(msg_frame, text=self.tr("common_content_lbl"),
                       font=("Arial", 11), anchor="w").pack(fill="x", pady=(0, 2))
         content_box = ctk.CTkTextbox(msg_frame, height=100, font=("Consolas", 11))
         content_box.pack(fill="x")
@@ -975,13 +1046,13 @@ class WindowCommanderMixin:
         # ============================================================
         embed_frame = ctk.CTkFrame(scroll, fg_color="transparent")
 
-        ctk.CTkLabel(embed_frame, text="Embed cím:",
+        ctk.CTkLabel(embed_frame, text=self.tr("common_embed_title_lbl"),
                       font=("Arial", 11), anchor="w").pack(fill="x", pady=(0, 2))
         emb_title = ctk.CTkEntry(embed_frame, width=460, height=36)
         emb_title.insert(0, data.get("embed", {}).get("title", ""))
         emb_title.pack(anchor="w")
 
-        ctk.CTkLabel(embed_frame, text="Embed leírás:",
+        ctk.CTkLabel(embed_frame, text=self.tr("common_embed_desc_lbl"),
                       font=("Arial", 11), anchor="w").pack(fill="x", pady=(8, 2))
         emb_desc = ctk.CTkTextbox(embed_frame, height=100, font=("Arial", 11))
         emb_desc.pack(fill="x")
@@ -990,7 +1061,7 @@ class WindowCommanderMixin:
         color_row = ctk.CTkFrame(embed_frame, fg_color="transparent")
         color_row.pack(fill="x", pady=(8, 0))
 
-        ctk.CTkLabel(color_row, text="Szín (hex):",
+        ctk.CTkLabel(color_row, text=self.tr("common_color_lbl"),
                       font=("Arial", 11)).pack(side="left")
         emb_color = ctk.CTkEntry(color_row, width=120, height=32)
         emb_color.insert(0, data.get("embed", {}).get("color", "#5865F2"))
@@ -1011,18 +1082,24 @@ class WindowCommanderMixin:
 
         emb_color.bind("<KeyRelease>", update_color)
 
+        # Gyors színek
         quick_colors = [
-            ("Blurple", "#5865F2"), ("Zöld", "#2ecc71"), ("Piros", "#e74c3c"),
-            ("Narancs", "#f39c12"), ("Kék", "#3498db"), ("Lila", "#9b59b6"),
-            ("Rózsa", "#e91e63"), ("Cián", "#16a085"),
+            ("color_blurple", "#5865F2"),
+            ("color_green",   "#2ecc71"),
+            ("color_red",     "#e74c3c"),
+            ("color_orange",  "#f39c12"),
+            ("color_blue",    "#3498db"),
+            ("color_purple",  "#9b59b6"),
+            ("color_rose",    "#e91e63"),
+            ("color_teal",    "#16a085"),
         ]
         color_quick = ctk.CTkFrame(embed_frame, fg_color="transparent")
         color_quick.pack(fill="x", pady=(6, 0))
-        ctk.CTkLabel(color_quick, text="Gyors:",
+        ctk.CTkLabel(color_quick, text=self.tr("common_quick_colors_lbl"),
                       font=("Arial", 10)).pack(side="left", padx=(0, 4))
-        for name, hexcode in quick_colors:
+        for name_key, hexcode in quick_colors:
             ctk.CTkButton(
-                color_quick, text=name, width=62, height=26,
+                color_quick, text=self.tr(name_key), width=62, height=26,
                 fg_color=hexcode, hover_color=hexcode,
                 text_color="white", font=("Arial", 10),
                 command=lambda h=hexcode: (
@@ -1032,13 +1109,13 @@ class WindowCommanderMixin:
                 ),
             ).pack(side="left", padx=2)
 
-        ctk.CTkLabel(embed_frame, text="Footer (alcím):",
+        ctk.CTkLabel(embed_frame, text=self.tr("common_embed_footer_lbl"),
                       font=("Arial", 11), anchor="w").pack(fill="x", pady=(10, 2))
         emb_footer = ctk.CTkEntry(embed_frame, width=460, height=36)
         emb_footer.insert(0, data.get("embed", {}).get("footer", ""))
         emb_footer.pack(anchor="w")
 
-        ctk.CTkLabel(embed_frame, text="Thumbnail URL (kép):",
+        ctk.CTkLabel(embed_frame, text=self.tr("common_embed_thumb_lbl"),
                       font=("Arial", 11), anchor="w").pack(fill="x", pady=(8, 2))
         emb_thumb = ctk.CTkEntry(embed_frame, width=460, height=36,
                                    placeholder_text="https://...")
@@ -1048,22 +1125,22 @@ class WindowCommanderMixin:
         # ============================================================
         #  OPCIÓK
         # ============================================================
-        ctk.CTkLabel(scroll, text="⚙️  Opciók",
+        ctk.CTkLabel(scroll, text=self.tr("commander_options_section"),
                       font=("Arial", 13, "bold"), anchor="w").pack(fill="x", pady=(16, 8))
 
         eph_var = ctk.BooleanVar(value=data.get("ephemeral", False))
-        ctk.CTkCheckBox(scroll, text="  Csak a hívónak látszódjon (ephemeral)",
+        ctk.CTkCheckBox(scroll, text=self.tr("commander_ephemeral_lbl"),
                           variable=eph_var, font=("Arial", 11)).pack(anchor="w", pady=3)
 
         en_var = ctk.BooleanVar(value=data.get("enabled", True))
-        ctk.CTkCheckBox(scroll, text="  Parancs engedélyezve",
+        ctk.CTkCheckBox(scroll, text=self.tr("commander_enabled_lbl"),
                           variable=en_var, font=("Arial", 11)).pack(anchor="w", pady=3)
 
         # ============================================================
         #  SZEKCIÓK KI/BE
         # ============================================================
         def toggle_sections(*_):
-            if type_var.get() == "Embed":
+            if type_var.get() == TYPE_EMBED_LABEL:
                 msg_frame.pack_forget()
                 embed_frame.pack(fill="x", pady=(10, 0))
             else:
@@ -1085,25 +1162,27 @@ class WindowCommanderMixin:
         def save():
             name = name_entry.get().strip().lstrip("/").replace(" ", "_").lower()
             if not name:
-                messagebox.showerror("Hiba", "A parancs neve nem lehet üres!", parent=dlg)
+                messagebox.showerror(self.tr("error_title"),
+                                       self.tr("commander_name_empty_msg"), parent=dlg)
                 return
             if not name.replace("_", "").isalnum():
-                messagebox.showerror("Hiba",
-                                       "A név csak betű, szám és alulvonás lehet!",
+                messagebox.showerror(self.tr("error_title"),
+                                       self.tr("commander_name_invalid_msg"),
                                        parent=dlg)
                 return
 
             all_cmds = self._load_commander_commands()
             for i, c in enumerate(all_cmds):
                 if c.get("name") == name and (is_new or i != idx):
-                    messagebox.showerror("Hiba",
-                                           f"Már létezik /{name} parancs!", parent=dlg)
+                    messagebox.showerror(self.tr("error_title"),
+                                           self.tr("commander_name_exists_msg", name=name),
+                                           parent=dlg)
                     return
 
             cmd_data = {
                 "name": name,
-                "description": desc_entry.get().strip() or "Egyedi parancs",
-                "type": "embed" if type_var.get() == "Embed" else "message",
+                "description": desc_entry.get().strip() or self.tr("commander_default_description"),
+                "type": "embed" if type_var.get() == TYPE_EMBED_LABEL else "message",
                 "content": content_box.get("1.0", "end-1c").strip(),
                 "embed": {
                     "title": emb_title.get().strip(),
@@ -1124,18 +1203,19 @@ class WindowCommanderMixin:
 
             if self._save_commander_commands(all_cmds):
                 self.notify(
-                    f"{'✅ Létrehozva' if is_new else '💾 Mentve'}: /{name}",
+                    self.tr("commander_created_toast", name=name) if is_new
+                    else self.tr("commander_saved_toast", name=name),
                     "success", 2000
                 )
                 self._refresh_command_list()
                 dlg.destroy()
 
-        ctk.CTkButton(bottom, text="❌  Mégse",
+        ctk.CTkButton(bottom, text=self.tr("cancel_btn"),
                        fg_color="#555555", hover_color="#666666",
                        width=140, height=44,
                        command=dlg.destroy).pack(side="right", padx=4)
 
-        ctk.CTkButton(bottom, text="💾  Mentés",
+        ctk.CTkButton(bottom, text=self.tr("commander_save_command_btn"),
                        fg_color="#27ae60", hover_color="#2ecc71",
                        width=180, height=44, font=("Arial", 13, "bold"),
                        command=save).pack(side="right", padx=4)
@@ -1145,7 +1225,8 @@ class WindowCommanderMixin:
         if not (0 <= idx < len(commands)):
             return
         name = commands[idx].get("name", "?")
-        if not messagebox.askyesno("Törlés", f"Törlöd a /{name} parancsot?"):
+        if not messagebox.askyesno(self.tr("commander_delete_command_title"),
+                                     self.tr("commander_delete_command_confirm", name=name)):
             return
         commands.pop(idx)
         self._save_commander_commands(commands)
@@ -1171,17 +1252,17 @@ class WindowCommanderMixin:
             return
         try:
             with open(path, "w", encoding="utf-8") as f:
-                f.write("# Automatikusan betöltendő extension-ök\n")
-                f.write("# Egy sor = egy extension neve (pl. cogs.parancsok)\n")
-                f.write("# A panel_integrity.py tölti be induláskor.\n\n")
+                f.write("# Auto-loaded extensions\n")
+                f.write("# One per line (e.g. cogs.commands)\n")
+                f.write("# Loaded by panel_integrity.py at startup.\n\n")
                 for ext in self._extensions:
                     f.write(ext + "\n")
             if win:
                 self._refresh_extension_list()
-                self.notify("💾 Extension lista mentve", "success", 1500)
+                self.notify(self.tr("commander_extensions_saved_msg"), "success", 1500)
         except OSError as e:
             if win:
-                messagebox.showerror("Hiba", str(e), parent=win)
+                messagebox.showerror(self.tr("error_title"), str(e), parent=win)
 
     def _refresh_extension_list(self):
         if not hasattr(self, "_ext_list"):
@@ -1194,7 +1275,7 @@ class WindowCommanderMixin:
 
         if not self._extensions:
             ctk.CTkLabel(self._ext_list,
-                          text="Még nincs hozzáadott extension.",
+                          text=self.tr("commander_no_extensions_msg"),
                           text_color="#777").pack(pady=20)
             return
 
@@ -1211,8 +1292,8 @@ class WindowCommanderMixin:
 
     def _add_extension(self, win):
         name = simpledialog.askstring(
-            "Új extension",
-            "Extension neve (pl. cogs.parancsok vagy egyszerű: uj_parancs):",
+            self.tr("commander_add_extension_title"),
+            self.tr("commander_add_extension_prompt"),
             parent=win
         )
         if not name:

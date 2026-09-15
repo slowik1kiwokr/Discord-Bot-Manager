@@ -9,6 +9,28 @@ import customtkinter as ctk
 import modules.config as config
 
 
+# Feature ID → nyelvi kulcs a megjelenített névhez
+FEATURE_NAME_KEYS = {
+    "open_settings_window_v2": "feat_settings",
+    "open_backup_manager": "feat_backup",
+    "open_sqlite_viewer": "feat_sqlite",
+    "open_broadcast_window": "feat_broadcast",
+    "open_commander_window": "feat_commander",
+    "open_plugins_window": "feat_plugins",
+    "open_servers_window": "feat_servers",
+    "open_global_stats_window": "feat_global_stats",
+    "open_monthly_report_window": "feat_monthly_report",
+    "open_tutorial_window": "feat_tutorial",
+    "open_alapok_window": "feat_basics",
+    "open_bot_info_editor": "feat_bot_info",
+    "open_activity_editor": "feat_activity",
+    "open_performance_charts_window": "feat_perf_charts",
+    "open_bot_appearance_editor": "feat_appearance",
+    "open_animated_charts_window": "feat_animated_charts",
+    "open_dashboard_window": "feat_dashboard",
+}
+
+
 class PanelStatsMixin:
     """Panel használati statisztikák követése és megjelenítése."""
 
@@ -102,7 +124,7 @@ class PanelStatsMixin:
     # ------------------------------------------------------------------
     def open_panel_stats_window(self):
         win = ctk.CTkToplevel(self)
-        win.title("📊 Panel statisztika")
+        win.title(self.tr("pstats_title"))
         win.geometry("820x680")
         win.minsize(700, 500)
         win.grab_set()
@@ -114,13 +136,13 @@ class PanelStatsMixin:
         header = ctk.CTkFrame(win, fg_color="#8e44ad", corner_radius=0, height=70)
         header.pack(fill="x")
         header.pack_propagate(False)
-        ctk.CTkLabel(header, text="📊  Panel használati statisztika",
+        ctk.CTkLabel(header, text=self.tr("pstats_header"),
                      font=("Arial", 18, "bold"), text_color="white").pack(pady=18)
 
         scroll = ctk.CTkScrollableFrame(win, fg_color="transparent")
         scroll.pack(fill="both", expand=True, padx=16, pady=14)
 
-        ctk.CTkLabel(scroll, text="📈  Áttekintés",
+        ctk.CTkLabel(scroll, text=self.tr("pstats_overview"),
                      font=("Arial", 14, "bold"), anchor="w").pack(fill="x", pady=(0, 8))
 
         cards_row = ctk.CTkFrame(scroll, fg_color="transparent")
@@ -138,63 +160,50 @@ class PanelStatsMixin:
         def fmt_time(sec):
             h = sec // 3600
             m = (sec % 3600) // 60
-            return f"{h}ó {m}p"
+            return self.tr("pstats_time_format", hours=h, minutes=m)
 
         opens = self.stats_data.get("opens", 0)
         total_sec = self.stats_data.get("total_seconds", 0)
         session_sec = int(time.time() - self.session_start)
 
-        make_card(cards_row, "🚀", "Megnyitások", opens, "#2ecc71")
-        make_card(cards_row, "⏱️", "Össz idő", fmt_time(total_sec), "#3498db")
-        make_card(cards_row, "⚡", "Ez a session", fmt_time(session_sec), "#f39c12")
+        make_card(cards_row, "🚀", self.tr("pstats_card_opens"), opens, "#2ecc71")
+        make_card(cards_row, "⏱️", self.tr("pstats_card_total"), fmt_time(total_sec), "#3498db")
+        make_card(cards_row, "⚡", self.tr("pstats_card_session"), fmt_time(session_sec), "#f39c12")
 
-        ctk.CTkLabel(scroll, text="📅  Időpontok",
+        ctk.CTkLabel(scroll, text=self.tr("pstats_dates_section"),
                      font=("Arial", 14, "bold"), anchor="w").pack(fill="x", pady=(8, 8))
 
         info_card = ctk.CTkFrame(scroll, fg_color="#1e2129", corner_radius=10)
         info_card.pack(fill="x", pady=(0, 16))
 
-        ctk.CTkLabel(info_card, text=f"🌱  Első megnyitás:  {self.stats_data.get('first_opened', '—')}",
+        ctk.CTkLabel(info_card,
+                     text=self.tr("pstats_first_opened",
+                                  value=self.stats_data.get("first_opened", "—")),
                      font=("Consolas", 11), anchor="w").pack(fill="x", padx=16, pady=(10, 4))
-        ctk.CTkLabel(info_card, text=f"🕐  Utolsó megnyitás:  {self.stats_data.get('last_opened', '—')}",
+        ctk.CTkLabel(info_card,
+                     text=self.tr("pstats_last_opened",
+                                  value=self.stats_data.get("last_opened", "—")),
                      font=("Consolas", 11), anchor="w").pack(fill="x", padx=16, pady=(0, 10))
 
-        ctk.CTkLabel(scroll, text="🔥  Legtöbbet használt funkciók",
+        ctk.CTkLabel(scroll, text=self.tr("pstats_top_features"),
                      font=("Arial", 14, "bold"), anchor="w").pack(fill="x", pady=(8, 8))
 
         feature_usage = self.stats_data.get("feature_usage", {})
         if not feature_usage:
-            ctk.CTkLabel(scroll, text="Még nincs adat.",
+            ctk.CTkLabel(scroll, text=self.tr("pstats_no_data"),
                          font=("Arial", 11), text_color="#666").pack(pady=10)
         else:
-            name_map = {
-                "open_settings_window_v2": "⚙️ Beállítások",
-                "open_backup_manager": "💾 Backup kezelő",
-                "open_sqlite_viewer": "🗄️ SQLite viewer",
-                "open_broadcast_window": "📢 Broadcast",
-                "open_commander_window": "⚡ Commander",
-                "open_plugins_window": "🧩 Pluginok",
-                "open_servers_window": "🌐 Szerverek",
-                "open_global_stats_window": "📈 Globális statisztika",
-                "open_monthly_report_window": "📅 Havi riport",
-                "open_tutorial_window": "📖 Tutorial",
-                "open_alapok_window": "📌 Alapok",
-                "open_bot_info_editor": "🤖 Bot adatok",
-                "open_activity_editor": "🎭 Activity",
-                "open_performance_charts_window": "📊 Teljesítmény grafikon",
-                "open_bot_appearance_editor": "🎨 Megjelenés",
-                "open_animated_charts_window": "📈 Élő grafikonok",
-                "open_dashboard_window": "📐 Dashboard",
-            }
-
             sorted_features = sorted(feature_usage.items(), key=lambda x: x[1], reverse=True)
             max_count = sorted_features[0][1] if sorted_features else 1
 
             for feat_id, count in sorted_features:
+                name_key = FEATURE_NAME_KEYS.get(feat_id)
+                display_name = self.tr(name_key) if name_key else feat_id
+
                 row = ctk.CTkFrame(scroll, fg_color="#1e2129", corner_radius=8)
                 row.pack(fill="x", pady=3)
 
-                ctk.CTkLabel(row, text=name_map.get(feat_id, feat_id),
+                ctk.CTkLabel(row, text=display_name,
                              font=("Arial", 12), anchor="w", width=200).pack(side="left", padx=12, pady=10)
 
                 bar_width = int((count / max_count) * 300)
@@ -212,8 +221,8 @@ class PanelStatsMixin:
 
         def reset_stats():
             from tkinter import messagebox
-            if not messagebox.askyesno("Visszaállítás",
-                                       "Biztosan törlöd az összes statisztikát?",
+            if not messagebox.askyesno(self.tr("pstats_reset_title"),
+                                       self.tr("pstats_reset_confirm"),
                                        parent=win):
                 return
             self.stats_data = {
@@ -225,16 +234,16 @@ class PanelStatsMixin:
             win.destroy()
             self.open_panel_stats_window()
 
-        ctk.CTkButton(btns, text="🔄  Adatok mentése",
+        ctk.CTkButton(btns, text=self.tr("pstats_save_btn"),
                       fg_color="#27ae60", hover_color="#2ecc71", width=160,
                       command=lambda: (self._save_panel_stats(),
-                                       self.notify("📊 Statisztika mentve", "success", 1500))
+                                       self.notify(self.tr("pstats_saved"), "success", 1500))
                       ).pack(side="left", padx=4)
 
-        ctk.CTkButton(btns, text="🗑️  Statisztika törlése",
+        ctk.CTkButton(btns, text=self.tr("pstats_reset_btn"),
                       fg_color="#c0392b", hover_color="#e74c3c", width=180,
                       command=reset_stats).pack(side="left", padx=4)
 
-        ctk.CTkButton(btns, text="Bezárás",
+        ctk.CTkButton(btns, text=self.tr("common_close_btn"),
                       fg_color="#555555", hover_color="#666666",
                       width=100, command=win.destroy).pack(side="right", padx=4)

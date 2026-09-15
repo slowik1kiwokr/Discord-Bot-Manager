@@ -6,18 +6,19 @@ import customtkinter as ctk
 import psutil
 
 
+# (name_key, icon, desc_key) — a szövegek a languages.py-ból jönnek
 WIDGET_CATALOG = {
-    "uptime":        ("Uptime", "⏱️", "Aktív bot futási ideje"),
-    "cpu":           ("CPU használat", "💻", "Processzor terhelés"),
-    "ram":           ("RAM használat", "💾", "Memória használat"),
-    "active_bots":   ("Aktív botok", "🟢", "Futó botok száma"),
-    "total_bots":    ("Összes bot", "🤖", "Regisztrált botok"),
-    "error_count":   ("Hibák", "⚠️", "Összes hiba"),
-    "commands":      ("Parancsok", "⚡", "Összes parancs"),
-    "temperature":   ("Hőmérséklet", "🌡️", "CPU hőmérséklet"),
-    "server_count":  ("Szerverek", "🌐", "Guildek száma"),
-    "user_count":    ("Felhasználók", "👥", "Elért felhasználók"),
-    "recent_logs":   ("Legutóbbi naplók", "📝", "Utolsó bejegyzések"),
+    "uptime":        ("widget_uptime_name",        "⏱️", "widget_uptime_desc"),
+    "cpu":           ("widget_cpu_name",           "💻", "widget_cpu_desc"),
+    "ram":           ("widget_ram_name",           "💾", "widget_ram_desc"),
+    "active_bots":   ("widget_active_bots_name",   "🟢", "widget_active_bots_desc"),
+    "total_bots":    ("widget_total_bots_name",    "🤖", "widget_total_bots_desc"),
+    "error_count":   ("widget_error_count_name",   "⚠️", "widget_error_count_desc"),
+    "commands":      ("widget_commands_name",      "⚡", "widget_commands_desc"),
+    "temperature":   ("widget_temperature_name",   "🌡️", "widget_temperature_desc"),
+    "server_count":  ("widget_server_count_name",  "🌐", "widget_server_count_desc"),
+    "user_count":    ("widget_user_count_name",    "👥", "widget_user_count_desc"),
+    "recent_logs":   ("widget_recent_logs_name",   "📝", "widget_recent_logs_desc"),
 }
 
 
@@ -43,7 +44,7 @@ class DashboardWidgetsMixin:
             self.dashboard_layout = self._default_dashboard_layout()
 
         win = ctk.CTkToplevel(self)
-        win.title("📐 Dashboard")
+        win.title(self.tr("dashboard_title"))
         win.geometry("1000x680")
         win.minsize(700, 500)
         win.grab_set()
@@ -55,17 +56,17 @@ class DashboardWidgetsMixin:
         header = ctk.CTkFrame(win, fg_color="#5865F2", corner_radius=0, height=60)
         header.pack(fill="x")
         header.pack_propagate(False)
-        ctk.CTkLabel(header, text="📐  Testreszabható Dashboard",
+        ctk.CTkLabel(header, text=self.tr("dashboard_header"),
                      font=("Arial", 17, "bold"), text_color="white").pack(side="left", padx=20, pady=14)
 
         container = ctk.CTkScrollableFrame(win, fg_color="transparent")
         container.pack(fill="both", expand=True, padx=12, pady=12)
 
-        ctk.CTkButton(header, text="⚙️  Widgetek", fg_color="#2c3e50",
+        ctk.CTkButton(header, text=self.tr("dashboard_widgets_btn"), fg_color="#2c3e50",
                       hover_color="#34495e", width=120,
                       command=lambda: self._open_widget_manager(win, container)
                       ).pack(side="right", padx=8, pady=14)
-        ctk.CTkButton(header, text="🔄  Frissítés", fg_color="#27ae60",
+        ctk.CTkButton(header, text=self.tr("dashboard_refresh_btn"), fg_color="#27ae60",
                       hover_color="#2ecc71", width=110,
                       command=lambda: self._render_dashboard(container)
                       ).pack(side="right", padx=8, pady=14)
@@ -79,7 +80,7 @@ class DashboardWidgetsMixin:
         visible = [w for w in self.dashboard_layout if w.get("visible", True)]
         if not visible:
             ctk.CTkLabel(container,
-                         text="Nincs megjeleníthető widget.\n\nKattints a ⚙️ Widgetek gombra!",
+                         text=self.tr("dashboard_no_widgets"),
                          font=("Arial", 14), text_color="#888").pack(pady=60)
             return
 
@@ -88,7 +89,9 @@ class DashboardWidgetsMixin:
             w_id = conf.get("id")
             if w_id not in WIDGET_CATALOG:
                 continue
-            name, icon, desc = WIDGET_CATALOG[w_id]
+            name_key, icon, desc_key = WIDGET_CATALOG[w_id]
+            name = self.tr(name_key)
+            desc = self.tr(desc_key)
             card = self._build_widget_card(container, w_id, name, icon, desc)
             card.grid(row=row, column=col, padx=8, pady=8, sticky="nsew")
             col += 1
@@ -199,7 +202,8 @@ class DashboardWidgetsMixin:
 
             elif w_id == "recent_logs":
                 logs = bot.get("raw_logs", [])[-5:]
-                label.configure(text=f"{len(logs)} db", font=("Arial", 18))
+                label.configure(text=self.tr("dashboard_recent_logs_count", count=len(logs)),
+                                font=("Arial", 18))
 
         except Exception:
             pass
@@ -211,7 +215,7 @@ class DashboardWidgetsMixin:
 
     def _open_widget_manager(self, parent_win, container):
         mgr = ctk.CTkToplevel(parent_win)
-        mgr.title("⚙️ Widgetek kezelése")
+        mgr.title(self.tr("dashboard_manager_title"))
         mgr.geometry("500x600")
         mgr.grab_set()
         mgr.update_idletasks()
@@ -219,9 +223,9 @@ class DashboardWidgetsMixin:
         y = (mgr.winfo_screenheight() - 600) // 2
         mgr.geometry(f"500x600+{x}+{y}")
 
-        ctk.CTkLabel(mgr, text="⚙️  Widgetek kezelése",
+        ctk.CTkLabel(mgr, text=self.tr("dashboard_manager_header"),
                      font=("Arial", 16, "bold")).pack(pady=(14, 4))
-        ctk.CTkLabel(mgr, text="Pipáld be, mely widgetek jelenjenek meg.",
+        ctk.CTkLabel(mgr, text=self.tr("dashboard_manager_hint"),
                      font=("Arial", 11), text_color="#888").pack(pady=(0, 10))
 
         list_frame = ctk.CTkScrollableFrame(mgr)
@@ -230,17 +234,17 @@ class DashboardWidgetsMixin:
         visible_ids = {w["id"] for w in self.dashboard_layout if w.get("visible", True)}
         vars_map = {}
 
-        for w_id, (name, icon, desc) in WIDGET_CATALOG.items():
+        for w_id, (name_key, icon, desc_key) in WIDGET_CATALOG.items():
             row = ctk.CTkFrame(list_frame, fg_color="#1e2129", corner_radius=8)
             row.pack(fill="x", padx=4, pady=3)
 
             var = ctk.BooleanVar(value=w_id in visible_ids)
             vars_map[w_id] = var
 
-            ctk.CTkCheckBox(row, text=f"{icon}  {name}",
+            ctk.CTkCheckBox(row, text=f"{icon}  {self.tr(name_key)}",
                             variable=var, font=("Arial", 12, "bold")).pack(
                 side="left", padx=12, pady=10)
-            ctk.CTkLabel(row, text=desc, font=("Arial", 9),
+            ctk.CTkLabel(row, text=self.tr(desc_key), font=("Arial", 9),
                          text_color="#888").pack(side="right", padx=12)
 
         def save_and_close():
@@ -260,6 +264,6 @@ class DashboardWidgetsMixin:
             self._render_dashboard(container)
             mgr.destroy()
 
-        ctk.CTkButton(mgr, text="💾 Mentés", fg_color="#27ae60",
+        ctk.CTkButton(mgr, text=self.tr("dashboard_save_btn"), fg_color="#27ae60",
                       hover_color="#2ecc71", height=40,
                       command=save_and_close).pack(pady=12, padx=14, fill="x")

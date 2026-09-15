@@ -2,7 +2,6 @@ import customtkinter as ctk
 from tkinter import filedialog, messagebox, simpledialog
 
 import modules.config as config
-from modules.languages import LANGUAGES
 
 
 class WindowActivityMixin:
@@ -36,6 +35,7 @@ class WindowActivityMixin:
             row = ctk.CTkFrame(rows_frame, fg_color="transparent")
             row.pack(fill="x", pady=4)
             type_var = ctk.StringVar(value=activity_type)
+            # ⚠️ Ezek az értékek a bot számára kellenek — NEM fordítjuk!
             ctk.CTkComboBox(row, values=["Playing", "Listening", "Watching", "Streaming"], variable=type_var, width=130).pack(side="left", padx=4)
             text_entry = ctk.CTkEntry(row, placeholder_text=self.tr("activity_text"))
             text_entry.insert(0, activity_text)
@@ -58,7 +58,8 @@ class WindowActivityMixin:
             try:
                 interval = max(1, int(interval_entry.get()))
             except ValueError:
-                messagebox.showwarning("Hiba", "A váltási idő egész szám legyen.", parent=win)
+                messagebox.showwarning(self.tr("common_error_title"),
+                                       self.tr("activity_interval_invalid"), parent=win)
                 return
             loop = [{"type": item["type"].get(), "text": item["text"].get().strip()} for item in rows if item["text"].get().strip()]
             bot["activity_enabled"] = bool(enabled.get())
@@ -68,4 +69,4 @@ class WindowActivityMixin:
                 bot["activity_type"], bot["activity_text"] = loop[0]["type"], loop[0]["text"]
             self.save_config()
             win.destroy()
-        ctk.CTkButton(win, text="Mentés", fg_color="#27ae60", command=save).pack(pady=10)
+        ctk.CTkButton(win, text=self.tr("common_save_btn"), fg_color="#27ae60", command=save).pack(pady=10)

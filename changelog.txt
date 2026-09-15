@@ -1,154 +1,81 @@
-v2.4.0
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+v2.5.1 — Többnyelvűsítés (Magyar + English)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-✨ ÚJ FUNKCIÓK:
+🌍 NYELVI RENDSZER
+  • A panel mostantól teljesen kétnyelvű: Magyar és English
+  • Nyelvváltás a Beállítások → Megjelenés → Nyelv menüből
+  • Minden gomb, felirat, üzenet és értesítés azonnal átfordul
+  • A nyelv a settings.json-ban tárolódik (kulcs: language)
 
-  📌  Integrációs panel — teljes újratervezés
-      • „Van már botod?" választó (2 ág)
-      • Meglévő bothoz: csak panel_integrity.py hozzáadása
-      • Új bothoz: teljes 3 fájlos sablon generálás
-      • Fájlok száma 5-ről 3-ra csökkent:
-          - bot.py
-          - panel_integrity.py (minden panel funkció)
-          - version.py
-      • Függőségek ablak a fejlécben
-      • Bot adatai gomb a token beállításához
+📦 ÁTÍRT MODULOK
+  • panel.pyw — teljesen átírva, minden szöveg tr()-ből jön
+  • modules/splash.py — külön nyelvfelismeréssel (a fő app előtt fut)
+  • modules/mixins/achievements.py — 15 achievement mind nyelvi kulcsot használ
+  • modules/mixins/afk_screen.py — nap/hónap nevek is fordítva
+  • modules/mixins/ai_assistant.py — chatbot, kódgenerátor, hibaelemzés
+  • modules/mixins/animated_charts.py — élő grafikonok
+  • modules/mixins/dashboard_widgets.py — widget nevek és leírások kulcsolva
+  • modules/mixins/hotkeys.py — F2 súgó és gyorsgombok listája
+  • modules/mixins/panel_stats.py — feature-usage nevek lefordítva
+  • modules/mixins/streak.py — napi streak toast üzenetek
+  • modules/mixins/ui_enhancements.py — emoji/szín választó, kereső
+  • modules/mixins/ui_extras.py — toast + sidebar
+  • modules/mixins/window_activity.py — activity loop szerkesztő
+  • modules/mixins/window_backup.py — backup kezelő
+  • modules/mixins/window_bot_info.py — bot adatok szerkesztő
+  • modules/mixins/window_broadcast.py — broadcast ablak + 8 sablon
+  • modules/mixins/window_commander.py — Commander + 20 parancssablon
+  • modules/mixins/window_github_update.py — frissítéskezelő
+  • modules/mixins/window_integration.py — integráció + függőségek
+  • modules/mixins/window_plugins.py — plugin kezelő + 10 sablon
+  • modules/mixins/window_report.py — havi riport
+  • modules/mixins/window_servers.py — szerver JSON szerkesztő
+  • modules/mixins/window_settings.py — Settings ablak teljesen átírva
 
-  ⚡  Commander — teljes újratervezés
-      • Bot mappa fájlfa (mint VSCode)
-      • Fájl szerkesztő beépítve
-      • Új fájl / mappa létrehozás
-      • Átnevezés / törlés
-      • 18 parancs sablon
-      • Részletes parancs szerkesztő (embed szín, footer, thumbnail)
-      • Élő szín előnézet + gyors színek
-      • Extension lista (bot_extensions.txt)
-      • Auto-extension: új .py fájl automatikusan betöltődik
-      • Python szintaxis ellenőrzés mentés előtt
+🎨 SETTINGS ABLAK ÚJRADIZÁJNOLVA
+  • Új, letisztult fejléc (éjkék háttér + cián kiemelés)
+  • Színes szekció kártyák: Biztonság, Megjelenés, Értesítések,
+    Naplók, AFK, Backup, GitHub, AI, Erőforrások, Teszt mód,
+    Összeomlás kezelés
+  • Fix alsó mentés sáv — mindig látható
+  • „Mentés és bezárás" gomb minden panelen elérhető
+  • Panel Settings / Bot Settings fülek szétválasztva
 
-  📢  Broadcast — teljes újratervezés
-      • Automatikus szerver + csatorna lista (bot_channels.json)
-      • Csatorna jogosultság jelző:
-          - 🚫 = bot nem tud írni
-          - ⚠️ = bot nem tud embedet küldeni
-      • 8 broadcast sablon
-      • Embed támogatás (cím, leírás, szín, footer, thumbnail)
-      • Időzített küldés (1 perc – 24 óra)
-      • Élő előnézet (Discord-szerű megjelenés)
-      • Csatorna gyorsválasztó (Összes / Egyik sem)
+⚙️ TECHNIKAI VÁLTOZÁSOK
+  • Új tr(kulcs, **kwargs) metódus — támogatja a {name}, {count},
+    {version} stb. helyettesítőket
+  • Nyelvi kulcsok konvenciója:
+      _btn      = gomb
+      _title    = cím
+      _lbl      = label
+      _ph       = placeholder
+      _msg      = üzenet
+      _section  = szekció fejléc
+      _hint     = tipp
+      _status   = állapot
+  • A splash külön _detect_language() és _tr() függvényt használ,
+    mert a fő app ELŐTT fut
+  • A plugin- és parancssablonok kódja érintetlen (a user szerkeszti)
+  • Az ikonok (emoji) fixek maradnak — nem nyelvfüggők
 
-  🔤  Bot prefix támogatás
-      • BOT_PREFIX a version.py fájlban
-      • Prefix mező a Bot adatai ablakban
-      • bot.py: get_prefix() függvény
-      • Állítható: / ! ? $ stb.
+🔧 JAVÍTÁSOK
+  • A bot fájljai érintetlenek — csak a panel oldali kód változott
+  • Ai provider lista egységesítve: "Ollama (local)" / "LM Studio (local)"
+  • A changelog parser az „Általános" szekciót is fordítja
 
-  🔌  panel_integrity.py — minden egy fájlban
-      • /connect parancs
-      • Statisztika küldés a panelnek
-      • Csatorna lista küldés
-      • Távoli vezérlés (start / stop / restart / info / log / stressz)
-      • Broadcast (embed + időzítés támogatás)
-      • Commander parancsok betöltése
-      • Auto-extension-ök betöltése
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+v2.4.0 — Korábbi verzió
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🎨 UI / UX FEJLESZTÉSEK:
-
-  •  Színes sidebar kártyák (Vezérlés, Tömeges, Integráció, Statisztika)
-  •  3 kártyás felső sáv:
-      - 📁 BOT FÁJLOK (kék)
-      - ⚙️ PANEL VISELKEDÉS (zöld)
-      - 🤖 BOT INFO (lila)
-  •  Téma rendszer külön fájlban (modules/theme.py)
-  •  AFK képernyő logóval (logo.jpg)
-  •  Log vízjel (logo_watermark.png)
-  •  Settings ablak színes kártyákkal
-  •  Toast értesítések
-  •  Gyorsgombok (Ctrl+S, Ctrl+B, Ctrl+R, Ctrl+F, F1, F2, F5)
-  •  Trackpad / egérgörgő támogatás minden panelen
-
-🔧 JAVÍTÁSOK:
-
-  •  Unicode hiba javítva (UTF-8 kimenet a bot oldalán)
-  •  Log szűrő debounce — nem fagy nagy napló esetén
-  •  Log vízjel automatikus elrejtés/megjelenítés
-  •  Téma váltás azonnali újraépítéssel
-  •  GitHub update ablak AFK screen fölé kerül
-  •  `skipped_version` kezelés javítva
-  •  `_rebuild_ui_for_theme` duplikáció javítva
-  •  `_build_main_content` duplikáció megszüntetve
-  •  `resource_monitor_loop` scroll duplikáció javítva
-  •  Függőségek fül: `pkg_resources` → `importlib.metadata`
-  •  Panel ID helyes kezelése (config.PANEL_ID)
-  •  AI chat threading hiba javítva
-
-📦 TECHNIKAI VÁLTOZÁSOK:
-
-  •  Új fájlok:
-     - modules/theme.py
-     - modules/mixins/afk_screen.py
-     - modules/mixins/skin.py
-     - modules/mixins/hotkeys.py
-     - modules/mixins/ui_extras.py
-     - modules/mixins/ui_enhancements.py
-     - modules/mixins/dashboard_widgets.py
-     - modules/mixins/animated_charts.py
-     - modules/mixins/panel_stats.py
-     - modules/mixins/ai_assistant.py
-     - modules/mixins/achievements.py
-     - modules/mixins/streak.py
-     - modules/mixins/window_report.py
-     - modules/mixins/window_commander.py
-     - modules/mixins/window_tutorial.py
-     - make_watermark.py
-
-  •  Módosított fájlok:
-     - panel.pyw
-     - modules/templates.py
-     - modules/splash.py
-     - modules/mixins/window_settings.py
-     - modules/mixins/window_github_update.py
-     - modules/mixins/window_integration.py
-     - modules/mixins/window_broadcast.py
-
-  •  Bot oldali fájlok (generált):
-     - bot.py
-     - panel_integrity.py
-     - version.py (BOT_PREFIX hozzáadva)
-     - bot_extensions.txt (auto-generált)
-     - bot_channels.json (auto-generált)
-     - commander_commands.json (auto-generált)
-
-  •  Védett fájlok (.gitignore):
-     - achievements.json
-     - streak.json
-     - panel_stats.json
-     - update_history.json
-
-v2.3.6
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🔧  Kisebb hibajavítások
-🎨  UI finomítások
-
-v2.3.5
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🔧  Hibajavítások
-🎨  Splash screen átdolgozás
-
-v2.3.4
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-✨  Új ikon és splash screen
-🎨  Sidebar újratervezés
-
-v2.3.0
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🎉  Első nyilvános kiadás
-    •  Multi-bot kezelés
-    •  Élő naplók
-    •  Statisztikák
-    •  Backup rendszer
-    •  GitHub auto-update
+  • AI asszisztens (OpenAI, Claude, Ollama, LM Studio)
+  • AFK képernyő élő bot-állapot nézettel
+  • Animált grafikonok (CPU / RAM)
+  • Testreszabható dashboard widgetek
+  • Havi riport rendszer
+  • Plugin rendszer sablonokkal
+  • Commander — egyedi parancsok kezelése
+  • Broadcast — üzenet minden szerverre
+  • GitHub automatikus frissítés
+  • Streak és achievement rendszer
+  • Backup kezelő

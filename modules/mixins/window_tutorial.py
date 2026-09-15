@@ -5,12 +5,19 @@ import customtkinter as ctk
 from modules.languages import LANGUAGES
 
 
-TUTORIAL_CONTENT = {
-    "Magyar": [
-        {
-            "id": "getting_started",
-            "title": "🚀 Első lépések",
-            "content": """# 🚀 Első lépések
+class WindowTutorialMixin:
+    """Beépített tutorial / súgó ablak — kétnyelvű."""
+
+    def open_tutorial_window(self):
+        lang = getattr(self, "current_language", "English")
+        
+        # A korábbi beépített tartalomstruktúra megőrzése teljes hosszában
+        tutorial_content = {
+            "Magyar": [
+                {
+                    "id": "getting_started",
+                    "title": "🚀 Első lépések",
+                    "content": """# 🚀 Első lépések
 
 ## Mi ez a panel?
 A Discord Bot Manager egy több botot kezelő vezérlőpult.
@@ -52,11 +59,11 @@ Jobb oldal — Pro metrikák
 5. Kattints a Mentés gombra
 6. Kész! Most már tudod indítani.
 """,
-        },
-        {
-            "id": "bot_management",
-            "title": "🤖 Bot kezelés",
-            "content": """# 🤖 Bot kezelés
+                },
+                {
+                    "id": "bot_management",
+                    "title": "🤖 Bot kezelés",
+                    "content": """# 🤖 Bot kezelés
 
 ## Bot indítása
 1. Válaszd ki a botot a fülek közül (bal felül)
@@ -112,11 +119,11 @@ Ha a bot összeomlik, a panel:
   2. Ha be van kapcsolva, újraindítja (Crash Watchdog)
   3. A Settings ablakban állítható a várakozási idő
 """,
-        },
-        {
-            "id": "settings",
-            "title": "⚙️ Beállítások",
-            "content": """# ⚙️ Beállítások
+                },
+                {
+                    "id": "settings",
+                    "title": "⚙️ Beállítások",
+                    "content": """# ⚙️ Beállítások
 
 ## Settings ablak megnyitása
 Bal oldali menü → ⚙️ Beállítások
@@ -189,11 +196,11 @@ Modell
   • Pl. gpt-4o-mini, llama3.2
   • Hagyd üresen az alapértelmezettnek
 """,
-        },
-        {
-            "id": "commander",
-            "title": "⚡ Commander",
-            "content": """# ⚡ Commander — Dinamikus parancsok
+                },
+                {
+                    "id": "commander",
+                    "title": "⚡ Commander",
+                    "content": """# ⚡ Commander — Dinamikus parancsok
 
 ## Mi ez?
 A Commanderrel kód írása nélkül hozhatsz létre Discord
@@ -255,11 +262,11 @@ Ha azonnal akarod:
   • Fejlesztői szerveren: /commander_reload
   • Vagy indítsd újra a botot
 """,
-        },
-        {
-            "id": "plugins",
-            "title": "🧩 Pluginok",
-            "content": """# 🧩 Pluginok — Panel bővítése
+                },
+                {
+                    "id": "plugins",
+                    "title": "🧩 Pluginok",
+                    "content": """# 🧩 Pluginok — Panel bővítése
 
 ## Mi ez?
 A pluginok Python fájlok, amik a panelbe épülnek be,
@@ -309,11 +316,11 @@ azonnal életbe lép (nem kell újraindítani a panelt).
 Minden pluginben kell egy setup_panel(panel) függvény.
 A panel paraméter a fő panel példány, amit használhatsz.
 """,
-        },
-        {
-            "id": "backup",
-            "title": "💾 Biztonsági mentés",
-            "content": """# 💾 Biztonsági mentés
+                },
+                {
+                    "id": "backup",
+                    "title": "💾 Biztonsági mentés",
+                    "content": """# 💾 Biztonsági mentés
 
 ## Mi ez?
 A panel ZIP fájlba menti:
@@ -355,11 +362,11 @@ Időzített mentés gyakorisága
   • .db, .sqlite — adatbázisok
   • data/ mappa — szerver adatok
 """,
-        },
-        {
-            "id": "github_update",
-            "title": "🚀 Frissítések",
-            "content": """# 🚀 Automatikus frissítés
+                },
+                {
+                    "id": "github_update",
+                    "title": "🚀 Frissítések",
+                    "content": """# 🚀 Automatikus frissítés
 
 ## Hogyan működik?
 A panel 60 percenként ellenőrzi a GitHubon, van-e új verzió.
@@ -404,11 +411,11 @@ A letöltés után a panel kérdezi:
 Bal oldali menü → 🔄 GitHub Frissítés
 Mindig megmutatja, van-e új verzió (akár van, akár nincs).
 """,
-        },
-        {
-            "id": "statistics",
-            "title": "📊 Statisztikák",
-            "content": """# 📊 Statisztikák
+                },
+                {
+                    "id": "statistics",
+                    "title": "📊 Statisztikák",
+                    "content": """# 📊 Statisztikák
 
 ## Pro metrikák (jobb oldal)
 A főablak jobb oldalán látható:
@@ -497,11 +504,11 @@ Keresés
 Automatikus görgetés
   • Pipáld be — mindig a legfrissebb sorra ugrik
 """,
-        },
-        {
-            "id": "integration",
-            "title": "📌 Bot integráció",
-            "content": """# 📌 Bot integráció
+                },
+                {
+                    "id": "integration",
+                    "title": "📌 Bot integráció",
+                    "content": """# 📌 Bot integráció
 
 ## Mi ez?
 A panel és a botod együttműködnek. A bot egy kiegészítő
@@ -591,11 +598,11 @@ A bot mappájában lévő version.py:
 
 FIGYELEM: A tokent tartsd titokban!
 """,
-        },
-        {
-            "id": "ai_features",
-            "title": "🤖 AI funkciók",
-            "content": """# 🤖 AI funkciók
+                },
+                {
+                    "id": "ai_features",
+                    "title": "🤖 AI funkciók",
+                    "content": """# 🤖 AI funkciók
 
 ## Mi ez?
 A panel 4 AI funkciót tartalmaz. Az AI **helyben fut**
@@ -607,7 +614,7 @@ Settings ablak → 🤖 AI beállítások
 Provider
   • OpenAI (GPT) — fizetős, profi
   • Anthropic (Claude) — fizetős
-  • Ollama (helyi) — INGYENES, ajánlott
+  • Ollama (helyi) — INGYENES, a gépeden fut
   • LM Studio (helyi) — INGYENES
 
 Ollama telepítés (ingyenes, helyi AI):
@@ -662,11 +669,11 @@ Az Ollama az első indításkor **10-30 másodpercig** is
 eltarthat, mert a modellt betölti a memóriába.
 Utána már gyors (2-5 másodperc).
 """,
-        },
-        {
-            "id": "achievements",
-            "title": "🏆 Achievementek",
-            "content": """# 🏆 Achievementek és Streak
+                },
+                {
+                    "id": "achievements",
+                    "title": "🏆 Achievementek",
+                    "content": """# 🏆 Achievementek és Streak
 
 ## Achievement rendszer
 Bal oldali menü → 🏆 Achievementek
@@ -710,11 +717,11 @@ Bal oldali menü → 🏆 Achievementek
 ⚠️ Ezek a fájlok a te személyes adataid, nem kerülnek
 fel a GitHubra (a .gitignore védi őket).
 """,
-        },
-        {
-            "id": "hotkeys",
-            "title": "⌨️ Gyorsgombok",
-            "content": """# ⌨️ Gyorsgombok és tippek
+                },
+                {
+                    "id": "hotkeys",
+                    "title": "⌨️ Gyorsgombok",
+                    "content": """# ⌨️ Gyorsgombok és tippek
 
 ## Billentyűparancsok
 
@@ -795,13 +802,13 @@ Nem jelenik meg a hőmérséklet
   • Telepítsd a LibreHardwareMonitor-t
   • Vagy hagyd figyelmen kívül (CPU % mutatja a terhelést)
 """,
-        },
-    ],
-    "English": [
-        {
-            "id": "getting_started",
-            "title": "🚀 Getting Started",
-            "content": """# 🚀 Getting Started
+                },
+            ],
+            "English": [
+                {
+                    "id": "getting_started",
+                    "title": "🚀 Getting Started",
+                    "content": """# 🚀 Getting Started
 
 ## What is this panel?
 Discord Bot Manager is a control panel for managing multiple bots.
@@ -843,11 +850,11 @@ Right side — Pro metrics
 5. Click Save
 6. Done! You can now start it.
 """,
-        },
-        {
-            "id": "bot_management",
-            "title": "🤖 Bot Management",
-            "content": """# 🤖 Bot Management
+                },
+                {
+                    "id": "bot_management",
+                    "title": "🤖 Bot Management",
+                    "content": """# 🤖 Bot Management
 
 ## Starting a bot
 1. Select the bot from the tabs (top left)
@@ -903,11 +910,11 @@ If the bot crashes, the panel:
   2. If enabled, restarts it (Crash Watchdog)
   3. The wait time is configurable in Settings
 """,
-        },
-        {
-            "id": "settings",
-            "title": "⚙️ Settings",
-            "content": """# ⚙️ Settings
+                },
+                {
+                    "id": "settings",
+                    "title": "⚙️ Settings",
+                    "content": """# ⚙️ Settings
 
 ## Opening the Settings window
 Left menu → ⚙️ Settings
@@ -979,11 +986,11 @@ Model
   • E.g. gpt-4o-mini, llama3.2
   • Leave empty for default
 """,
-        },
-        {
-            "id": "commander",
-            "title": "⚡ Commander",
-            "content": """# ⚡ Commander — Dynamic commands
+                },
+                {
+                    "id": "commander",
+                    "title": "⚡ Commander",
+                    "content": """# ⚡ Commander — Dynamic commands
 
 ## What is it?
 Commander lets you create Discord commands without writing
@@ -1045,11 +1052,11 @@ To refresh immediately:
   • On a dev server: /commander_reload
   • Or restart the bot
 """,
-        },
-        {
-            "id": "plugins",
-            "title": "🧩 Plugins",
-            "content": """# 🧩 Plugins — Extending the panel
+                },
+                {
+                    "id": "plugins",
+                    "title": "🧩 Plugins",
+                    "content": """# 🧩 Plugins — Extending the panel
 
 ## What is it?
 Plugins are Python files that hook into the panel and add
@@ -1099,11 +1106,11 @@ changes immediately (no need to restart the panel).
 Every plugin must have a setup_panel(panel) function.
 The panel parameter is the main panel instance you can use.
 """,
-        },
-        {
-            "id": "backup",
-            "title": "💾 Backups",
-            "content": """# 💾 Backups
+                },
+                {
+                    "id": "backup",
+                    "title": "💾 Backups",
+                    "content": """# 💾 Backups
 
 ## What is it?
 The panel saves into a ZIP file:
@@ -1145,11 +1152,11 @@ Scheduled backup interval
   • .db, .sqlite — databases
   • data/ folder — server data
 """,
-        },
-        {
-            "id": "github_update",
-            "title": "🚀 Updates",
-            "content": """# 🚀 Automatic update
+                },
+                {
+                    "id": "github_update",
+                    "title": "🚀 Updates",
+                    "content": """# 🚀 Automatic update
 
 ## How it works
 The panel checks GitHub every 60 minutes for a new version.
@@ -1194,11 +1201,11 @@ After download, the panel asks:
 Left menu → 🔄 GitHub Update
 Always shows whether there's a new version.
 """,
-        },
-        {
-            "id": "statistics",
-            "title": "📊 Statistics",
-            "content": """# 📊 Statistics
+                },
+                {
+                    "id": "statistics",
+                    "title": "📊 Statistics",
+                    "content": """# 📊 Statistics
 
 ## Pro metrics (right side)
 Visible on the right side of the main window:
@@ -1282,18 +1289,18 @@ Search
   • Type text in the search box
   • Filters logs instantly
 """,
-        },
-        {
-            "id": "integration",
-            "title": "📌 Bot Integration",
-            "content": """# 📌 Bot Integration
+                },
+                {
+                    "id": "integration",
+                    "title": "📌 Bot Integration",
+                    "content": """# 📌 Bot Integration
 
 ## What is it?
 The panel and your bot work together. The bot gets an
 additional code that receives the panel's commands.
 
 ## Integration window
-Left menu → 📌 Basics / Integration
+Left menu → 📌 Alapok / Integráció
 
 ## 4 tabs
 
@@ -1365,11 +1372,11 @@ The version.py file in the bot folder:
 
 WARNING: Keep the token secret!
 """,
-        },
-        {
-            "id": "ai_features",
-            "title": "🤖 AI Features",
-            "content": """# 🤖 AI Features
+                },
+                {
+                    "id": "ai_features",
+                    "title": "🤖 AI Features",
+                    "content": """# 🤖 AI Features
 
 ## What is it?
 The panel has 4 AI features. The AI runs **locally**
@@ -1434,11 +1441,11 @@ Ollama may take **10-30 seconds** on the first request
 while it loads the model into memory.
 After that it's fast (2-5 seconds).
 """,
-        },
-        {
-            "id": "achievements",
-            "title": "🏆 Achievements",
-            "content": """# 🏆 Achievements and Streak
+                },
+                {
+                    "id": "achievements",
+                    "title": "🏆 Achievements",
+                    "content": """# 🏆 Achievements and Streak
 
 ## Achievement system
 Left menu → 🏆 Achievements
@@ -1478,11 +1485,11 @@ Left menu → 🏆 Achievements
 
 ⚠️ These are your personal data, not uploaded to GitHub.
 """,
-        },
-        {
-            "id": "hotkeys",
-            "title": "⌨️ Hotkeys",
-            "content": """# ⌨️ Hotkeys and tips
+                },
+                {
+                    "id": "hotkeys",
+                    "title": "⌨️ Hotkeys",
+                    "content": """# ⌨️ Hotkeys and tips
 
 ## Keyboard shortcuts
 
@@ -1561,42 +1568,14 @@ Temperature not showing
   • Install LibreHardwareMonitor
   • Or ignore it (CPU % shows load)
 """,
-        },
-    ],
-}
+                },
+            ],
+        }
 
-
-class WindowTutorialMixin:
-    """Beépített tutorial / súgó ablak — kétnyelvű."""
-
-    def open_tutorial_window(self):
-        lang = getattr(self, "current_language", "English")
-        sections = TUTORIAL_CONTENT.get(lang, TUTORIAL_CONTENT["English"])
-
-        title_text = "📖 Tutorial — Discord Bot Manager"
-
-        header_text = {
-            "Magyar": "📖  Discord Bot Manager — Teljes útmutató",
-            "English": "📖  Discord Bot Manager — Complete Guide",
-        }.get(lang, "📖  Discord Bot Manager — Complete Guide")
-
-        categories_text = {
-            "Magyar": "📚 Kategóriák",
-            "English": "📚 Categories",
-        }.get(lang, "📚 Categories")
-
-        hint_text = {
-            "Magyar": "💡 Válassz kategóriát\n      a bal oldalról",
-            "English": "💡 Choose a category\n      from the left",
-        }.get(lang, "💡 Choose a category")
-
-        close_text = {
-            "Magyar": "Bezárás",
-            "English": "Close",
-        }.get(lang, "Close")
+        sections = tutorial_content.get(lang, tutorial_content["English"])
 
         win = ctk.CTkToplevel(self)
-        win.title(title_text)
+        win.title(self.tr("tutorial_window_title"))
         win.geometry("1100x700")
         win.minsize(900, 560)
         win.grab_set()
@@ -1610,12 +1589,12 @@ class WindowTutorialMixin:
         header.pack(fill="x")
         header.pack_propagate(False)
         ctk.CTkLabel(
-            header, text=header_text,
+            header, text=self.tr("tutorial_header_text"),
             font=("Arial", 20, "bold"), text_color="white"
         ).pack(side="left", padx=24, pady=16)
 
         ctk.CTkButton(
-            header, text="🌐 GitHub",
+            header, text=self.tr("github_btn"),
             fg_color="#2c3e50", hover_color="#34495e",
             width=110, height=34,
             command=lambda: webbrowser.open(
@@ -1631,11 +1610,10 @@ class WindowTutorialMixin:
         left.pack_propagate(False)
 
         ctk.CTkLabel(
-            left, text=categories_text,
+            left, text=self.tr("tutorial_categories"),
             font=("Arial", 14, "bold"), anchor="w"
         ).pack(fill="x", padx=14, pady=(14, 8))
 
-        # Görgethető kategória lista
         left_scroll = ctk.CTkScrollableFrame(left, fg_color="transparent")
         left_scroll.pack(fill="both", expand=True, padx=4, pady=(0, 4))
 
@@ -1680,13 +1658,13 @@ class WindowTutorialMixin:
 
         ctk.CTkLabel(
             left,
-            text=hint_text,
+            text=self.tr("tutorial_hint"),
             font=("Arial", 10), text_color="#888",
             justify="left",
         ).pack(side="bottom", fill="x", padx=14, pady=8)
 
         ctk.CTkButton(
-            win, text=close_text,
+            win, text=self.tr("close_btn"),
             fg_color="#555555", hover_color="#666666",
             width=120, height=36,
             command=win.destroy

@@ -121,16 +121,16 @@ class BotManagerApp(
     WindowSqliteMixin,
     WindowStatsMixin,
     WindowTutorialMixin,
-    WindowReportMixin,          
-    HotkeysMixin,               
-    UIExtrasMixin, 
-    UIEnhancementsMixin, 
-    DashboardWidgetsMixin,     
-    AnimatedChartsMixin,       
+    WindowReportMixin,
+    HotkeysMixin,
+    UIExtrasMixin,
+    UIEnhancementsMixin,
+    DashboardWidgetsMixin,
+    AnimatedChartsMixin,
     PanelStatsMixin,
-    AIAssistantMixin,          
-    AchievementsMixin,          
-    StreakMixin, 
+    AIAssistantMixin,
+    AchievementsMixin,
+    StreakMixin,
     AfkScreenMixin,
     ctk.CTk,
 ):
@@ -138,7 +138,7 @@ class BotManagerApp(
         super().__init__()
 
         self.current_language = "English"
-        self.selected_error_sound = "Alap (Beep)"
+        self.selected_error_sound = "beep"
         self.minimize_to_tray_enabled = True
         self.current_theme = "DBM (Alap)"
         self.custom_icon_path = ""
@@ -148,7 +148,7 @@ class BotManagerApp(
         self.ai_provider = "OpenAI (GPT)"
         self.ai_api_key = ""
         self.ai_model = ""
-        self.log_save_level = "Mindent mentse"
+        self.log_save_level = "all"
         self.max_ram_mb = 200
         self.task_kill_enabled = False
         self.rpc_enabled = True
@@ -185,22 +185,19 @@ class BotManagerApp(
         if self.panel_password:
             self.withdraw()
             if self.prompt_startup_password():
-                # Sikeres belépés → újra megjelenítjük a főablakot
                 self.after(50, self.deiconify)
             else:
-                # Felhasználó bezárta / megszakította
                 sys.exit(0)
 
         self.apply_theme_setting(self.current_theme)
         self.apply_window_icon()
 
-        self.title(self.tr("title"))
+        self.title(self.tr("panel_title"))
 
         # Igazodás a képernyőhöz
         screen_w = self.winfo_screenwidth()
         screen_h = self.winfo_screenheight()
 
-        # Ne legyen nagyobb a képernyőnél (60-80 px margó a tálcának/címsornak)
         win_w = min(1280, screen_w - 60)
         win_h = min(800, screen_h - 80)
         pos_x = max(0, (screen_w - win_w) // 2)
@@ -231,13 +228,12 @@ class BotManagerApp(
         self.after(1500, self.check_and_run_autostarts)
         self.after(3000, self.check_scheduled_backup)
         self.after(500, self.process_remote_commands)
-                # GitHub auto-update indítása a mentett intervallummal
+
         if getattr(self, "update_check_interval_minutes", 60) > 0:
             self.after(2000, lambda: self.schedule_update_check(
                 interval_minutes=self.update_check_interval_minutes
             ))
 
-        # Új rendszerek inicializálása
         self.init_toast_system()
         self.init_collapsible_sidebar()
         self.init_animated_status()
@@ -248,8 +244,8 @@ class BotManagerApp(
         self.init_achievements()
         self.init_streak()
         self._ui_built = True
-        self.log_event("INFO", "A Discord Bot Vezérlőpult sikeresen elindult.")
-        self.notify("🚀 Panel elindult!", "success", 3000)
+        self.log_event("INFO", self.tr("panel_started_log"))
+        self.notify(self.tr("toast_panel_started"), "success", 3000)
 
     def prompt_startup_password(self):
         pwd_win = ctk.CTkToplevel(self)
@@ -258,14 +254,12 @@ class BotManagerApp(
         pwd_win.resizable(False, False)
         pwd_win.grab_set()
 
-        # Középre
         pwd_win.update_idletasks()
         x = (pwd_win.winfo_screenwidth() - 380) // 2
         y = (pwd_win.winfo_screenheight() - 260) // 2
         pwd_win.geometry(f"380x260+{x}+{y}")
 
         def on_close():
-            # Ha X-el bezárják, kilépünk
             try:
                 pwd_win.destroy()
             except Exception:
@@ -274,13 +268,13 @@ class BotManagerApp(
 
         pwd_win.protocol("WM_DELETE_WINDOW", on_close)
 
-        ctk.CTkLabel(pwd_win, text=self.tr("password_protection"),
+        ctk.CTkLabel(pwd_win, text=self.tr("password_protection_lbl"),
                     font=("Arial", 16, "bold"), text_color="#5865F2").pack(pady=(20, 5))
-        ctk.CTkLabel(pwd_win, text=self.tr("enter_password"),
+        ctk.CTkLabel(pwd_win, text=self.tr("password_prompt"),
                     font=("Arial", 12)).pack(pady=(0, 10))
 
         pwd_in = ctk.CTkEntry(pwd_win, show="*", width=280,
-                            placeholder_text=self.tr("password"))
+                            placeholder_text=self.tr("password_ph"))
         pwd_in.pack(pady=5)
 
         error_label = ctk.CTkLabel(pwd_win, text="", text_color="#e74c3c",
@@ -296,17 +290,16 @@ class BotManagerApp(
                 success[0] = True
                 pwd_win.destroy()
             else:
-                error_label.configure(text="❌ Hibás jelszó! Próbáld újra.")
+                error_label.configure(text=self.tr("wrong_password_msg"))
                 pwd_in.delete(0, "end")
                 pwd_in.focus_set()
 
         pwd_in.bind("<Return>", verify)
 
-        ctk.CTkButton(pwd_win, text=self.tr("login"), fg_color="#27ae60",
+        ctk.CTkButton(pwd_win, text=self.tr("login_btn"), fg_color="#27ae60",
                     hover_color="#2ecc71", width=280,
                     command=verify).pack(pady=10)
 
-        # Fókusz kényszerítés — ez a lényeg!
         def force_focus():
             try:
                 pwd_win.lift()
@@ -325,13 +318,13 @@ class BotManagerApp(
 
     def log_event(self, level, message):
         should_log = False
-        if self.log_save_level == "Mindent mentse":
+        if self.log_save_level == "all":
             should_log = True
-        elif self.log_save_level == "Csak hibák" and level == "ERROR":
+        elif self.log_save_level == "errors" and level == "ERROR":
             should_log = True
-        elif self.log_save_level == "Csak események" and level == "EVENT":
+        elif self.log_save_level == "events" and level == "EVENT":
             should_log = True
-        elif self.log_save_level == "Sikeres interakciók" and level == "SUCCESS":
+        elif self.log_save_level == "success" and level == "SUCCESS":
             should_log = True
 
         if should_log:
@@ -341,7 +334,7 @@ class BotManagerApp(
                 with open(config.LOG_FILE_PATH, "a", encoding="utf-8") as f:
                     f.write(log_line)
             except Exception as e:
-                print(f"Hiba a logírás során: {e}")
+                print(f"[LOG] Írási hiba: {e}")
 
     def audit_remote_action(self, user, source, action, result):
         audit_entry = {
@@ -442,8 +435,6 @@ class BotManagerApp(
         return self.temperature_text
 
     def read_temperature(self):
-        """Több módszerrel próbálja kiolvasni a CPU hőmérsékletet."""
-        # 1) psutil (Linuxon működik, Windowson általában nem)
         try:
             sensors = psutil.sensors_temperatures()
             if sensors:
@@ -457,7 +448,6 @@ class BotManagerApp(
         if os.name != "nt":
             return self.tr("unavailable")
 
-        # 2) OpenHardwareMonitor / LibreHardwareMonitor WMI (ha fut a program)
         for namespace in ("root/OpenHardwareMonitor", "root/LibreHardwareMonitor"):
             try:
                 result = subprocess.run(
@@ -474,7 +464,6 @@ class BotManagerApp(
             except (OSError, subprocess.SubprocessError, ValueError):
                 pass
 
-        # 3) MSAcpi_ThermalZoneTemperature (alap Windows, gyakran admin kell)
         try:
             result = subprocess.run(
                 ["powershell", "-NoProfile", "-Command",
@@ -493,7 +482,6 @@ class BotManagerApp(
         except (OSError, subprocess.SubprocessError, ValueError):
             pass
 
-        # 4) wmi Python modul (ha telepítve van: pip install wmi)
         try:
             import wmi
             w = wmi.WMI(namespace="root\\wmi")
@@ -511,9 +499,6 @@ class BotManagerApp(
             return f"CPU: {cpu:.0f}%"
         except Exception:
             return self.tr("unavailable")
-            
-        # 5) Ha semmi nem működik, adjunk egy informatív szöveget
-        return "N/A (admin?)"
 
     def temperature_monitor_loop(self):
         while getattr(self, "is_monitoring", True):
@@ -536,13 +521,19 @@ class BotManagerApp(
         self.clipboard_clear()
         self.clipboard_append(command)
         self.update()
-        messagebox.showinfo(self.tr("copied"), command)
+        messagebox.showinfo(self.tr("copied_msg"), command)
 
     # ---------- FORDÍTÁS ----------
 
-    def tr(self, key):
+    def tr(self, key, **kwargs):
+        """Szöveg lekérése a jelenlegi nyelven, helyettesítőkkel."""
         language = LANGUAGES.get(self.current_language, LANGUAGES.get("English", {}))
         text = language.get(key, LANGUAGES.get("English", {}).get(key, key))
+        if kwargs:
+            try:
+                text = text.format(**kwargs)
+            except (KeyError, IndexError):
+                pass
         return text.replace("{version}", version)
 
     def apply_language(self, language):
@@ -555,7 +546,6 @@ class BotManagerApp(
     # ---------- TÉMA & IKON ----------
 
     def apply_theme_setting(self, theme_name):
-        """Alkalmazza a kiválasztott témát."""
         try:
             from modules.theme import (
                 THEMES, DEFAULT_THEME,
@@ -575,28 +565,23 @@ class BotManagerApp(
 
         self.theme_colors = get_theme_colors(theme_name)
 
-        # Főablak háttere
         try:
             self.configure(fg_color=self.theme_colors.get("bg_main", "#0f1420"))
         except Exception:
             pass
 
-        # Ha a panel már felépült, építsük újra
         if hasattr(self, "sidebar") and getattr(self, "_ui_built", False):
             try:
                 self.after(50, self._rebuild_ui_for_theme)
             except Exception as e:
                 print(f"[THEME] Rebuild ütemezés hiba: {e}")
 
-        # Log és konténerek stílusának frissítése
         try:
             self.after(50, self._apply_log_styling)
         except Exception:
             pass
 
     def _apply_log_styling(self):
-        """A napló és fő konténerek stílusának frissítése a témához."""
-        # Log textbox
         if hasattr(self, "log_textbox"):
             try:
                 self.log_textbox.configure(
@@ -607,7 +592,6 @@ class BotManagerApp(
             except Exception:
                 pass
 
-        # Vízjel háttér frissítése — ugyanaz mint a textbox!
         if hasattr(self, "log_watermark_label") and self.log_watermark_label is not None:
             try:
                 self.log_watermark_label.configure(
@@ -616,7 +600,6 @@ class BotManagerApp(
             except Exception:
                 pass
 
-        # Log container
         if hasattr(self, "log_container"):
             try:
                 self.log_container.configure(
@@ -627,7 +610,6 @@ class BotManagerApp(
             except Exception:
                 pass
 
-        # Settings box
         if hasattr(self, "settings_box"):
             try:
                 self.settings_box.configure(
@@ -638,7 +620,6 @@ class BotManagerApp(
             except Exception:
                 pass
 
-        # Stats panel
         if hasattr(self, "stats_panel"):
             try:
                 self.stats_panel.configure(
@@ -647,7 +628,6 @@ class BotManagerApp(
             except Exception:
                 pass
 
-        # Main frame
         if hasattr(self, "main_frame"):
             try:
                 self.main_frame.configure(
@@ -656,7 +636,6 @@ class BotManagerApp(
             except Exception:
                 pass
 
-        # Top tab frame
         if hasattr(self, "top_tab_frame"):
             try:
                 self.top_tab_frame.configure(
@@ -665,7 +644,6 @@ class BotManagerApp(
             except Exception:
                 pass
 
-        # Sidebar
         if hasattr(self, "sidebar"):
             try:
                 self.sidebar.configure(
@@ -674,13 +652,10 @@ class BotManagerApp(
             except Exception:
                 pass
 
-
     def _rebuild_ui_for_theme(self):
-        """A teljes UI újraépítése a téma váltás után."""
         try:
             self.is_loading = True
 
-            # 1) Csak a fő UI elemeit töröljük
             for attr in ("top_tab_frame", "sidebar", "main_frame"):
                 w = getattr(self, attr, None)
                 if w is not None:
@@ -689,25 +664,23 @@ class BotManagerApp(
                     except Exception:
                         pass
 
-            # 2) Reset-eljük a listákat
             self.stat_card_headers = []
             self.dual_stat_headers = []
             self.stats_section_labels = []
 
-            # 3) Újraépítjük a UI-t
             self._build_tabs()
             self._build_sidebar()
             self._build_main_content()
             self.render_tabs()
             self.switch_bot(self.active_bot_key)
 
-            # 4) Frissítjük a szövegeket
             self.update_ui_texts()
 
             self.is_loading = False
 
             try:
-                self.notify(f"🎨 Téma: {self.current_theme}", "success", 2000)
+                self.notify(self.tr("toast_theme_changed", name=self.current_theme),
+                            "success", 2000)
             except Exception:
                 pass
 
@@ -769,7 +742,7 @@ class BotManagerApp(
 
         # ---------- Státuszjelző ----------
         self.lbl_status = ctk.CTkLabel(
-            self.sidebar, text="● OFFLINE",
+            self.sidebar, text=self.tr("offline_status"),
             text_color="#e74c3c", font=("Arial", 14, "bold")
         )
         self.lbl_status.pack(padx=20, pady=(18, 10))
@@ -781,18 +754,7 @@ class BotManagerApp(
         self.sidebar_menu.pack(fill="both", expand=True, padx=2, pady=(0, 4))
         menu = self.sidebar_menu
 
-        # ============================================================
-        #  Segédfüggvények — KÁRTYA alapú szekciók
-        # ============================================================
-        CARD_BG = "#1e2129"
-        CARD_BORDER = "#2f3542"
-
         def make_section(title_key, accent="#5865F2", bg_tint="#1e2129"):
-            """Létrehoz egy színes kártya-szekciót címmel.
-
-            accent:  a keret és a cím színe
-            bg_tint: a kártya finom háttérszíne
-            """
             card = ctk.CTkFrame(
                 menu,
                 fg_color=bg_tint,
@@ -813,7 +775,6 @@ class BotManagerApp(
             return card
 
         def nav_btn(parent, text, command, active=False, color=None, hover=None):
-            """Ha color=None → áttetsző, ha color megadva → színes gomb."""
             if color:
                 fg = color
                 hv = hover or color
@@ -853,62 +814,63 @@ class BotManagerApp(
         #  VEZÉRLÉS
         # ============================================================
         card = make_section("control_section")
-        self.btn_start = action_btn(card, "▶   " + self.tr("start"), self.start_bot, "#27ae60")
-        self.btn_restart = action_btn(card, "⟳   " + self.tr("restart"), self.restart_bot, "#d35400")
-        self.btn_stop = action_btn(card, "■   " + self.tr("stop"), self.stop_bot, "#c0392b")
+        self.btn_start = action_btn(card, "▶   " + self.tr("bot_start_btn"), self.start_bot, "#27ae60")
+        self.btn_restart = action_btn(card, "⟳   " + self.tr("bot_restart_btn"), self.restart_bot, "#d35400")
+        self.btn_stop = action_btn(card, "■   " + self.tr("bot_stop_btn"), self.stop_bot, "#c0392b")
         spacer(card, 6)
 
         # ============================================================
         #  TÖMEGES VEZÉRLÉS
         # ============================================================
-        card = make_section("bulk_control")
-        self.btn_start_all = nav_btn(card, "▶   Összes indítása", self.start_all_bots, color="#27ae60")
-        self.btn_restart_all = nav_btn(card, "⟳   Összes újraindítása", self.restart_all_bots, color="#d35400")
-        self.btn_stop_all = nav_btn(card, "■   Összes leállítása", self.stop_all_bots, color="#c0392b")
+        card = make_section("bulk_control_section")
+        self.btn_start_all = nav_btn(card, "▶   " + self.tr("start_all_btn"), self.start_all_bots, color="#27ae60")
+        self.btn_restart_all = nav_btn(card, "⟳   " + self.tr("restart_all_btn"), self.restart_all_bots, color="#d35400")
+        self.btn_stop_all = nav_btn(card, "■   " + self.tr("stop_all_btn"), self.stop_all_bots, color="#c0392b")
         spacer(card, 6)
 
         # ============================================================
         #  INTEGRÁCIÓ
         # ============================================================
         card = make_section("tools_section")
-        self.btn_commander = nav_btn(card, "Commander", self.open_commander_window, color="#f39c12")
-        self.btn_plugins = nav_btn(card, self.tr("plugins"), self.open_plugins_window, color="#8e44ad")
-        self.btn_appearance = nav_btn(card, "Megjelenés", self.open_bot_appearance_editor, color="#bb8fce")
-        self.btn_alapok = nav_btn(card, self.tr("integration"), self.open_alapok_window, color="#9b59b6")
+        self.btn_commander = nav_btn(card, self.tr("commander_btn"), self.open_commander_window, color="#f39c12")
+        self.btn_plugins = nav_btn(card, self.tr("plugins_btn"), self.open_plugins_window, color="#8e44ad")
+        self.btn_appearance = nav_btn(card, self.tr("appearance_btn"), self.open_bot_appearance_editor, color="#bb8fce")
+        self.btn_alapok = nav_btn(card, self.tr("integration_btn"), self.open_alapok_window, color="#9b59b6")
         spacer(card, 6)
 
         # ============================================================
         #  STATISZTIKA
         # ============================================================
         card = make_section("stats_section")
-        self.btn_global_stats = nav_btn(card, self.tr("global_stats"), self.open_global_stats_window, color="#2980b9")
-        self.btn_dashboard = action_btn(card, "📐   Dashboard", self.open_dashboard_window, "#5865F2")
-        self.btn_animated = action_btn(card, "📈   Élő grafikonok", self.open_animated_charts_window, "#e67e22")
-        self.btn_panel_stats = action_btn(card, "📊   Panel statisztika", self.open_panel_stats_window, "#8e44ad")
-        self.btn_report = nav_btn(card, "Havi riport", self.open_monthly_report_window, color="#2ecc71")
-        self.btn_broadcast = nav_btn(card, self.tr("broadcast"), self.open_broadcast_window, color="#cb4335")
-        self.btn_backup = nav_btn(card, self.tr("backups"), self.open_backup_manager, color="#9b59b6")
-        self.btn_sqlite = nav_btn(card, self.tr("sqlite_viewer"), self.open_sqlite_viewer, color="#795548")
+        self.btn_global_stats = nav_btn(card, self.tr("global_stats_btn"), self.open_global_stats_window, color="#2980b9")
+        self.btn_dashboard = action_btn(card, "📐   " + self.tr("dashboard_widget_btn"), self.open_dashboard_window, "#5865F2")
+        self.btn_animated = action_btn(card, "📈   " + self.tr("live_charts_btn"), self.open_animated_charts_window, "#e67e22")
+        self.btn_panel_stats = action_btn(card, "📊   " + self.tr("panel_stats_btn"), self.open_panel_stats_window, "#8e44ad")
+        self.btn_report = nav_btn(card, self.tr("monthly_report_btn"), self.open_monthly_report_window, color="#2ecc71")
+        self.btn_broadcast = nav_btn(card, self.tr("broadcast_btn"), self.open_broadcast_window, color="#cb4335")
+        self.btn_backup = nav_btn(card, self.tr("backup_btn"), self.open_backup_manager, color="#9b59b6")
+        self.btn_sqlite = nav_btn(card, self.tr("sqlite_btn"), self.open_sqlite_viewer, color="#795548")
         spacer(card, 6)
 
         # ============================================================
         #  RENDSZER
         # ============================================================
         card = make_section("system_section")
-        self.btn_settings = nav_btn(card, self.tr("settings"), self.open_settings_window_v2, active=True, color="#3498db")
-        self.btn_tutorial = nav_btn(card, self.tr("tutorial"), self.open_tutorial_window, color="#e74c3c")
-        self.btn_github_update = nav_btn(card, "GitHub Frissítés", lambda: self.update_from_github("manual"), color="#2980b9")
+        self.btn_settings = nav_btn(card, self.tr("settings_btn"), self.open_settings_window_v2, active=True, color="#3498db")
+        self.btn_tutorial = nav_btn(card, self.tr("tutorial_btn"), self.open_tutorial_window, color="#e74c3c")
+        self.btn_github_update = nav_btn(card, self.tr("github_update_btn"), lambda: self.update_from_github("manual"), color="#2980b9")
         spacer(card, 6)
 
         # ============================================================
         #  AI FUNKCIOK
         # ============================================================
         card = make_section("ai_section", accent="#00bcd4", bg_tint="#0f1a24")
-        self.btn_ai_chat = action_btn(card, "🤖   AI Asszisztens", self.open_ai_chat_window, "#5865F2")
-        self.btn_ai_code = action_btn(card, "✨   AI Kód Generátor", self.open_ai_code_generator, "#9b59b6")
-        self.btn_ai_docs = action_btn(card, "📄   AI Dokumentáció", self.open_ai_docs_generator, "#16a085")
-        self.btn_achievements = action_btn(card, "🏆   Achievementek", self.open_achievements_window, "#f39c12")
+        self.btn_ai_chat = action_btn(card, "🤖   " + self.tr("ai_assistant_btn"), self.open_ai_chat_window, "#5865F2")
+        self.btn_ai_code = action_btn(card, "✨   " + self.tr("ai_code_gen_btn"), self.open_ai_code_generator, "#9b59b6")
+        self.btn_ai_docs = action_btn(card, "📄   " + self.tr("ai_docs_btn"), self.open_ai_docs_generator, "#16a085")
+        self.btn_achievements = action_btn(card, "🏆   " + self.tr("achievements_btn"), self.open_achievements_window, "#f39c12")
         spacer(card, 6)
+
         # ============================================================
         #  PANEL INFO KÁRTYA
         # ============================================================
@@ -922,7 +884,7 @@ class BotManagerApp(
         info_card.pack(fill="x", padx=6, pady=(10, 12))
 
         ctk.CTkLabel(
-            info_card, text="PANEL AZONOSÍTÓ",
+            info_card, text=self.tr("panel_id_lbl").upper(),
             font=("Arial", 9, "bold"),
             text_color="#7a8090",
             anchor="w",
@@ -939,7 +901,7 @@ class BotManagerApp(
 
         self.btn_copy_connect = ctk.CTkButton(
             info_card,
-            text="📋  Parancs másolása",
+            text="📋  " + self.tr("copy_command_btn"),
             height=32, corner_radius=6,
             fg_color="#5865F2", hover_color="#4752C4",
             font=("Arial", 11, "bold"),
@@ -948,8 +910,6 @@ class BotManagerApp(
         self.btn_copy_connect.pack(fill="x", padx=10, pady=(0, 10))
         self.register_scrollable(self.sidebar_menu)
 
-
-#-------------------------------------------------------------------------------
     def _build_main_content(self):
         self.main_frame = ctk.CTkFrame(
             self, corner_radius=0,
@@ -967,7 +927,6 @@ class BotManagerApp(
 
         card_bg = self.theme_colors.get("card_bg", "#1e2330")
 
-        # Segédfüggvény: kártya fejléc
         def card_header(parent, icon, title, accent):
             header = ctk.CTkFrame(parent, fg_color="transparent")
             header.pack(fill="x", padx=14, pady=(10, 4))
@@ -993,21 +952,22 @@ class BotManagerApp(
         )
         self.card_files.pack(side="left", fill="both", expand=True, padx=(0, 5))
 
-        card_header(self.card_files, "📁", "BOT FÁJLOK", "#3498db")
+        card_header(self.card_files, "📁", self.tr("bot_files_section"), "#3498db")
 
         files_content = ctk.CTkFrame(self.card_files, fg_color="transparent")
         files_content.pack(fill="x", padx=14, pady=(0, 12))
 
-        ctk.CTkLabel(
-            files_content, text="Fő bot fájl:",
+        self.lbl_path_title = ctk.CTkLabel(
+            files_content, text=self.tr("bot_file_lbl"),
             font=("Arial", 10),
             text_color=self.theme_colors.get("subtext", "#8a8e98"),
             anchor="w",
-        ).pack(fill="x", pady=(0, 2))
+        )
+        self.lbl_path_title.pack(fill="x", pady=(0, 2))
 
         self.entry_path = ctk.CTkEntry(
             files_content,
-            placeholder_text=self.tr("browse_placeholder"),
+            placeholder_text=self.tr("bot_file_ph"),
             height=32,
         )
         self.entry_path.pack(fill="x", pady=(0, 6))
@@ -1025,7 +985,7 @@ class BotManagerApp(
         files_btns.pack(fill="x")
 
         self.btn_save_path = ctk.CTkButton(
-            files_btns, text="💾  " + self.tr("save"),
+            files_btns, text="💾  " + self.tr("save_btn"),
             width=100, height=32,
             fg_color=self.theme_colors.get("save_btn", "#27ae60"),
             hover_color=self.theme_colors.get("save_hover", "#2ecc71"),
@@ -1035,7 +995,7 @@ class BotManagerApp(
         self.btn_save_path.pack(side="left", padx=(0, 4))
 
         self.btn_browse = ctk.CTkButton(
-            files_btns, text="📂  " + self.tr("browse"),
+            files_btns, text="📂  " + self.tr("browse_btn"),
             width=110, height=32,
             fg_color="#3498db", hover_color="#5dade2",
             font=("Arial", 11, "bold"),
@@ -1053,7 +1013,7 @@ class BotManagerApp(
         )
         self.card_behavior.pack(side="left", fill="both", expand=True, padx=5)
 
-        card_header(self.card_behavior, "⚙️", "PANEL VISELKEDÉS", "#2ecc71")
+        card_header(self.card_behavior, "⚙️", self.tr("behavior_section"), "#2ecc71")
 
         behavior_content = ctk.CTkFrame(self.card_behavior, fg_color="transparent")
         behavior_content.pack(fill="x", padx=14, pady=(0, 12))
@@ -1063,7 +1023,7 @@ class BotManagerApp(
         self.midnight_var = ctk.BooleanVar(value=False)
 
         self.chk_autostart = ctk.CTkSwitch(
-            behavior_content, text="  " + self.tr("autostart"),
+            behavior_content, text="  " + self.tr("autostart_lbl"),
             variable=self.autostart_var,
             command=self.save_config,
             font=("Arial", 11),
@@ -1073,7 +1033,7 @@ class BotManagerApp(
         sound_row = ctk.CTkFrame(behavior_content, fg_color="transparent")
         sound_row.pack(fill="x", pady=2)
         self.chk_sound = ctk.CTkSwitch(
-            sound_row, text="  " + self.tr("error_sound"),
+            sound_row, text="  " + self.tr("error_sound_lbl"),
             variable=self.sound_var,
             command=self.save_config,
             font=("Arial", 11),
@@ -1087,7 +1047,7 @@ class BotManagerApp(
         self.slider_volume.pack(side="left")
 
         self.chk_midnight = ctk.CTkSwitch(
-            behavior_content, text="  " + self.tr("midnight_restart"),
+            behavior_content, text="  " + self.tr("midnight_restart_lbl"),
             variable=self.midnight_var,
             command=self.on_midnight_toggle,
             font=("Arial", 11),
@@ -1095,7 +1055,7 @@ class BotManagerApp(
         self.chk_midnight.pack(anchor="w", pady=2)
 
         ctk.CTkLabel(
-            behavior_content, text=self.tr("auto_restart_label"),
+            behavior_content, text=self.tr("auto_restart_lbl"),
             font=("Arial", 10, "bold"),
             text_color=self.theme_colors.get("subtext", "#8a8e98"),
             anchor="w",
@@ -1111,7 +1071,7 @@ class BotManagerApp(
             command=lambda v: self.on_restart_slider_change(),
         )
         self.slider_r_days.pack()
-        self.lbl_r_days = ctk.CTkLabel(col1, text="0d", font=("Arial", 9))
+        self.lbl_r_days = ctk.CTkLabel(col1, text="0" + self.tr("days_short"), font=("Arial", 9))
         self.lbl_r_days.pack()
 
         col2 = ctk.CTkFrame(restart_row, fg_color="transparent")
@@ -1121,7 +1081,7 @@ class BotManagerApp(
             command=lambda v: self.on_restart_slider_change(),
         )
         self.slider_r_hours.pack()
-        self.lbl_r_hours = ctk.CTkLabel(col2, text="0h", font=("Arial", 9))
+        self.lbl_r_hours = ctk.CTkLabel(col2, text="0" + self.tr("hours_short"), font=("Arial", 9))
         self.lbl_r_hours.pack()
 
         col3 = ctk.CTkFrame(restart_row, fg_color="transparent")
@@ -1131,7 +1091,7 @@ class BotManagerApp(
             command=lambda v: self.on_restart_slider_change(),
         )
         self.slider_r_mins.pack()
-        self.lbl_r_mins = ctk.CTkLabel(col3, text="0m", font=("Arial", 9))
+        self.lbl_r_mins = ctk.CTkLabel(col3, text="0" + self.tr("minutes_short"), font=("Arial", 9))
         self.lbl_r_mins.pack()
 
         # ---------- 3. KÁRTYA — BOT INFO ----------
@@ -1144,7 +1104,7 @@ class BotManagerApp(
         )
         self.card_botinfo.pack(side="left", fill="both", expand=True, padx=(5, 0))
 
-        card_header(self.card_botinfo, "🤖", "BOT INFO", "#9b59b6")
+        card_header(self.card_botinfo, "🤖", self.tr("bot_info_section"), "#9b59b6")
 
         botinfo_content = ctk.CTkFrame(self.card_botinfo, fg_color="transparent")
         botinfo_content.pack(fill="x", padx=14, pady=(0, 12))
@@ -1153,7 +1113,7 @@ class BotManagerApp(
         row1.pack(fill="x", pady=(0, 4))
 
         self.btn_servers = ctk.CTkButton(
-            row1, text="🌐  " + self.tr("servers"),
+            row1, text="🌐  " + self.tr("servers_btn"),
             height=32, fg_color="#16a085", hover_color="#1abc9c",
             font=("Arial", 11, "bold"),
             command=self.open_servers_window,
@@ -1161,7 +1121,7 @@ class BotManagerApp(
         self.btn_servers.pack(side="left", fill="x", expand=True, padx=(0, 2))
 
         self.btn_bot_info = ctk.CTkButton(
-            row1, text="🤖  " + self.tr("bot_info"),
+            row1, text="🤖  " + self.tr("bot_data_btn"),
             height=32, fg_color="#8e44ad", hover_color="#9b59b6",
             font=("Arial", 11, "bold"),
             command=self.open_bot_info_editor,
@@ -1169,7 +1129,7 @@ class BotManagerApp(
         self.btn_bot_info.pack(side="left", fill="x", expand=True, padx=2)
 
         self.btn_activity = ctk.CTkButton(
-            botinfo_content, text="🎭  " + self.tr("activity"),
+            botinfo_content, text="🎭  " + self.tr("activity_btn"),
             height=32, fg_color="#5865F2", hover_color="#4752C4",
             font=("Arial", 11, "bold"),
             command=self.open_activity_editor,
@@ -1178,7 +1138,7 @@ class BotManagerApp(
 
         self.test_mode_var = ctk.BooleanVar(value=False)
         self.chk_test_mode = ctk.CTkSwitch(
-            botinfo_content, text="  " + self.tr("test_mode"),
+            botinfo_content, text="  " + self.tr("test_mode_lbl"),
             variable=self.test_mode_var,
             progress_color="#e67e22",
             command=self.on_test_mode_toggle,
@@ -1197,36 +1157,35 @@ class BotManagerApp(
         self.log_header_frame = ctk.CTkFrame(self.log_container, fg_color="transparent")
         self.log_header_frame.pack(fill="x", padx=10, pady=(10, 0))
 
-        self.lbl_logs_title = ctk.CTkLabel(self.log_header_frame, text=self.tr("live_logs"), font=("Arial", 14, "bold"))
+        self.lbl_logs_title = ctk.CTkLabel(self.log_header_frame, text=self.tr("live_logs_title"), font=("Arial", 14, "bold"))
         self.lbl_logs_title.pack(side="left")
 
-        self.btn_filter_all = ctk.CTkButton(self.log_header_frame, text=self.tr("all"), width=45, command=lambda: self.filter_logs("ALL"))
+        self.btn_filter_all = ctk.CTkButton(self.log_header_frame, text=self.tr("filter_all_btn"), width=60, command=lambda: self.filter_logs("ALL"))
         self.btn_filter_all.pack(side="left", padx=(10, 2))
 
-        self.btn_filter_errors = ctk.CTkButton(self.log_header_frame, text=self.tr("errors"), width=55, fg_color="#c0392b", command=lambda: self.filter_logs("ERROR"))
+        self.btn_filter_errors = ctk.CTkButton(self.log_header_frame, text=self.tr("filter_errors_btn"), width=70, fg_color="#c0392b", command=lambda: self.filter_logs("ERROR"))
         self.btn_filter_errors.pack(side="left", padx=2)
 
-        self.btn_filter_success = ctk.CTkButton(self.log_header_frame, text=self.tr("success"), width=60, fg_color="#27ae60", command=lambda: self.filter_logs("SUCCESS"))
+        self.btn_filter_success = ctk.CTkButton(self.log_header_frame, text=self.tr("filter_success_btn"), width=70, fg_color="#27ae60", command=lambda: self.filter_logs("SUCCESS"))
         self.btn_filter_success.pack(side="left", padx=2)
 
-        self.btn_filter_events = ctk.CTkButton(self.log_header_frame, text=self.tr("events"), width=55, fg_color="#8e44ad", command=lambda: self.filter_logs("EVENT"))
+        self.btn_filter_events = ctk.CTkButton(self.log_header_frame, text=self.tr("filter_events_btn"), width=80, fg_color="#8e44ad", command=lambda: self.filter_logs("EVENT"))
         self.btn_filter_events.pack(side="left", padx=2)
 
-        self.btn_clear = ctk.CTkButton(self.log_header_frame, text=self.tr("clear"), width=45, fg_color="#555555", command=self.clear_logs)
+        self.btn_clear = ctk.CTkButton(self.log_header_frame, text=self.tr("clear_logs_btn"), width=55, fg_color="#555555", command=self.clear_logs)
         self.btn_clear.pack(side="right", padx=5)
 
-        self.chk_autoscroll = ctk.CTkCheckBox(self.log_header_frame, text=self.tr("autoscroll"))
+        self.chk_autoscroll = ctk.CTkCheckBox(self.log_header_frame, text=self.tr("autoscroll_lbl"))
         self.chk_autoscroll.pack(side="right", padx=5)
         self.chk_autoscroll.select()
 
         self.log_search_frame = ctk.CTkFrame(self.log_container, fg_color="transparent")
         self.log_search_frame.pack(fill="x", padx=10, pady=(5, 0))
 
-        self.search_entry = ctk.CTkEntry(self.log_search_frame, placeholder_text=self.tr("search_placeholder"), font=("Arial", 12))
+        self.search_entry = ctk.CTkEntry(self.log_search_frame, placeholder_text=self.tr("log_search_ph"), font=("Arial", 12))
         self.search_entry.pack(fill="x", padx=0, pady=2)
         self.search_entry.bind("<KeyRelease>", lambda e: self.apply_log_search_and_filter())
 
-        # Tartalom terület — ide kerül a textbox és a vízjel
         self.log_content_area = ctk.CTkFrame(
             self.log_container, fg_color="transparent",)
         self.log_content_area.pack(fill="both", expand=True, padx=10, pady=(5, 10))
@@ -1235,59 +1194,52 @@ class BotManagerApp(
             self.log_content_area, font=("Consolas", 12), fg_color=self.theme_colors.get("log_bg", "#131720"), border_width=1, border_color=self.theme_colors.get("log_border", "#5865F2"), corner_radius=8,)
         self.log_textbox.pack(fill="both", expand=True)
 
-        # Vízjel (üres állapot)
         self.log_watermark_image = self._create_log_watermark_image()
         if self.log_watermark_image:
             self.log_watermark_label = ctk.CTkLabel(
                 self.log_content_area,
                 image=self.log_watermark_image,
                 text="",
-                fg_color=self.theme_colors.get("log_bg", "#131720"),  # ← UGYANAZ mint a textbox!
+                fg_color=self.theme_colors.get("log_bg", "#131720"),
                 corner_radius=0,
             )
             self.log_watermark_label.place(relx=0.5, rely=0.5, anchor="center")
         else:
             self.log_watermark_label = None
 
-
-
         self.stats_panel = ctk.CTkScrollableFrame(
-            self.middle_frame,width=260, label_text=self.tr("metrics"), fg_color=self.theme_colors.get("bg_main", "#0d0f14"),)
+            self.middle_frame,width=260, label_text=self.tr("metrics_section"), fg_color=self.theme_colors.get("bg_main", "#0d0f14"),)
         self.stats_panel.pack(side="right", fill="y", padx=(5, 0))
 
-        self.btn_open_charts = ctk.CTkButton(self.stats_panel, text=self.tr("open_charts"), fg_color="#e67e22", hover_color="#d35400", command=self.open_performance_charts_window)
+        self.btn_open_charts = ctk.CTkButton(self.stats_panel, text=self.tr("open_charts_btn"), fg_color="#e67e22", hover_color="#d35400", command=self.open_performance_charts_window)
         self.btn_open_charts.pack(fill="x", padx=5, pady=(2, 8))
 
         self.stats_section_labels = []
-        bot_info_label = ctk.CTkLabel(self.stats_panel, text=self.tr("bot_information"), font=("Arial", 12, "bold"), text_color="#3498db")
+        bot_info_label = ctk.CTkLabel(self.stats_panel, text=self.tr("bot_information_section"), font=("Arial", 12, "bold"), text_color="#3498db")
         bot_info_label.pack(anchor="w", padx=8, pady=(4, 2))
-        self.stats_section_labels.append((bot_info_label, "bot_information"))
-        self.lbl_bot_name = self._create_stat_card(self.tr("bot_name"), "-", icon="🤖")
-        self.lbl_bot_version = self._create_stat_card(self.tr("bot_version"), "-", icon="🏷️")
-        self.lbl_uptime = self._create_stat_card(self.tr("uptime"), "00:00:00", icon="⏱️")
-        self.lbl_weekly_uptime = self._create_stat_card(self.tr("weekly_uptime"), "0h 0m", icon="📅")
-        self.lbl_api_ping, self.lbl_msg_ping = self._create_dual_stat_card(self.tr("ping"), "API: 0ms", "Msg: 0ms", icon="📡")
-        self.lbl_commands = self._create_stat_card(self.tr("total_commands"), "0", icon="⚡")
-        pc_info_label = ctk.CTkLabel(self.stats_panel, text=self.tr("pc_resources"), font=("Arial", 12, "bold"), text_color="#2ecc71")
+        self.stats_section_labels.append((bot_info_label, "bot_information_section"))
+        self.lbl_bot_name = self._create_stat_card(self.tr("bot_name_lbl"), "-", icon="🤖")
+        self.lbl_bot_version = self._create_stat_card(self.tr("bot_version_lbl"), "-", icon="🏷️")
+        self.lbl_uptime = self._create_stat_card(self.tr("uptime_lbl"), "00:00:00", icon="⏱️")
+        self.lbl_weekly_uptime = self._create_stat_card(self.tr("weekly_uptime_lbl"), "0h 0m", icon="📅")
+        self.lbl_api_ping, self.lbl_msg_ping = self._create_dual_stat_card(self.tr("ping_lbl"), "API: 0ms", "Msg: 0ms", icon="📡")
+        self.lbl_commands = self._create_stat_card(self.tr("total_commands_lbl"), "0", icon="⚡")
+        pc_info_label = ctk.CTkLabel(self.stats_panel, text=self.tr("pc_resources_section"), font=("Arial", 12, "bold"), text_color="#2ecc71")
         pc_info_label.pack(anchor="w", padx=8, pady=(8, 2))
-        self.stats_section_labels.append((pc_info_label, "pc_resources"))
-        self.lbl_ram = self._create_stat_card(self.tr("ram"), "0 MB", icon="💾")
-        self.lbl_cpu = self._create_stat_card(self.tr("cpu"), "0 %", icon="💻")
-        self.lbl_temperature = self._create_stat_card(self.tr("temperature_pc"), self.tr("unavailable"), icon="🌡️")
-        self.lbl_servers = self._create_stat_card(self.tr("guilds"), "0", icon="🌐")
-        self.lbl_users = self._create_stat_card(self.tr("users"), "0", icon="👥")
-        self.lbl_errors = self._create_stat_card(self.tr("error_counter"), "0", text_color="#e74c3c", icon="⚠️")
+        self.stats_section_labels.append((pc_info_label, "pc_resources_section"))
+        self.lbl_ram = self._create_stat_card(self.tr("ram_lbl"), "0 MB", icon="💾")
+        self.lbl_cpu = self._create_stat_card(self.tr("cpu_lbl"), "0 %", icon="💻")
+        self.lbl_temperature = self._create_stat_card(self.tr("temperature_pc_lbl"), self.tr("unavailable"), icon="🌡️")
+        self.lbl_servers = self._create_stat_card(self.tr("guilds_lbl"), "0", icon="🌐")
+        self.lbl_users = self._create_stat_card(self.tr("users_lbl"), "0", icon="👥")
+        self.lbl_errors = self._create_stat_card(self.tr("error_counter_lbl"), "0", text_color="#e74c3c", icon="⚠️")
         self.register_scrollable(self.stats_panel)
 
     def _create_log_watermark_image(self):
-        """A log vízjel ikonjának betöltése — a kész watermark PNG-ből."""
         try:
             from PIL import Image
 
-            # A make_watermark.py által generált fájl
             logo_path = os.path.join(SCRIPT_DIR, "logo_watermark.png")
-
-            # Fallback-ek, ha a watermark még nincs meg
             if not os.path.isfile(logo_path):
                 logo_path = os.path.join(SCRIPT_DIR, "logo_clean.png")
             if not os.path.isfile(logo_path):
@@ -1300,7 +1252,6 @@ class BotManagerApp(
 
             img = Image.open(logo_path).convert("RGBA")
 
-            # Ha a watermark PNG már 220-as, nem kell átméretezni
             max_size = 220
             if img.width > max_size or img.height > max_size:
                 ratio = min(max_size / img.width, max_size / img.height)
@@ -1311,7 +1262,6 @@ class BotManagerApp(
             self._watermark_base_image = img
             self._watermark_size = (img.width, img.height)
 
-            # 0% alphaval indul (fade-in-hez)
             transparent = img.copy()
             alpha = transparent.split()[3]
             alpha = alpha.point(lambda p: 0)
@@ -1326,44 +1276,7 @@ class BotManagerApp(
             print(f"[LOG] Watermark hiba: {e}")
             return None
 
-    def _remove_solid_background(self, img, tolerance=30):
-        """Háttéreltávolítás: sötét ÉS telítetlen (szürkés/feketés) pixeleket tüntet el.
-
-        Megtartja a sötét, de SZÍNES részeket (pl. sötétkék pajzs).
-        """
-        try:
-            img = img.convert("RGBA")
-            pixels = img.load()
-            w, h = img.size
-
-            # Sötétség küszöb: a legvilágosabb csatorna ennél kisebb
-            dark_threshold = 90
-            # Telítettség küszöb: a legvilágosabb - legdarkabb csatorna különbsége
-            saturation_threshold = 40
-
-            removed = 0
-
-            for y in range(h):
-                for x in range(w):
-                    r, g, b, a = pixels[x, y]
-
-                    max_ch = max(r, g, b)
-                    min_ch = min(r, g, b)
-                    saturation = max_ch - min_ch
-
-                    # Sötét ÉS telítetlen (szürkés/feketés) → háttér
-                    if max_ch < dark_threshold and saturation < saturation_threshold:
-                        pixels[x, y] = (r, g, b, 0)
-                        removed += 1
-
-            print(f"[LOG] Eltávolított pixelek: {removed} / {w*h}")
-            return img
-        except Exception as e:
-            print(f"[LOG] Háttéreltávolítás hiba: {e}")
-            return img
-
     def _set_watermark_alpha(self, alpha_value):
-        """A vízjel átlátszóságának beállítása (0.0 - 1.0)."""
         if not getattr(self, "_watermark_base_image", None):
             return
         if not hasattr(self, "log_watermark_label") or self.log_watermark_label is None:
@@ -1383,14 +1296,11 @@ class BotManagerApp(
                 size=self._watermark_size,
             )
             self.log_watermark_label.configure(image=new_ctk)
-            # Referenciát tartunk, különben a garbage collector törli
             self._watermark_current_image = new_ctk
         except Exception as e:
             print(f"[LOG] Watermark alpha hiba: {e}")
 
     def _fade_in_log_watermark(self, duration_ms=500, target_alpha=1.0):
-        """A vízjel lassú megjelenítése (fade-in)."""
-        # Ha már fut egy fade, állítsuk le
         if getattr(self, "_watermark_fade_id", None):
             try:
                 self.after_cancel(self._watermark_fade_id)
@@ -1401,12 +1311,10 @@ class BotManagerApp(
         if not hasattr(self, "log_watermark_label") or self.log_watermark_label is None:
             return
 
-        # Kezdés: 0% alpha
         self._set_watermark_alpha(0.0)
         self.log_watermark_label.place(relx=0.5, rely=0.5, anchor="center")
         self.log_watermark_label.lift()
 
-        # Animáció paraméterek
         steps = 25
         step_delay = max(15, duration_ms // steps)
 
@@ -1416,9 +1324,7 @@ class BotManagerApp(
                     self._set_watermark_alpha(target_alpha)
                     self._watermark_fade_id = None
                     return
-                # progress: 0.0 → 1.0
                 progress = step / steps
-                # Ease-out görbe a szebb animációhoz
                 eased = 1 - (1 - progress) ** 2
                 current_alpha = target_alpha * eased
                 self._set_watermark_alpha(current_alpha)
@@ -1432,7 +1338,6 @@ class BotManagerApp(
         animate(0)
 
     def _fade_out_log_watermark(self, duration_ms=250):
-        """A vízjel lassú eltüntetése (fade-out)."""
         if getattr(self, "_watermark_fade_id", None):
             try:
                 self.after_cancel(self._watermark_fade_id)
@@ -1443,7 +1348,6 @@ class BotManagerApp(
         if not hasattr(self, "log_watermark_label") or self.log_watermark_label is None:
             return
 
-        # Ha már úgyis rejtett, ne csináljunk semmit
         try:
             if not self.log_watermark_label.winfo_ismapped():
                 return
@@ -1476,11 +1380,6 @@ class BotManagerApp(
         animate(0)
 
     def _update_log_empty_state(self):
-        """Debounce: 150 ms után ellenőrzi a napló állapotát.
-
-        Nem indít új animációt, ha már a helyes állapotban van.
-        """
-        # Előző debounce törlése
         if getattr(self, "_watermark_debounce_id", None):
             try:
                 self.after_cancel(self._watermark_debounce_id)
@@ -1488,11 +1387,9 @@ class BotManagerApp(
                 pass
             self._watermark_debounce_id = None
 
-        # Új debounce ütemezése
         self._watermark_debounce_id = self.after(150, self._do_update_log_empty_state)
 
     def _do_update_log_empty_state(self):
-        """Tényleges watermark állapot ellenőrzés (debounce után)."""
         self._watermark_debounce_id = None
 
         if not hasattr(self, "log_watermark_label") or self.log_watermark_label is None:
@@ -1504,17 +1401,13 @@ class BotManagerApp(
         except Exception:
             return
 
-        # Közvetlen ellenőrzés: látszik-e a vízjel?
         try:
             currently_visible = self.log_watermark_label.winfo_ismapped()
         except Exception:
             currently_visible = False
 
-        # Tartalom van ÉS látszik a vízjel → elrejtés
         if has_content and currently_visible:
             self._fade_out_log_watermark()
-
-        # Nincs tartalom ÉS nem látszik → megjelenítés
         elif not has_content and not currently_visible:
             self._fade_in_log_watermark()
 
@@ -1545,7 +1438,6 @@ class BotManagerApp(
         lbl2 = ctk.CTkLabel(sub_f, text=val2, font=("Arial", 12, "bold"), text_color="#2ecc71")
         lbl2.pack(side="right", expand=True)
         return lbl1, lbl2
-
 
     # ---------- BOT METADATA ----------
 
@@ -1591,7 +1483,7 @@ class BotManagerApp(
         prefix = prefix.strip() or "/"
         script_path = bot.get("path", "")
         if not script_path or not os.path.isfile(script_path):
-            messagebox.showwarning("Hiányzó bot", "Előbb tallózd be a bot.py fájlt.")
+            messagebox.showwarning(self.tr("warning_title"), self.tr("bot_script_missing_msg"))
             return
         bot_dir = os.path.dirname(script_path)
         with open(os.path.join(bot_dir, "version.py"), "w", encoding="utf-8") as version_file:
@@ -1607,14 +1499,14 @@ class BotManagerApp(
             self.rename_bot_key(old_key, name, persist=False)
         self.save_config()
         self.switch_bot(self.active_bot_key)
-        self.notify(f"💾 Bot adatai mentve: {name}", "success", 2000)
+        self.notify(self.tr("bot_data_saved_msg", name=name), "success", 2000)
 
     def rename_bot_key(self, old_key, new_key, persist=True):
         new_key = new_key.strip()
         if not new_key or old_key not in self.bots:
             return False
         if new_key != old_key and new_key in self.bots:
-            messagebox.showerror(self.tr("error_counter"), self.tr("duplicate_bot"))
+            messagebox.showerror(self.tr("error_title"), self.tr("duplicate_bot_msg"))
             return False
         bot = self.bots.pop(old_key)
         bot["name"] = new_key
@@ -1693,17 +1585,17 @@ class BotManagerApp(
     def on_test_mode_toggle(self):
         if not self.is_loading:
             self.save_config()
-            status_str = "BEKAPCSOLVA" if self.test_mode_var.get() else "KIKAPCSOLVA"
-            self.append_log("EVENT", f"Teszt mód állapota megváltoztatva: {status_str}")
+            status_str = self.tr("test_mode_on_status") if self.test_mode_var.get() else self.tr("test_mode_off_status")
+            self.append_log("EVENT", self.tr("test_mode_changed_msg", status=status_str))
 
     def on_midnight_toggle(self):
         if self.midnight_var.get():
             self.slider_r_days.set(0)
             self.slider_r_hours.set(0)
             self.slider_r_mins.set(0)
-            self.lbl_r_days.configure(text="0d")
-            self.lbl_r_hours.configure(text="0h")
-            self.lbl_r_mins.configure(text="0m")
+            self.lbl_r_days.configure(text="0" + self.tr("days_short"))
+            self.lbl_r_hours.configure(text="0" + self.tr("hours_short"))
+            self.lbl_r_mins.configure(text="0" + self.tr("minutes_short"))
         if not self.is_loading:
             self.save_config()
 
@@ -1711,9 +1603,9 @@ class BotManagerApp(
         d = int(self.slider_r_days.get())
         h = int(self.slider_r_hours.get())
         m = int(self.slider_r_mins.get())
-        self.lbl_r_days.configure(text=f"{d}d")
-        self.lbl_r_hours.configure(text=f"{h}h")
-        self.lbl_r_mins.configure(text=f"{m}m")
+        self.lbl_r_days.configure(text=f"{d}" + self.tr("days_short"))
+        self.lbl_r_hours.configure(text=f"{h}" + self.tr("hours_short"))
+        self.lbl_r_mins.configure(text=f"{m}" + self.tr("minutes_short"))
 
         if (d > 0 or h > 0 or m > 0) and self.midnight_var.get():
             self.midnight_var.set(False)
@@ -1724,59 +1616,62 @@ class BotManagerApp(
     # ---------- UI SZÖVEG FRISSÍTÉS ----------
 
     def update_ui_texts(self):
-        self.title(self.tr("title"))
-        stat_keys = ["bot_name", "bot_version", "uptime", "weekly_uptime", "total_commands", "ram", "cpu", "temperature_pc", "guilds", "users", "error_counter"]
+        self.title(self.tr("panel_title"))
+
+        stat_keys = [
+            "bot_name_lbl", "bot_version_lbl", "uptime_lbl", "weekly_uptime_lbl",
+            "total_commands_lbl", "ram_lbl", "cpu_lbl", "temperature_pc_lbl",
+            "guilds_lbl", "users_lbl", "error_counter_lbl"
+        ]
         for (header, _), key in zip(self.stat_card_headers, stat_keys):
             icon = header.cget("text").split(" ", 1)[0]
             header.configure(text=f"{icon} {self.tr(key)}")
         if self.dual_stat_headers:
             header, _ = self.dual_stat_headers[0]
             icon = header.cget("text").split(" ", 1)[0]
-            header.configure(text=f"{icon} {self.tr('ping')}")
+            header.configure(text=f"{icon} {self.tr('ping_lbl')}")
         self._refresh_stat_section_labels()
-        self.btn_dashboard.configure(text=self.tr("dashboard"))
-        self.btn_start.configure(text=self.tr("start"))
-        self.btn_restart.configure(text=self.tr("restart"))
-        self.btn_stop.configure(text=self.tr("stop"))
-        self.btn_settings.configure(text=self.tr("settings"))
-        self.btn_global_stats.configure(text=self.tr("global_stats"))
+        self.btn_dashboard.configure(text="📐   " + self.tr("dashboard_widget_btn"))
+        self.btn_start.configure(text="▶   " + self.tr("bot_start_btn"))
+        self.btn_restart.configure(text="⟳   " + self.tr("bot_restart_btn"))
+        self.btn_stop.configure(text="■   " + self.tr("bot_stop_btn"))
+        self.btn_settings.configure(text=self.tr("settings_btn"))
+        self.btn_global_stats.configure(text=self.tr("global_stats_btn"))
         if hasattr(self, "btn_broadcast"):
-            self.btn_broadcast.configure(text=self.tr("broadcast"))
-        self.btn_servers.configure(text=self.tr("servers"))
-        self.lbl_panel_id.configure(text=f"{self.tr('panel_id')}: {config.PANEL_ID}")
-        self.btn_copy_connect.configure(text=self.tr("connect_command"))
+            self.btn_broadcast.configure(text=self.tr("broadcast_btn"))
+        self.btn_servers.configure(text="🌐  " + self.tr("servers_btn"))
+        self.lbl_panel_id.configure(text=config.PANEL_ID)
+        self.btn_copy_connect.configure(text="📋  " + self.tr("copy_command_btn"))
         if hasattr(self, "btn_integrate_panel"):
-            self.btn_integrate_panel.configure(text=self.tr("integrate_panel"))
-        self.btn_bot_info.configure(text=self.tr("bot_data"))
-        self.btn_start_all.configure(text=self.tr("start_all"))
-        self.btn_restart_all.configure(text=self.tr("restart_all"))
-        self.btn_stop_all.configure(text=self.tr("stop_all"))
-        self.btn_alapok.configure(text=self.tr("integration"))
-        self.btn_tutorial.configure(text=self.tr("tutorial"))
-        self.btn_backup.configure(text=self.tr("backups"))
-        self.btn_sqlite.configure(text=self.tr("sqlite_viewer"))
-        self.btn_plugins.configure(text=self.tr("plugins"))
-        self.entry_path.configure(placeholder_text=self.tr("browse_placeholder"))
-        self.btn_activity.configure(text=self.tr("activity"))
-        self.lbl_path_title.configure(text=self.tr("bot_script"))
-        self.btn_save_path.configure(text=self.tr("save"))
-        self.btn_browse.configure(text=self.tr("browse"))
-        self.chk_autostart.configure(text=self.tr("autostart"))
-        self.chk_sound.configure(text=self.tr("error_sound"))
-        self.chk_test_mode.configure(text=self.tr("test_mode"))
-        self.chk_midnight.configure(text=self.tr("midnight_restart"))
-        self.lbl_logs_title.configure(text=self.tr("live_logs"))
-        self.btn_filter_all.configure(text=self.tr("all"))
-        self.btn_filter_errors.configure(text=self.tr("errors"))
-        self.btn_filter_success.configure(text=self.tr("success"))
-        self.btn_filter_events.configure(text=self.tr("events"))
-        self.search_entry.configure(placeholder_text=self.tr("search_placeholder"))
-        self.btn_clear.configure(text=self.tr("clear"))
-        self.chk_autoscroll.configure(text=self.tr("autoscroll"))
-        self.btn_open_charts.configure(text=self.tr("open_charts"))
+            self.btn_integrate_panel.configure(text=self.tr("add_panel_btn"))
+        self.btn_bot_info.configure(text="🤖  " + self.tr("bot_data_btn"))
+        self.btn_start_all.configure(text="▶   " + self.tr("start_all_btn"))
+        self.btn_restart_all.configure(text="⟳   " + self.tr("restart_all_btn"))
+        self.btn_stop_all.configure(text="■   " + self.tr("stop_all_btn"))
+        self.btn_alapok.configure(text=self.tr("integration_btn"))
+        self.btn_tutorial.configure(text=self.tr("tutorial_btn"))
+        self.btn_backup.configure(text=self.tr("backup_btn"))
+        self.btn_sqlite.configure(text=self.tr("sqlite_btn"))
+        self.btn_plugins.configure(text=self.tr("plugins_btn"))
+        self.entry_path.configure(placeholder_text=self.tr("bot_file_ph"))
+        self.btn_activity.configure(text="🎭  " + self.tr("activity_btn"))
+        self.lbl_path_title.configure(text=self.tr("bot_file_lbl"))
+        self.btn_save_path.configure(text="💾  " + self.tr("save_btn"))
+        self.btn_browse.configure(text="📂  " + self.tr("browse_btn"))
+        self.chk_autostart.configure(text="  " + self.tr("autostart_lbl"))
+        self.chk_sound.configure(text="  " + self.tr("error_sound_lbl"))
+        self.chk_test_mode.configure(text="  " + self.tr("test_mode_lbl"))
+        self.chk_midnight.configure(text="  " + self.tr("midnight_restart_lbl"))
+        self.lbl_logs_title.configure(text=self.tr("live_logs_title"))
+        self.btn_filter_all.configure(text=self.tr("filter_all_btn"))
+        self.btn_filter_errors.configure(text=self.tr("filter_errors_btn"))
+        self.btn_filter_success.configure(text=self.tr("filter_success_btn"))
+        self.btn_filter_events.configure(text=self.tr("filter_events_btn"))
+        self.search_entry.configure(placeholder_text=self.tr("log_search_ph"))
+        self.btn_clear.configure(text=self.tr("clear_logs_btn"))
+        self.chk_autoscroll.configure(text=self.tr("autoscroll_lbl"))
+        self.btn_open_charts.configure(text=self.tr("open_charts_btn"))
         self.check_env_file()
-        if hasattr(self, "btn_dashboard"):
-            self.btn_dashboard.configure(text="📐   Dashboard")
 
     def _refresh_stat_section_labels(self):
         if hasattr(self, "stats_section_labels"):
@@ -1795,8 +1690,8 @@ class BotManagerApp(
                         python_exe = sys.executable.lower().replace("pythonw.exe", "python.exe")
                         env = os.environ.copy()
                         env["PYTHONUNBUFFERED"] = "1"
-                        env["PYTHONIOENCODING"] = "utf-8"      
-                        env["PYTHONUTF8"] = "1"                
+                        env["PYTHONIOENCODING"] = "utf-8"
+                        env["PYTHONUTF8"] = "1"
                         creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
 
                         bot["process"] = subprocess.Popen(
@@ -1806,12 +1701,12 @@ class BotManagerApp(
                         bot["start_time"] = time.time()
 
                         if key == self.active_bot_key:
-                            self.lbl_status.configure(text=self.tr("online"), text_color="#2ecc71")
+                            self.lbl_status.configure(text=self.tr("online_status"), text_color="#2ecc71")
 
-                        self.append_log_to_bot(key, "SUCCESS", f"Auto-start folyamat elindítva (PID: {bot['process'].pid})")
+                        self.append_log_to_bot(key, "SUCCESS", self.tr("auto_start_process_started_msg", pid=bot['process'].pid))
                         threading.Thread(target=self._read_bot_output, args=(key,), daemon=True).start()
                     except Exception as e:
-                        self.append_log_to_bot(key, "ERROR", f"Auto-start indítási hiba: {e}")
+                        self.append_log_to_bot(key, "ERROR", self.tr("auto_start_error_msg", error=e))
 
     def check_auto_restarts(self):
         bot = self.bots.get(self.active_bot_key)
@@ -1819,7 +1714,7 @@ class BotManagerApp(
             if bot["midnight_restart"]:
                 now = datetime.datetime.now()
                 if now.hour == 0 and now.minute == 0 and now.second < 2:
-                    self.append_log("EVENT", "Éjféli (Midnight) újraindítás időzítő elértve. Újraindítás...")
+                    self.append_log("EVENT", self.tr("midnight_restart_event_msg"))
                     self.restart_bot()
                     return
 
@@ -1827,7 +1722,7 @@ class BotManagerApp(
             if total_seconds_limit > 0:
                 elapsed = time.time() - bot["start_time"]
                 if elapsed >= total_seconds_limit:
-                    self.append_log("EVENT", "Auto-restart időzítő lejárt. Újraindítás...")
+                    self.append_log("EVENT", self.tr("auto_restart_event_msg"))
                     self.restart_bot()
 
     def play_error_sound(self):
@@ -1843,37 +1738,18 @@ class BotManagerApp(
 
     def create_bot_data(self, name, path=""):
         return {
-            "name": name,
-            "path": path,
-            "emoji": "🤖",
-            "color": "#5865F2",
-            "autostart": False,
-            "test_mode": False,
-            "restart_days": 0,
-            "restart_hours": 0,
-            "restart_mins": 0,
-            "midnight_restart": False,
-            "error_sound": False,
-            "volume": 50,
-            "raw_logs": [],
-            "is_running": False,
-            "process": None,
-            "start_time": None,
-            "error_count": 0,
-            "total_commands": 0,
-            "allowed_discord_ids": [],
-            "weekly_uptime_seconds": 0,
-            "history_ram": [],
-            "history_cpu": [],
-            "history_time": [],
-            "auto_restart_on_crash": False,
-            "crash_restart_delay": 10,
-            "manual_stop": False,
-            "activity_enabled": True,
-            "activity_type": "Playing",
-            "activity_text": "",
-            "activity_interval_minutes": 5,
-            "activity_loop": [],
+            "name": name, "path": path, "emoji": "🤖", "color": "#5865F2",
+            "autostart": False, "test_mode": False,
+            "restart_days": 0, "restart_hours": 0, "restart_mins": 0,
+            "midnight_restart": False, "error_sound": False, "volume": 50,
+            "raw_logs": [], "is_running": False, "process": None,
+            "start_time": None, "error_count": 0, "total_commands": 0,
+            "allowed_discord_ids": [], "weekly_uptime_seconds": 0,
+            "history_ram": [], "history_cpu": [], "history_time": [],
+            "auto_restart_on_crash": False, "crash_restart_delay": 10,
+            "manual_stop": False, "activity_enabled": True,
+            "activity_type": "Playing", "activity_text": "",
+            "activity_interval_minutes": 5, "activity_loop": [],
         }
 
     # ---------- TAB KEZELÉS ----------
@@ -1898,9 +1774,7 @@ class BotManagerApp(
 
             btn = ctk.CTkButton(
                 self.tab_buttons_frame,
-                text=btn_text,
-                width=140,
-                fg_color=color,
+                text=btn_text, width=140, fg_color=color,
                 hover_color=self.theme_colors["accent_hover"] if custom_color else "#3a3a3a",
                 command=lambda k=key: self.switch_bot(k)
             )
@@ -1911,20 +1785,16 @@ class BotManagerApp(
             btn.pack(side="left", padx=5, pady=5)
 
     def _show_bot_tooltip(self, event, bot_key):
-        """Tooltip megjelenítése késleltetéssel (400 ms)."""
         try:
             if getattr(self, "_bot_tooltip_key", None) == bot_key:
                 return
-
             if getattr(self, "_bot_tooltip_after_id", None):
                 try:
                     self.after_cancel(self._bot_tooltip_after_id)
                 except Exception:
                     pass
                 self._bot_tooltip_after_id = None
-
             self._bot_tooltip_key = bot_key
-
             self._bot_tooltip_after_id = self.after(
                 400, lambda: self._really_show_bot_tooltip(bot_key)
             )
@@ -1932,12 +1802,9 @@ class BotManagerApp(
             print(f"[TOOLTIP] show hiba: {e}")
 
     def _really_show_bot_tooltip(self, bot_key):
-        """A tooltip tényleges megjelenítése."""
         if getattr(self, "_bot_tooltip_key", None) != bot_key:
             return
-
         self._hide_bot_tooltip(clear_key=False)
-
         try:
             bot = self.bots.get(bot_key)
             if not bot:
@@ -1973,7 +1840,7 @@ class BotManagerApp(
 
             is_running = bot.get("is_running", False)
             status_color = "#2ecc71" if is_running else "#e74c3c"
-            status_text = "● ONLINE" if is_running else "● OFFLINE"
+            status_text = self.tr("online_status") if is_running else self.tr("offline_status")
 
             def add_row(label, value, color="#ffffff"):
                 row = ctk.CTkFrame(info, fg_color="transparent")
@@ -1987,7 +1854,7 @@ class BotManagerApp(
                     text_color=color, anchor="w",
                 ).pack(side="left")
 
-            add_row("Állapot:", status_text, status_color)
+            add_row("State:", status_text, status_color)
 
             if is_running and bot.get("start_time"):
                 sec = int(time.time() - bot["start_time"])
@@ -2002,17 +1869,16 @@ class BotManagerApp(
             if is_running and bot.get("process"):
                 try:
                     p = psutil.Process(bot["process"].pid)
-                    ram_mb = p.memory_info().rss / (1024 * 1024)
-                    ram_text = f"{ram_mb:.1f} MB"
+                    ram_text = f"{p.memory_info().rss / (1024 * 1024):.1f} MB"
                     cpu_text = f"{p.cpu_percent(interval=None):.1f}%"
                 except Exception:
                     pass
 
             add_row("RAM:", ram_text, "#3498db")
             add_row("CPU:", cpu_text, "#2ecc71")
-            add_row("Hibák:", str(bot.get("error_count", 0)),
+            add_row("Errors:", str(bot.get("error_count", 0)),
                     "#e74c3c" if bot.get("error_count", 0) > 0 else "#6a6e78")
-            add_row("Parancsok:", str(bot.get("total_commands", 0)), "#f39c12")
+            add_row("Commands:", str(bot.get("total_commands", 0)), "#f39c12")
 
             tip.update_idletasks()
             tip_w = tip.winfo_reqwidth()
@@ -2024,7 +1890,6 @@ class BotManagerApp(
                     if bot_key in str(child.cget("text")):
                         btn_widget = child
                         break
-
                 if btn_widget:
                     x = btn_widget.winfo_rootx()
                     y = btn_widget.winfo_rooty() + btn_widget.winfo_height() + 6
@@ -2047,7 +1912,6 @@ class BotManagerApp(
                 y = 10
 
             tip.geometry(f"{tip_w}x{tip_h}+{x}+{y}")
-
             self._bot_tooltip = tip
 
             def fade_in(alpha=0.0):
@@ -2062,12 +1926,10 @@ class BotManagerApp(
                     pass
 
             tip.after(10, fade_in)
-
         except Exception as e:
             print(f"[TOOLTIP] megjelenítés hiba: {e}")
 
     def _hide_bot_tooltip(self, event=None, clear_key=True):
-        """Tooltip eltüntetése."""
         try:
             if getattr(self, "_bot_tooltip_after_id", None):
                 try:
@@ -2075,10 +1937,8 @@ class BotManagerApp(
                 except Exception:
                     pass
                 self._bot_tooltip_after_id = None
-
             if clear_key:
                 self._bot_tooltip_key = None
-
             tip = getattr(self, "_bot_tooltip", None)
             if tip is not None:
                 try:
@@ -2092,42 +1952,50 @@ class BotManagerApp(
 
     def show_tab_context_menu(self, event, key, is_first):
         menu = tk.Menu(self, tearoff=0)
-        menu.add_command(label="✏️ Átnevezés (Rename)", command=lambda: self.rename_bot(key))
+        menu.add_command(label="✏️ " + self.tr("rename_btn"), command=lambda: self.rename_bot(key))
         if not is_first and len(self.bots) > 1:
-            menu.add_command(label="🗑️ Törlés (Delete)", command=lambda: self.delete_bot(key))
+            menu.add_command(label="🗑️ " + self.tr("delete_btn"), command=lambda: self.delete_bot(key))
         try:
             menu.tk_popup(event.x_root, event.y_root)
         finally:
             menu.grab_release()
 
     def rename_bot(self, key):
-        new_name = simpledialog.askstring(self.tr("rename"), f"{self.tr('new_bot_prompt')} ({key}):", initialvalue=key)
+        new_name = simpledialog.askstring(
+            self.tr("rename_btn"),
+            f"{self.tr('new_bot_prompt')} ({key}):",
+            initialvalue=key
+        )
         if new_name:
             new_name = new_name.strip()
             if not new_name or new_name in self.bots:
-                messagebox.showerror(self.tr("error"), self.tr("duplicate_bot"))
+                messagebox.showerror(self.tr("error_title"), self.tr("duplicate_bot_msg"))
                 return
-
             if not self.rename_bot_key(key, new_name, persist=False):
                 return
             bot = self.bots[new_name]
             metadata = self.read_bot_metadata(new_name)
             script_path = bot.get("path", "")
             if script_path and os.path.isfile(script_path):
-                with open(os.path.join(os.path.dirname(script_path), "version.py"), "w", encoding="utf-8") as version_file:
-                    version_file.write("BOT_NAME = %r\nBOT_VERSION = %r\nBOT_TOKEN = %r\n" % (new_name, metadata["version"], metadata["token"]))
+                with open(os.path.join(os.path.dirname(script_path), "version.py"),
+                          "w", encoding="utf-8") as version_file:
+                    version_file.write(
+                        "BOT_NAME = %r\nBOT_VERSION = %r\nBOT_TOKEN = %r\n"
+                        % (new_name, metadata["version"], metadata["token"])
+                    )
             self.save_config()
             self.switch_bot(self.active_bot_key)
 
     def delete_bot(self, key):
         keys_list = list(self.bots.keys())
         if keys_list and keys_list[0] == key:
-            messagebox.showwarning("Figyelem", "Az alapértelmezett (fő) bot nem törölhető!")
+            messagebox.showwarning(self.tr("warning_title"), self.tr("default_bot_no_delete"))
             return
         if len(self.bots) <= 1:
-            messagebox.showwarning("Figyelem", "Az utolsó botot nem törölheted!")
+            messagebox.showwarning(self.tr("warning_title"), self.tr("last_bot_no_delete_msg"))
             return
-        if messagebox.askyesno("Megerősítés", f"Biztosan törölni akarod a(z) '{key}' botot?"):
+        if messagebox.askyesno(self.tr("confirm_btn"),
+                                self.tr("delete_bot_confirm", name=key)):
             if self.bots[key]["is_running"]:
                 try:
                     self.bots[key]["process"].terminate()
@@ -2156,7 +2024,7 @@ class BotManagerApp(
         if not self.is_loading:
             if self.active_bot_key in self.bots:
                 current_text = self.entry_path.get().strip()
-                if current_text and current_text != "Tallózd be a fő .py fájlt...":
+                if current_text and current_text != self.tr("bot_file_ph"):
                     self.bots[self.active_bot_key]["path"] = current_text
                 self.bots[self.active_bot_key]["autostart"] = self.autostart_var.get()
                 self.bots[self.active_bot_key]["test_mode"] = self.test_mode_var.get()
@@ -2179,9 +2047,9 @@ class BotManagerApp(
         self.slider_r_days.set(bot["restart_days"])
         self.slider_r_hours.set(bot["restart_hours"])
         self.slider_r_mins.set(bot["restart_mins"])
-        self.lbl_r_days.configure(text=f"{bot['restart_days']}d")
-        self.lbl_r_hours.configure(text=f"{bot['restart_hours']}h")
-        self.lbl_r_mins.configure(text=f"{bot['restart_mins']}m")
+        self.lbl_r_days.configure(text=f"{bot['restart_days']}" + self.tr("days_short"))
+        self.lbl_r_hours.configure(text=f"{bot['restart_hours']}" + self.tr("hours_short"))
+        self.lbl_r_mins.configure(text=f"{bot['restart_mins']}" + self.tr("minutes_short"))
 
         self.midnight_var.set(bot.get("midnight_restart", False))
         self.sound_var.set(bot["error_sound"])
@@ -2194,9 +2062,12 @@ class BotManagerApp(
 
         emoji = bot.get("emoji", "🤖")
         custom_color = bot.get("color", None)
-        if bot["is_running"]: self.lbl_status.configure(text=f"{emoji} ● ONLINE", text_color=custom_color or "#2ecc71")
+        if bot["is_running"]:
+            self.lbl_status.configure(text=f"{emoji} {self.tr('online_status')}",
+                                       text_color=custom_color or "#2ecc71")
         else:
-            self.lbl_status.configure(text=f"{emoji} ● OFFLINE", text_color="#e74c3c")
+            self.lbl_status.configure(text=f"{emoji} {self.tr('offline_status')}",
+                                       text_color="#e74c3c")
 
         self.lbl_errors.configure(text=str(bot["error_count"]))
         self.lbl_commands.configure(text=str(bot["total_commands"]) if bot["path"] and os.path.exists(bot["path"]) else "0")
@@ -2211,11 +2082,11 @@ class BotManagerApp(
             self.render_tabs()
 
     def add_bot_dialog(self):
-        bot_name = simpledialog.askstring(self.tr("new_bot"), self.tr("new_bot_prompt"))
+        bot_name = simpledialog.askstring(self.tr("new_bot_title"), self.tr("new_bot_prompt"))
         if bot_name:
             bot_name = bot_name.strip()
             if bot_name in self.bots:
-                messagebox.showerror(self.tr("error_counter"), self.tr("duplicate_bot"))
+                messagebox.showerror(self.tr("error_title"), self.tr("duplicate_bot_msg"))
                 return
             self.bots[bot_name] = self.create_bot_data(bot_name)
             self.switch_bot(bot_name)
@@ -2228,27 +2099,27 @@ class BotManagerApp(
         for key in self.bots:
             self.switch_bot(key)
             self.start_bot()
-        self.log_event("SUCCESS", "Összes bot indítási parancs kiadva.")
-        messagebox.showinfo("Bot Vezérlőpult", "Az összes bot elindítási folyamata lefutott!")
+        self.log_event("SUCCESS", self.tr("all_bots_start_log"))
+        messagebox.showinfo(self.tr("panel_title"), self.tr("all_bots_start_msg"))
 
     def restart_all_bots(self):
         for key in self.bots:
             self.switch_bot(key)
             self.restart_bot()
-        self.log_event("SUCCESS", "Összes bot újraindítási parancs kiadva.")
-        messagebox.showinfo("Bot Vezérlőpult", "Az összes bot újraindult!")
+        self.log_event("SUCCESS", self.tr("all_bots_restart_log"))
+        messagebox.showinfo(self.tr("panel_title"), self.tr("all_bots_restart_msg"))
 
     def stop_all_bots(self):
         for key in self.bots:
             self.switch_bot(key)
             self.stop_bot()
-        self.log_event("WARNING", "Összes bot leállítási parancs kiadva.")
-        messagebox.showwarning("Bot Vezérlőpult", "Minden futó bot leállítva!")
+        self.log_event("WARNING", self.tr("all_bots_stop_log"))
+        messagebox.showwarning(self.tr("panel_title"), self.tr("all_bots_stop_msg"))
 
     def start_bot(self):
         script_path = self.entry_path.get().strip()
         if not script_path or not os.path.exists(script_path):
-            self.append_log("ERROR", "Hiba: A megadott Python fájl nem létezik!")
+            self.append_log("ERROR", self.tr("bot_script_missing_msg"))
             return
 
         bot = self.bots[self.active_bot_key]
@@ -2267,12 +2138,12 @@ class BotManagerApp(
                 bot["manual_stop"] = False
                 bot["start_time"] = time.time()
                 bot["path"] = script_path
-                self.lbl_status.configure(text=self.tr("online"), text_color="#2ecc71")
-                self.append_log("SUCCESS", f"Bot folyamat elindítva (PID: {bot['process'].pid})")
+                self.lbl_status.configure(text=self.tr("online_status"), text_color="#2ecc71")
+                self.append_log("SUCCESS", self.tr("bot_process_started_msg", pid=bot['process'].pid))
                 threading.Thread(target=self._read_bot_output, args=(self.active_bot_key,), daemon=True).start()
                 self.save_config()
             except Exception as e:
-                self.append_log("ERROR", f"Indítási hiba: {e}")
+                self.append_log("ERROR", self.tr("start_error_msg", error=e))
 
     def _read_bot_output(self, bot_key):
         bot = self.bots[bot_key]
@@ -2303,10 +2174,12 @@ class BotManagerApp(
             return
         bot["process"] = None
         bot["start_time"] = None
-        self.append_log_to_bot(bot_key, "ERROR" if return_code not in (0, None) else "EVENT", "Bot folyamat váratlanul leállt (kód: %s)." % return_code)
+        self.append_log_to_bot(bot_key,
+                                "ERROR" if return_code not in (0, None) else "EVENT",
+                                self.tr("bot_unexpected_stop_msg", code=return_code))
         if bot.get("auto_restart_on_crash") and not bot.get("manual_stop") and return_code not in (0, None):
             delay = max(1, int(bot.get("crash_restart_delay", 10)))
-            self.append_log_to_bot(bot_key, "EVENT", "Crash watchdog: újraindítás %s másodperc múlva." % delay)
+            self.append_log_to_bot(bot_key, "EVENT", self.tr("crash_watchdog_msg", n=delay))
             self.after(delay * 1000, lambda: self.restart_crashed_bot(bot_key))
 
     def restart_crashed_bot(self, bot_key):
@@ -2325,12 +2198,12 @@ class BotManagerApp(
             bot["process"] = None
             bot["is_running"] = False
             bot["start_time"] = None
-            self.lbl_status.configure(text=self.tr("offline"), text_color="#e74c3c")
-            self.append_log("EVENT", "Bot folyamat leállítva.")
+            self.lbl_status.configure(text=self.tr("offline_status"), text_color="#e74c3c")
+            self.append_log("EVENT", self.tr("bot_process_stopped_msg"))
             self.save_config()
 
     def restart_bot(self):
-        self.append_log("EVENT", "Bot újraindítása...")
+        self.append_log("EVENT", self.tr("bot_restart_msg"))
         self.stop_bot()
         self.after(1500, self.start_bot)
 
@@ -2357,9 +2230,9 @@ class BotManagerApp(
             self.play_error_sound()
 
         timestamp = datetime.datetime.now().strftime("%H:%M:%S")
-        entry = {"time": timestamp, "date": datetime.datetime.now().strftime("%Y-%m-%d"), "type": log_type, "msg": message}
+        entry = {"time": timestamp, "date": datetime.datetime.now().strftime("%Y-%m-%d"),
+                  "type": log_type, "msg": message}
         bot["raw_logs"].append(entry)
-
         self.log_event(log_type, f"[{bot_key}] {message}")
 
         if bot_key == self.active_bot_key:
@@ -2393,7 +2266,7 @@ class BotManagerApp(
         for entry in self.bots[self.active_bot_key]["raw_logs"]:
             if not query or query in entry["msg"].lower() or query in entry["type"].lower() or query in entry["time"].lower():
                 self._write_to_textbox(entry)
-        self._update_log_empty_state()      
+        self._update_log_empty_state()
 
     def clear_logs(self):
         bot = self.bots[self.active_bot_key]
@@ -2408,9 +2281,10 @@ class BotManagerApp(
 
     def manual_save_path(self):
         path_val = self.entry_path.get().strip()
-        if path_val and path_val != "Tallózd be a fő .py fájlt...":
+        if path_val and path_val != self.tr("bot_file_ph"):
             if not os.path.exists(path_val):
-                messagebox.showerror("Hiba", f"A megadott fájl nem létezik:\n{path_val}")
+                messagebox.showerror(self.tr("error_title"),
+                                      self.tr("file_not_found_msg", path=path_val))
                 return
             self.bots[self.active_bot_key]["path"] = path_val
 
@@ -2426,8 +2300,8 @@ class BotManagerApp(
 
         self.save_config()
         self.check_env_file()
-        messagebox.showinfo("Siker", "Sikeres mentés!")
-        self.append_log("EVENT", "Beállítások manuálisan elmentve.")
+        messagebox.showinfo(self.tr("success_title"), self.tr("save_msg"))
+        self.append_log("EVENT", self.tr("settings_manually_saved_msg"))
 
     def save_config(self):
         if getattr(self, "is_loading", False):
@@ -2435,7 +2309,7 @@ class BotManagerApp(
 
         current_text = self.entry_path.get().strip()
         if self.active_bot_key in self.bots:
-            if current_text and current_text != "Tallózd be a fő .py fájlt...":
+            if current_text and current_text != self.tr("bot_file_ph"):
                 self.bots[self.active_bot_key]["path"] = current_text
 
             curr = self.bots[self.active_bot_key]
@@ -2470,10 +2344,7 @@ class BotManagerApp(
                 except Exception as e:
                     print(f"Hiba a bot_config.json mentésekor: {e}")
 
-        bots_data = {
-            "active_bot": self.active_bot_key,
-            "bots": {}
-        }
+        bots_data = {"active_bot": self.active_bot_key, "bots": {}}
         for k, v in self.bots.items():
             stored_path = v["path"]
             if stored_path:
@@ -2482,18 +2353,13 @@ class BotManagerApp(
                 except ValueError:
                     pass
             bots_data["bots"][k] = {
-                "name": v["name"],
-                "path": stored_path,
-                "emoji": v.get("emoji", "🤖"),
-                "color": v.get("color", "#5865F2"),
-                "autostart": v["autostart"],
-                "test_mode": v.get("test_mode", False),
-                "restart_days": v["restart_days"],
-                "restart_hours": v["restart_hours"],
+                "name": v["name"], "path": stored_path,
+                "emoji": v.get("emoji", "🤖"), "color": v.get("color", "#5865F2"),
+                "autostart": v["autostart"], "test_mode": v.get("test_mode", False),
+                "restart_days": v["restart_days"], "restart_hours": v["restart_hours"],
                 "restart_mins": v["restart_mins"],
                 "midnight_restart": v.get("midnight_restart", False),
-                "error_sound": v["error_sound"],
-                "volume": v.get("volume", 50),
+                "error_sound": v["error_sound"], "volume": v.get("volume", 50),
                 "allowed_discord_ids": v.get("allowed_discord_ids", []),
                 "total_commands": v["total_commands"],
                 "weekly_uptime_seconds": v["weekly_uptime_seconds"],
@@ -2513,19 +2379,15 @@ class BotManagerApp(
             print(f"Hiba bots.json mentéskor: {e}")
 
         settings_data = {
-            "panel_id": config.PANEL_ID,
-            "language": self.current_language,
+            "panel_id": config.PANEL_ID, "language": self.current_language,
             "minimize_to_tray": self.minimize_to_tray_enabled,
             "panel_password": self.panel_password,
             "error_sound_type": self.selected_error_sound,
             "theme": self.current_theme,
             "custom_icon": os.path.relpath(self.custom_icon_path, SCRIPT_DIR) if self.custom_icon_path else "",
-            "log_save_level": self.log_save_level,
-            "max_ram_mb": self.max_ram_mb,
-            "task_kill_enabled": self.task_kill_enabled,
-            "rpc_enabled": self.rpc_enabled,
-            "backup_enabled": self.backup_enabled,
-            "backup_on_start": self.backup_on_start,
+            "log_save_level": self.log_save_level, "max_ram_mb": self.max_ram_mb,
+            "task_kill_enabled": self.task_kill_enabled, "rpc_enabled": self.rpc_enabled,
+            "backup_enabled": self.backup_enabled, "backup_on_start": self.backup_on_start,
             "backup_interval_hours": self.backup_interval_hours,
             "backup_last_run": self.backup_last_run,
             "last_report_month": getattr(self, "last_report_month", ""),
@@ -2544,6 +2406,37 @@ class BotManagerApp(
         except Exception as e:
             print(f"Hiba settings.json mentéskor: {e}")
 
+    # ---------- ÉRTÉK NORMALIZÁLÁS (visszafele kompatibilitás) ----------
+
+    def _normalize_log_level(self, value):
+        """A régi magyar értékeket átalakítja fix kulcsokra.
+
+        Régi → új:
+            "Mindent mentse"        → "all"
+            "Csak hibák"            → "errors"
+            "Csak események"        → "events"
+            "Sikeres interakciók"   → "success"
+        """
+        legacy_map = {
+            "Mindent mentse": "all",
+            "Csak hibák": "errors",
+            "Csak események": "events",
+            "Sikeres interakciók": "success",
+        }
+        if value in legacy_map:
+            return legacy_map[value]
+        if value in ("all", "errors", "events", "success"):
+            return value
+        return "all"
+
+    def _normalize_sound_key(self, value):
+        """A régi magyar hangneveket átalakítja fix kulcsokra."""
+        try:
+            from modules.sounds import _normalize_key
+            return _normalize_key(value)
+        except Exception:
+            return "beep"
+            
     def load_config(self):
         if os.path.exists(BOTS_FILE):
             try:
@@ -2593,12 +2486,12 @@ class BotManagerApp(
                     self.current_language = "English"
                 self.minimize_to_tray_enabled = s_data.get("minimize_to_tray", True)
                 self.panel_password = s_data.get("panel_password", "")
-                self.selected_error_sound = s_data.get("error_sound_type", "Alap (Beep)")
-                self.current_theme = s_data.get("theme", DEFAULT_THEME)               
+                self.selected_error_sound = self._normalize_sound_key(s_data.get("error_sound_type", "beep"))
+                self.current_theme = s_data.get("theme", DEFAULT_THEME)
                 self.custom_icon_path = s_data.get("custom_icon", "")
                 if self.custom_icon_path and not os.path.isabs(self.custom_icon_path):
                     self.custom_icon_path = os.path.abspath(os.path.join(SCRIPT_DIR, self.custom_icon_path))
-                self.log_save_level = s_data.get("log_save_level", "Mindent mentse")
+                self.log_save_level = self._normalize_log_level(s_data.get("log_save_level", "all"))
                 self.max_ram_mb = s_data.get("max_ram_mb", 200)
                 self.task_kill_enabled = s_data.get("task_kill_enabled", False)
                 self.rpc_enabled = s_data.get("rpc_enabled", True)
@@ -2646,8 +2539,8 @@ class BotManagerApp(
             self.after(0, self.perform_exit)
 
         menu = pystray.Menu(
-            pystray.MenuItem("Open Panel" if self.current_language == "English" else "Panel Megnyitása", show_panel, default=True),
-            pystray.MenuItem("Quit" if self.current_language == "English" else "Kilépés", quit_panel)
+            pystray.MenuItem(self.tr("tray_open"), show_panel, default=True),
+            pystray.MenuItem(self.tr("tray_quit"), quit_panel)
         )
         self.tray_icon = pystray.Icon("BotManager", image, "Bot Manager", menu)
         threading.Thread(target=self.tray_icon.run, daemon=True).start()
@@ -2667,7 +2560,7 @@ class BotManagerApp(
     def perform_exit(self, icon=None, item=None):
         self.is_monitoring = False
         self.rpc_enabled = False
-        self.stop_afk_screen() 
+        self.stop_afk_screen()
         if hasattr(self, 'tray_icon'):
             self.stop_tray()
         self.save_config()

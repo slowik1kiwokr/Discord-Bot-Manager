@@ -63,18 +63,22 @@ class StreakMixin:
         current = self.streak_data["current"]
         try:
             if current == 1:
-                self.notify("🔥 Új streak elkezdve!", "info", 3000)
+                self.notify(self.tr("streak_started"), "info", 3000)
             elif current in (3, 7, 14, 30, 60, 100, 365):
-                self.notify(f"🔥 {current} napos streak!", "success", 5000)
+                self.notify(self.tr("streak_milestone", days=current), "success", 5000)
             else:
-                self.notify(f"🔥 {current} napos streak", "info", 2500)
+                self.notify(self.tr("streak_progress", days=current), "info", 2500)
         except Exception:
             pass
 
-        self.log_event("EVENT", f"[STREAK] {current} nap (best: {self.streak_data['best']})")
+        self.log_event("EVENT", self.tr(
+            "streak_log",
+            days=current,
+            best=self.streak_data["best"],
+        ))
 
     def get_streak_text(self):
-        return f"🔥 {self.streak_data.get('current', 0)} nap"
+        return self.tr("streak_short", days=self.streak_data.get("current", 0))
 
     # ------------------------------------------------------------------
     #  Kis kártya a sidebar-hoz
@@ -85,18 +89,18 @@ class StreakMixin:
                              border_color="#f39c12")
         card.pack(fill="x", padx=6, pady=(8, 4))
 
-        ctk.CTkLabel(card, text="🔥  STREAK",
+        ctk.CTkLabel(card, text=self.tr("streak_header"),
                      font=("Arial", 9, "bold"),
                      text_color="#f39c12").pack(pady=(10, 2))
 
         current = self.streak_data.get("current", 0)
         best = self.streak_data.get("best", 0)
 
-        ctk.CTkLabel(card, text=f"{current} nap",
+        ctk.CTkLabel(card, text=self.tr("streak_days", days=current),
                      font=("Arial", 18, "bold"),
                      text_color="#f39c12").pack()
 
-        ctk.CTkLabel(card, text=f"Legjobb: {best} nap",
+        ctk.CTkLabel(card, text=self.tr("streak_best", days=best),
                      font=("Arial", 9), text_color="#aaa").pack(pady=(0, 10))
 
         return card

@@ -2,7 +2,6 @@ import customtkinter as ctk
 from tkinter import filedialog, messagebox, simpledialog
 
 import modules.config as config
-from modules.languages import LANGUAGES
 
 
 class WindowBotInfoMixin:
@@ -32,7 +31,7 @@ class WindowBotInfoMixin:
             (self.tr("bot_name"), "name", None, "Main Bot"),
             (self.tr("bot_version"), "version", None, "1.0.0"),
             (self.tr("bot_prefix"), "prefix", None, "/"),
-            ("Bot Token", "token", "*", "ide_ird_a_bot_tokened"),
+            ("Bot Token", "token", "*", self.tr("bot_info_token_placeholder")),
         )
 
         for label, key, show, placeholder in field_defs:
@@ -47,8 +46,7 @@ class WindowBotInfoMixin:
 
         ctk.CTkLabel(
             win,
-            text="ℹ️  A token érzékeny adat, ne oszd meg senkivel!\n"
-                 "A prefix az, amivel a bot a sima szöveges parancsokat fogadja (pl. / vagy !).",
+            text=self.tr("bot_info_hint"),
             font=("Arial", 10), text_color="#e67e22",
             justify="left",
         ).pack(anchor="w", padx=24, pady=(14, 6))

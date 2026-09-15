@@ -8,7 +8,6 @@ import customtkinter as ctk
 
 import modules.config as config
 from modules.config import SCRIPT_DIR, BACKUP_DIR
-from modules.languages import LANGUAGES
 
 
 class WindowBackupMixin:
@@ -40,11 +39,12 @@ class WindowBackupMixin:
             self.backup_last_run = datetime.datetime.now().isoformat(timespec="seconds")
             self.save_config()
             if show_message:
-                messagebox.showinfo("Biztonsági mentés", "A mentés elkészült:\n%s" % backup_path)
+                messagebox.showinfo(self.tr("backup_done_title"),
+                                    self.tr("backup_done_msg", path=backup_path))
             return backup_path
         except OSError as error:
             if show_message:
-                messagebox.showerror("Mentési hiba", str(error))
+                messagebox.showerror(self.tr("backup_error_title"), str(error))
             return ""
 
     def check_scheduled_backup(self):
@@ -95,12 +95,12 @@ class WindowBackupMixin:
         def restore():
             selected = listbox.curselection()
             if not selected:
-                messagebox.showwarning("Válassz mentést",
-                                       "Jelölj ki egy ZIP mentést.", parent=win)
+                messagebox.showwarning(self.tr("backup_select_title"),
+                                       self.tr("backup_select_msg"), parent=win)
                 return
             archive_path = os.path.join(BACKUP_DIR, listbox.get(selected[0]))
-            if not messagebox.askyesno("Visszaállítás",
-                                       "A mentés felülírhat meglévő JSON, DB és data fájlokat. Folytatod?",
+            if not messagebox.askyesno(self.tr("backup_restore_title"),
+                                       self.tr("backup_restore_confirm"),
                                        parent=win):
                 return
             try:
@@ -108,16 +108,17 @@ class WindowBackupMixin:
                     for member in archive.infolist():
                         target = os.path.abspath(os.path.join(SCRIPT_DIR, member.filename))
                         if not target.startswith(os.path.abspath(SCRIPT_DIR) + os.sep):
-                            raise ValueError("Érvénytelen mentésútvonal")
+                            raise ValueError(self.tr("backup_invalid_path"))
                         if member.filename in ("bots.json", "settings.json"):
                             archive.extract(member, SCRIPT_DIR)
                         elif member.filename.startswith("bots/"):
                             archive.extract(member, SCRIPT_DIR)
-                messagebox.showinfo("Visszaállítás",
-                                    "A mentés visszaállt. A teljes alkalmazás újraindítása javasolt.",
+                messagebox.showinfo(self.tr("backup_restore_title"),
+                                    self.tr("backup_restore_done"),
                                     parent=win)
             except (OSError, zipfile.BadZipFile, ValueError) as error:
-                messagebox.showerror("Visszaállítási hiba", str(error), parent=win)
+                messagebox.showerror(self.tr("backup_restore_error_title"),
+                                     str(error), parent=win)
 
         buttons = ctk.CTkFrame(win, fg_color="transparent")
         buttons.pack(fill="x", padx=15, pady=10)

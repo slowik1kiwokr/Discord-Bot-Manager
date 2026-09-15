@@ -1,33 +1,56 @@
 import os
+import json
 import random
 import customtkinter as ctk
 from PIL import Image
 from version import version
 
 
-SPLASH_LOGO_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "logo.jpg"
-)
-SPLASH_LOGO_PNG = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "logo.png"
-)
+# --- Útvonalak (a splash.py a modules/ mappában van) ---
+SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+SPLASH_LOGO_PATH = os.path.join(SCRIPT_DIR, "logo.jpg")
+SPLASH_LOGO_PNG = os.path.join(SCRIPT_DIR, "logo.png")
+SETTINGS_FILE = os.path.join(SCRIPT_DIR, "settings.json")
 
 
-# Tipp szövegek, amik véletlenszerűen jelennek meg
-LOADING_TIPS = [
-    "💡 Tipp: Használd a Ctrl+B-t gyors backup-hoz",
-    "💡 Tipp: A Commanderrel kód nélkül hozhatsz létre parancsokat",
-    "💡 Tipp: Állíts be emojit minden botnak",
-    "💡 Tipp: Az AI asszisztens segít a hibakeresésben",
-    "💡 Tipp: Használd az Ollama-t ingyenes helyi AI-hoz",
-    "💡 Tipp: Ctrl+1..9 váltás a botok között",
-    "💡 Tipp: A Havi riport exportálható JSON-ba",
-    "💡 Tipp: Kattints a 🎨 Megjelenés gombra bot színezéshez",
-    "💡 Tipp: A Dashboard widgetek testreszabhatók",
-    "💡 Tipp: 15 achievementet oldhatsz fel",
-]
+# --- Nyelvi szótár betöltése (a fő app-tól függetlenül) ---
+try:
+    from modules.languages import LANGUAGES
+except Exception:
+    LANGUAGES = {"English": {}, "Magyar": {}}
+
+
+def _detect_language():
+    """Kiolvassa a mentett nyelvet a settings.json-ból."""
+    try:
+        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        lang = data.get("language", "English")
+        if lang in LANGUAGES:
+            return lang
+    except (OSError, json.JSONDecodeError):
+        pass
+    return "English"
+
+
+def _tr(key, default=""):
+    """Lekéri a szöveget a mentett nyelven."""
+    lang = _detect_language()
+    language = LANGUAGES.get(lang, LANGUAGES.get("English", {}))
+    return language.get(key, LANGUAGES.get("English", {}).get(key, default))
+
+
+def _get_tips():
+    """Összegyűjti a splash tippeket a nyelvi szótárból."""
+    tips = []
+    for i in range(1, 11):
+        tip = _tr(f"splash_tip_{i}", "")
+        if tip:
+            tips.append(tip)
+    if not tips:
+        tips = [_tr("splash_status_loading", "Loading...")]
+    return tips
 
 
 class SplashScreen(ctk.CTk):
@@ -39,7 +62,12 @@ class SplashScreen(ctk.CTk):
         self._logo_image = None
         self._fade_alpha = 0.0
 
-        self.title("Betöltés...")
+        # Nyelv feloldása még egyszer (gyorsítótár)
+        self._lang = _detect_language()
+        self._tips = _get_tips()
+        self._current_tip = random.choice(self._tips) if self._tips else ""
+
+        self.title(self.tr("splash_title"))
         self.geometry("620x520")
         self.overrideredirect(True)
         self.configure(fg_color="#0d0f14")
@@ -79,14 +107,14 @@ class SplashScreen(ctk.CTk):
 
         ctk.CTkLabel(
             title_frame,
-            text="Discord Bot Manager",
+            text=self.tr("splash_title_text"),
             font=("Segoe UI", 26, "bold"),
             text_color="#ffffff",
         ).pack()
 
         ctk.CTkLabel(
             title_frame,
-            text="Professional Multi-Bot Panel",
+            text=self.tr("splash_subtitle"),
             font=("Segoe UI", 11),
             text_color="#6a6e78",
         ).pack(pady=(0, 6))
@@ -123,7 +151,7 @@ class SplashScreen(ctk.CTk):
         #  STÁTUSZ SZÖVEG
         # ============================================================
         self.status_label = ctk.CTkLabel(
-            border, text="Indítás...",
+            border, text=self.tr("splash_status_loading"),
             font=("Segoe UI", 11),
             text_color="#8a8e98",
         )
@@ -134,7 +162,7 @@ class SplashScreen(ctk.CTk):
         # ============================================================
         self.tip_label = ctk.CTkLabel(
             border,
-            text=random.choice(LOADING_TIPS),
+            text=self._current_tip,
             font=("Segoe UI", 10),
             text_color="#5a5e68",
             wraplength=480,
@@ -144,6 +172,19 @@ class SplashScreen(ctk.CTk):
         # Animációk indítása
         self._start_fade_in()
         self.animate_progress()
+
+    # --------------------------------------------------------------
+    #  Fordítás segédfüggvény (a fő app-tól függetlenül)
+    # --------------------------------------------------------------
+    def tr(self, key, **kwargs):
+        language = LANGUAGES.get(self._lang, LANGUAGES.get("English", {}))
+        text = language.get(key, LANGUAGES.get("English", {}).get(key, key))
+        if kwargs:
+            try:
+                text = text.format(**kwargs)
+            except (KeyError, IndexError):
+                pass
+        return text.replace("{version}", version)
 
     # --------------------------------------------------------------
     #  Logó betöltése
@@ -234,20 +275,20 @@ class SplashScreen(ctk.CTk):
             except Exception:
                 return
 
-            # Státusz szövegek
+            # Státusz szövegek (nyelvi kulcsokból)
             try:
                 if value < 0.15:
-                    self.status_label.configure(text="🔧 Rendszer inicializálása...")
+                    self.status_label.configure(text=self.tr("splash_status_init"))
                 elif value < 0.35:
-                    self.status_label.configure(text="📂 Konfiguráció betöltése...")
+                    self.status_label.configure(text=self.tr("splash_status_config"))
                 elif value < 0.55:
-                    self.status_label.configure(text="🧩 Modulok betöltése...")
+                    self.status_label.configure(text=self.tr("splash_status_modules"))
                 elif value < 0.75:
-                    self.status_label.configure(text="🤖 Botok előkészítése...")
+                    self.status_label.configure(text=self.tr("splash_status_bots"))
                 elif value < 0.9:
-                    self.status_label.configure(text="🎨 Felhasználói felület...")
+                    self.status_label.configure(text=self.tr("splash_status_ui"))
                 else:
-                    self.status_label.configure(text="✅ Minden kész!")
+                    self.status_label.configure(text=self.tr("splash_status_done"))
             except Exception:
                 pass
 

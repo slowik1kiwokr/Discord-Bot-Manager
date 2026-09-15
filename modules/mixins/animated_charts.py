@@ -20,11 +20,12 @@ class AnimatedChartsMixin:
     def open_animated_charts_window(self):
         if not MPL_OK:
             from tkinter import messagebox
-            messagebox.showerror("Hiba", "A matplotlib nincs telepítve!")
+            messagebox.showerror(self.tr("common_error_title"),
+                                 self.tr("charts_mpl_missing"))
             return
 
         win = ctk.CTkToplevel(self)
-        win.title("📈 Élő grafikonok")
+        win.title(self.tr("charts_title"))
         win.geometry("1000x700")
         win.grab_set()
         win.update_idletasks()
@@ -35,9 +36,9 @@ class AnimatedChartsMixin:
         header = ctk.CTkFrame(win, fg_color="#e67e22", corner_radius=0, height=60)
         header.pack(fill="x")
         header.pack_propagate(False)
-        ctk.CTkLabel(header, text="📈  Élő grafikonok",
+        ctk.CTkLabel(header, text=self.tr("charts_header"),
                      font=("Arial", 17, "bold"), text_color="white").pack(side="left", padx=20, pady=14)
-        ctk.CTkLabel(header, text="Hover az értékért • Görgess zoom-hoz • Húzd a pan-hez",
+        ctk.CTkLabel(header, text=self.tr("charts_hint"),
                      font=("Arial", 10), text_color="#ffeecc").pack(side="right", padx=20)
 
         cpu_data, ram_data = [], []
@@ -46,7 +47,11 @@ class AnimatedChartsMixin:
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(9, 5.5), facecolor="#1a1d24")
         fig.tight_layout(pad=2.5)
 
-        for ax, title in [(ax1, "CPU használat (%)"), (ax2, "RAM használat (%)")]:
+        chart_titles = [
+            (ax1, self.tr("charts_cpu_title")),
+            (ax2, self.tr("charts_ram_title")),
+        ]
+        for ax, title in chart_titles:
             ax.set_facecolor("#12151c")
             ax.set_title(title, color="white", fontsize=11, fontweight="bold")
             ax.tick_params(colors="#aaa", labelsize=9)
@@ -81,7 +86,7 @@ class AnimatedChartsMixin:
                 idx = max(0, min(idx, len(cpu_data) - 1))
                 if 0 <= idx < len(cpu_data):
                     annot_cpu.xy = (idx, cpu_data[idx])
-                    annot_cpu.set_text(f"CPU: {cpu_data[idx]:.1f}%")
+                    annot_cpu.set_text(self.tr("charts_hover_cpu", value=f"{cpu_data[idx]:.1f}"))
                     annot_cpu.set_visible(True)
                     changed = True
             elif event.inaxes == ax2 and ram_data:
@@ -89,7 +94,7 @@ class AnimatedChartsMixin:
                 idx = max(0, min(idx, len(ram_data) - 1))
                 if 0 <= idx < len(ram_data):
                     annot_ram.xy = (idx, ram_data[idx])
-                    annot_ram.set_text(f"RAM: {ram_data[idx]:.1f}%")
+                    annot_ram.set_text(self.tr("charts_hover_ram", value=f"{ram_data[idx]:.1f}"))
                     annot_ram.set_visible(True)
                     changed = True
             else:
@@ -113,7 +118,7 @@ class AnimatedChartsMixin:
         toolbar = NavigationToolbar2Tk(canvas, toolbar_frame)
         toolbar.update()
 
-        status = ctk.CTkLabel(win, text="Élő adatgyűjtés...",
+        status = ctk.CTkLabel(win, text=self.tr("charts_status_collecting"),
                               font=("Arial", 10), text_color="#888")
         status.pack(pady=(0, 6))
 
@@ -136,7 +141,12 @@ class AnimatedChartsMixin:
                 for ax in (ax1, ax2):
                     ax.set_xlim(0, max(10, len(cpu_data) - 1))
 
-                status.configure(text=f"Utolsó: CPU {cpu:.1f}%  |  RAM {ram:.1f}%  |  Pontok: {len(cpu_data)}")
+                status.configure(text=self.tr(
+                    "charts_status_last",
+                    cpu=f"{cpu:.1f}",
+                    ram=f"{ram:.1f}",
+                    points=len(cpu_data),
+                ))
             except Exception:
                 pass
             return line_cpu, line_ram
