@@ -1,4 +1,4 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-v2.5.2 — Többnyelvűsítés (Magyar + English)
+v3.0.0 Installer
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-- github updater popup patch
+- installer popup

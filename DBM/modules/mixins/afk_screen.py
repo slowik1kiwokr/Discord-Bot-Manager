@@ -108,7 +108,7 @@ class AfkScreenMixin:
         )
         border.pack(fill="both", expand=True, padx=1, pady=1)
 
-        # --- Logó (csak logo.jpg) ---
+        # --- Logó (csak title_logo.jpg) ---
         logo_frame = ctk.CTkFrame(border, fg_color="transparent")
         logo_frame.pack(fill="x", pady=(30, 12))
         self._build_afk_logo(logo_frame)
@@ -189,15 +189,15 @@ class AfkScreenMixin:
     #  Logó
     # ------------------------------------------------------------------
     def _build_afk_logo(self, parent):
-        """Betölti a logo.jpg-t a panel gyökeréből."""
+        """Betölti a title_logo.jpg-t a panel gyökeréből."""
         from PIL import Image
         import modules.config as config
 
         # Helyes útvonal — a panel gyökere
         script_dir = config.SCRIPT_DIR
 
-        # Elsődleges: logo.jpg
-        logo_path = os.path.join(script_dir, "logo.jpg")
+        # Elsődleges: title_logo.jpg
+        logo_path = os.path.join(script_dir, "title_logo.jpg")
         if not os.path.isfile(logo_path):
             logo_path = os.path.join(script_dir, "logo.png")
         if not os.path.isfile(logo_path):
