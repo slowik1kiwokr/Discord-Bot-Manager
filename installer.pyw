@@ -19,6 +19,19 @@ except ImportError:
 
 
 # ============================================================
+#  Szükséges csomagok (pip_név, import_név, rövid leírás)
+# ============================================================
+REQUIRED_PACKAGES = [
+    ("customtkinter", "customtkinter", "Modern UI framework"),
+    ("psutil", "psutil", "System monitoring"),
+    ("Pillow", "PIL", "Image handling"),
+    ("matplotlib", "matplotlib", "Charts"),
+    ("pystray", "pystray", "System tray icon"),
+    ("pypresence", "pypresence", "Discord Rich Presence"),
+]
+
+
+# ============================================================
 #  Nyelvi szótár
 # ============================================================
 L = {
@@ -41,6 +54,7 @@ L = {
         "opt_desktop": "  Parancsikon létrehozása az asztalra",
         "opt_startmenu": "  Parancsikon a Start menübe",
         "opt_launch": "  Panel indítása telepítés után",
+        "opt_delete_source": "  Forrásmappa törlése telepítés után",
         "install_btn": "📥   Telepítés",
         "installing": "Telepítés folyamatban...",
         "done": "✅  Telepítés kész!",
@@ -50,15 +64,30 @@ L = {
         "error_path": "Kérlek adj meg egy érvényes útvonalat!",
         "error_exists": "Ez a mappa már létezik és nem üres.\n\nFelülírjuk a fájlokat?",
         "error_install": "Telepítési hiba:\n{error}",
+        "error_winrar": "❌ A telepítőt a ZIP-en BELÜLről futtattad!\n\n"
+                        "A WinRAR csak egy ideiglenes fájlt másolt ki, a DBM mappa nincs mellette.\n\n"
+                        "✅ Megoldás:\n"
+                        "   1. Csomagold ki a ZIP-et (jobb klikk → Kibontás)\n"
+                        "   2. A kicsomagolt mappából indítsd újra az installer.pyw-t.",
         "lang_btn": "🌐  English",
         "open_folder": "📂  Mappa megnyitása",
         "close_btn": "Bezárás",
         "launching": "Panel indítása...",
-        "opt_delete_source": "  Forrásmappa törlése telepítés után",
-        "delete_confirm": "Telepítés kész!\n\nTöröljük a letöltött mappát?\n\n{path}",
-        "delete_yes": "Igen, törölhető",
-        "delete_no": "Nem, megtartom",
         "deleting": "Forrásmappa törlése...",
+
+        # Függőségek
+        "deps_title": "📦  Függőségek",
+        "deps_hint": "Az alábbi Python csomagok szükségesek a panel futtatásához.\n"
+                     "A hiányzókat a gombbal egy kattintással telepítheted.",
+        "deps_recheck": "🔍  Újraellenőrzés",
+        "deps_install_missing": "📥  Hiányzók telepítése",
+        "deps_all_ok": "✅  Minden szükséges csomag telepítve!",
+        "deps_missing_n": "❌  {count} csomag hiányzik — telepítsd őket!",
+        "deps_checking": "⏳  Csomagok ellenőrzése...",
+        "deps_installing": "⏳  Telepítés folyamatban...",
+        "deps_install_done": "✅  Telepítés befejezve.",
+        "deps_install_err": "❌  Hiba a telepítés során.",
+        "install_disabled_deps": "⚠️  Előbb telepítsd a hiányzó csomagokat!",
     },
     "en": {
         "title": "Discord Bot Manager — Installer",
@@ -79,6 +108,7 @@ L = {
         "opt_desktop": "  Create desktop shortcut",
         "opt_startmenu": "  Create Start Menu shortcut",
         "opt_launch": "  Launch panel after install",
+        "opt_delete_source": "  Delete source folder after install",
         "install_btn": "📥   Install",
         "installing": "Installing...",
         "done": "✅  Installation complete!",
@@ -88,15 +118,30 @@ L = {
         "error_path": "Please provide a valid path!",
         "error_exists": "This folder already exists and is not empty.\n\nOverwrite files?",
         "error_install": "Installation error:\n{error}",
+        "error_winrar": "❌ You ran the installer from INSIDE the ZIP!\n\n"
+                        "WinRAR only extracted one temporary file, the DBM folder is not next to it.\n\n"
+                        "✅ Solution:\n"
+                        "   1. Extract the ZIP first (right-click → Extract All)\n"
+                        "   2. Run installer.pyw from the extracted folder.",
         "lang_btn": "🌐  Magyar",
         "open_folder": "📂  Open folder",
         "close_btn": "Close",
         "launching": "Launching panel...",
-        "opt_delete_source": "  Delete source folder after install",
-        "delete_confirm": "Installation complete!\n\nDelete the downloaded folder?\n\n{path}",
-        "delete_yes": "Yes, delete it",
-        "delete_no": "No, keep it",
         "deleting": "Deleting source folder...",
+
+        # Dependencies
+        "deps_title": "📦  Dependencies",
+        "deps_hint": "The following Python packages are required to run the panel.\n"
+                     "You can install the missing ones with one click.",
+        "deps_recheck": "🔍  Re-check",
+        "deps_install_missing": "📥  Install missing",
+        "deps_all_ok": "✅  All required packages installed!",
+        "deps_missing_n": "❌  {count} package(s) missing — install them!",
+        "deps_checking": "⏳  Checking packages...",
+        "deps_installing": "⏳  Installation in progress...",
+        "deps_install_done": "✅  Installation complete.",
+        "deps_install_err": "❌  Error during installation.",
+        "install_disabled_deps": "⚠️  Please install missing packages first!",
     },
 }
 
@@ -122,31 +167,105 @@ def log_debug(msg):
         pass
 
 
+def is_winrar_temp(path):
+    """Igaz, ha a path egy WinRAR ideiglenes kibontási mappa."""
+    p = path.lower()
+    markers = ("rar$dia", "rar$", ".rartemp", "\\temp\\rar")
+    return any(m in p for m in markers)
+
+
 def source_dir():
-    """A panel forrásmappája — megkeresi a DBM mappát."""
+    """A panel forrásmappája — .pyw-ből is működik, több helyen keres."""
+    from pathlib import Path
+
+    candidates = []
+
+    # 1) sys.argv[0] — .pyw-nél is megbízható
+    try:
+        if sys.argv and sys.argv[0] and not sys.argv[0].startswith("-"):
+            candidates.append(Path(sys.argv[0]).resolve().parent)
+    except Exception as e:
+        log_debug(f"argv[0] hiba: {e}")
+
+    # 2) __file__
+    try:
+        candidates.append(Path(__file__).resolve().parent)
+    except Exception as e:
+        log_debug(f"__file__ hiba: {e}")
+
+    # 3) cwd
+    try:
+        candidates.append(Path.cwd())
+    except Exception:
+        pass
+
+    # 4) frozen exe
     if getattr(sys, "frozen", False):
-        base = os.path.dirname(sys.executable)
-    else:
-        base = os.path.dirname(os.path.abspath(__file__))
+        try:
+            candidates.append(Path(sys.executable).resolve().parent)
+        except Exception:
+            pass
 
-    log_debug(f"source_dir() base = {base}")
-    log_debug(f"  tartalom: {os.listdir(base)}")
+    # Egyediség
+    seen = set()
+    unique = []
+    for c in candidates:
+        s = str(c)
+        if s not in seen:
+            seen.add(s)
+            unique.append(c)
 
-    # 1) DBM (kis-nagybetű mindegy)
-    for entry in os.listdir(base):
-        if entry.lower() == "dbm":
-            full = os.path.join(base, entry)
-            if os.path.isdir(full):
-                log_debug(f"  → DBM mappa megtalálva: {full}")
-                return full
+    log_debug("=" * 60)
+    log_debug("source_dir() keresés:")
+    for u in unique:
+        log_debug(f"  jelölt: {u}  (mappa: {u.is_dir()})")
 
-    # 2) Ha közvetlenül itt van a panel.pyw
-    if os.path.isfile(os.path.join(base, "panel.pyw")):
-        log_debug(f"  → panel.pyw a gyökérben")
-        return base
+    # Végigmegyünk a jelölteken
+    for base in unique:
+        if not base.is_dir():
+            continue
 
-    log_debug(f"  → WARNING: se DBM, se panel.pyw — gyökér marad")
-    return base
+        try:
+            entries = list(base.iterdir())
+        except Exception as e:
+            log_debug(f"  olvasási hiba: {e}")
+            continue
+
+        log_debug(f"  tartalom: {[e.name for e in entries]}")
+
+        # A) DBM közvetlenül
+        for entry in entries:
+            if entry.is_dir() and entry.name.lower() == "dbm":
+                log_debug(f"  ✅ DBM: {entry}")
+                return str(entry)
+
+        # B) panel.pyw közvetlenül
+        if (base / "panel.pyw").is_file():
+            log_debug(f"  ✅ panel.pyw itt: {base}")
+            return str(base)
+
+        # C) 1 szint mélyebben: DBM vagy panel.pyw
+        for entry in entries:
+            if not entry.is_dir():
+                continue
+            if (entry / "panel.pyw").is_file():
+                log_debug(f"  ✅ panel.pyw almappában: {entry}")
+                return str(entry)
+            try:
+                for sub in entry.iterdir():
+                    if sub.is_dir() and sub.name.lower() == "dbm":
+                        log_debug(f"  ✅ DBM almappában: {sub}")
+                        return str(sub)
+            except Exception:
+                pass
+
+    # Fallback
+    if unique:
+        log_debug(f"  ⚠ Fallback: {unique[0]}")
+        return str(unique[0])
+
+    log_debug("  ❌ Semmi nem található")
+    return "."
 
 
 def shell_folder(csidl):
@@ -287,7 +406,7 @@ def copy_panel_files(src, dst, log_cb=None):
 
     skip = {"installer.pyw", "__pycache__", "update.zip", "update_extract",
             ".git", ".github", ".gitignore", ".idea", ".vscode",
-            "venv", ".venv", "README.md"}
+            "venv", ".venv", "README.md", "README.txt"}
 
     try:
         items = [i for i in os.listdir(src) if i not in skip]
@@ -338,9 +457,10 @@ class InstallerApp(ctk.CTk):
         self._install_running = False
         self._install_done = False
         self._target_path = ""
+        self._deps_ok = False
 
         self.title("Discord Bot Manager — Installer")
-        self.geometry("760x780")
+        self.geometry("760x900")
         self.minsize(680, 700)
         self.resizable(False, True)
         self.configure(fg_color="#0d0f14")
@@ -349,9 +469,10 @@ class InstallerApp(ctk.CTk):
         self.update_idletasks()
         sw = self.winfo_screenwidth()
         sh = self.winfo_screenheight()
-        x = (sw - 760) // 2
-        y = (sh - 780) // 2
-        self.geometry(f"760x780+{x}+{y}")
+        w, h = 760, 900
+        x = (sw - w) // 2
+        y = max(20, (sh - h) // 2)
+        self.geometry(f"{w}x{h}+{x}+{y}")
 
         self._build_ui()
 
@@ -379,7 +500,6 @@ class InstallerApp(ctk.CTk):
             if os.path.isfile(icon_path):
                 try:
                     ico = Image.open(icon_path)
-                    # A legnagyobb elérhető méretet vesszük ki
                     best_size = max(ico.info.get("sizes", [(32, 32)]),
                                      key=lambda s: s[0] * s[1])
                     ico = Image.open(icon_path)
@@ -403,7 +523,6 @@ class InstallerApp(ctk.CTk):
                     print(f"[INSTALLER] Ikon betöltési hiba: {e}")
 
         if not logo_loaded:
-            # Fallback: emoji
             ctk.CTkLabel(left, text="🎯", font=("Segoe UI Emoji", 26),
                           text_color="#7dd3fc").pack(side="left", padx=(0, 12))
 
@@ -454,6 +573,9 @@ class InstallerApp(ctk.CTk):
         # Options szekció
         self._build_options_section()
 
+        # Függőségek szekció
+        self._build_dependencies_section()
+
         # Progress + log
         self.progress = ctk.CTkProgressBar(self.scroll, height=8,
                                              progress_color="#5865F2")
@@ -480,8 +602,12 @@ class InstallerApp(ctk.CTk):
             fg_color="#27ae60", hover_color="#2ecc71",
             height=50, font=("Arial", 14, "bold"), corner_radius=10,
             command=self._on_action,
+            state="disabled",
         )
         self.action_btn.pack(fill="x", padx=18, pady=(0, 16))
+
+        # Induláskor automatikus ellenőrzés
+        self.after(400, self._check_dependencies)
 
     def _build_info_section(self):
         card = ctk.CTkFrame(self.scroll, fg_color="#15202b",
@@ -496,7 +622,6 @@ class InstallerApp(ctk.CTk):
         rows = [
             (L[self.lang]["info_version"], self.version),
             (L[self.lang]["info_author"], AUTHOR_NAME),
-            ("Forrás", self.src),
             (L[self.lang]["info_github"], GITHUB_URL),
             (L[self.lang]["info_support"], SUPPORT_URL),
         ]
@@ -567,10 +692,225 @@ class InstallerApp(ctk.CTk):
             anchor="w", padx=14, pady=4)
         ctk.CTkCheckBox(card, text=L[self.lang]["opt_launch"],
                          variable=self.opt_launch, font=("Arial", 12)).pack(
-            anchor="w", padx=14, pady=(4, 12))
+            anchor="w", padx=14, pady=4)
         ctk.CTkCheckBox(card, text=L[self.lang]["opt_delete_source"],
                          variable=self.opt_delete_source, font=("Arial", 12)).pack(
             anchor="w", padx=14, pady=(4, 12))
+
+    # ----------------------------------------------------------------
+    #  Függőség szekció
+    # ----------------------------------------------------------------
+    def _build_dependencies_section(self):
+        card = ctk.CTkFrame(self.scroll, fg_color="#1a1520",
+                             corner_radius=10, border_width=1, border_color="#e67e22")
+        card.pack(fill="x", pady=6)
+
+        ctk.CTkLabel(card, text=L[self.lang]["deps_title"],
+                      font=("Arial", 13, "bold"),
+                      text_color="#e67e22", anchor="w").pack(
+            fill="x", padx=14, pady=(10, 4))
+
+        ctk.CTkLabel(card, text=L[self.lang]["deps_hint"],
+                      font=("Arial", 10), text_color="#8a8e98",
+                      justify="left", anchor="w",
+                      wraplength=640).pack(fill="x", padx=14, pady=(0, 8))
+
+        # Lista konténer
+        self._deps_list_frame = ctk.CTkFrame(card, fg_color="transparent")
+        self._deps_list_frame.pack(fill="x", padx=14, pady=(0, 6))
+
+        # Státusz
+        self._deps_status = ctk.CTkLabel(
+            card, text=L[self.lang]["deps_checking"],
+            font=("Arial", 11, "bold"), text_color="#8a8e98", anchor="w"
+        )
+        self._deps_status.pack(fill="x", padx=14, pady=(0, 6))
+
+        # Gombok
+        btn_row = ctk.CTkFrame(card, fg_color="transparent")
+        btn_row.pack(fill="x", padx=14, pady=(0, 12))
+
+        self._deps_recheck_btn = ctk.CTkButton(
+            btn_row, text=L[self.lang]["deps_recheck"],
+            fg_color="#3498db", hover_color="#5dade2",
+            width=160, height=36, font=("Arial", 11, "bold"),
+            command=self._check_dependencies,
+        )
+        self._deps_recheck_btn.pack(side="left", padx=(0, 6))
+
+        self._deps_install_btn = ctk.CTkButton(
+            btn_row, text=L[self.lang]["deps_install_missing"],
+            fg_color="#e67e22", hover_color="#d35400",
+            width=200, height=36, font=("Arial", 11, "bold"),
+            command=self._install_dependencies,
+        )
+        self._deps_install_btn.pack(side="left", padx=6)
+
+        # Kezdeti állapot
+        self._render_deps_list([])
+
+    # ----------------------------------------------------------------
+    #  Ellenőrzés
+    # ----------------------------------------------------------------
+    def _check_dependencies(self):
+        import importlib.util
+
+        def _do():
+            self._deps_status.configure(
+                text=L[self.lang]["deps_checking"], text_color="#8a8e98")
+            self.update_idletasks()
+
+            results = []
+            missing = 0
+            for pip_name, import_name, desc in REQUIRED_PACKAGES:
+                try:
+                    spec = importlib.util.find_spec(import_name)
+                    installed = spec is not None
+                except Exception:
+                    installed = False
+
+                if not installed:
+                    missing += 1
+                results.append((pip_name, import_name, desc, installed))
+
+            self._render_deps_list(results)
+
+            if missing == 0:
+                self._deps_ok = True
+                self._deps_status.configure(
+                    text=L[self.lang]["deps_all_ok"], text_color="#2ecc71")
+                self.action_btn.configure(state="normal")
+                self._deps_install_btn.configure(state="disabled")
+            else:
+                self._deps_ok = False
+                self._deps_status.configure(
+                    text=L[self.lang]["deps_missing_n"].format(count=missing),
+                    text_color="#e74c3c")
+                self.action_btn.configure(state="disabled")
+                self._deps_install_btn.configure(state="normal")
+
+        self.after(0, _do)
+
+    def _render_deps_list(self, results):
+        for w in self._deps_list_frame.winfo_children():
+            w.destroy()
+
+        if not results:
+            ctk.CTkLabel(self._deps_list_frame,
+                          text="...", font=("Arial", 11),
+                          text_color="#666").pack(anchor="w", pady=2)
+            return
+
+        for pip_name, import_name, desc, installed in results:
+            row = ctk.CTkFrame(self._deps_list_frame, fg_color="transparent")
+            row.pack(fill="x", pady=2)
+
+            icon = "✅" if installed else "❌"
+            color = "#2ecc71" if installed else "#e74c3c"
+
+            ctk.CTkLabel(row, text=icon, font=("Arial", 14),
+                          width=26).pack(side="left")
+            ctk.CTkLabel(row, text=pip_name,
+                          font=("Consolas", 11, "bold"),
+                          text_color=color, width=130,
+                          anchor="w").pack(side="left")
+            ctk.CTkLabel(row, text="—  " + desc,
+                          font=("Arial", 10), text_color="#8a8e98",
+                          anchor="w").pack(side="left")
+
+    # ----------------------------------------------------------------
+    #  Függőség telepítés
+    # ----------------------------------------------------------------
+    def _install_dependencies(self):
+        import importlib.util
+
+        missing = []
+        for pip_name, import_name, _ in REQUIRED_PACKAGES:
+            try:
+                if importlib.util.find_spec(import_name) is None:
+                    missing.append(pip_name)
+            except Exception:
+                missing.append(pip_name)
+
+        if not missing:
+            self._check_dependencies()
+            return
+
+        # Gombok letiltása
+        self._deps_install_btn.configure(
+            state="disabled", text=L[self.lang]["deps_installing"])
+        self._deps_recheck_btn.configure(state="disabled")
+        self.action_btn.configure(state="disabled")
+
+        self._deps_status.configure(
+            text=L[self.lang]["deps_installing"], text_color="#f39c12")
+
+        self._log(f"\n▶ Függőségek telepítése: {len(missing)} csomag")
+        for m in missing:
+            self._log(f"  • {m}")
+
+        threading.Thread(target=self._deps_install_worker,
+                          args=(missing,), daemon=True).start()
+
+    def _deps_install_worker(self, packages):
+        total = len(packages)
+        failed = []
+        try:
+            for idx, pkg in enumerate(packages, 1):
+                self._log(f"\n[{idx}/{total}] pip install {pkg}")
+                self._deps_status.configure(
+                    text=f"⏳  [{idx}/{total}]  {pkg}...")
+
+                cmd = [sys.executable, "-m", "pip", "install", "--upgrade", pkg]
+                try:
+                    proc = subprocess.Popen(
+                        cmd,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        text=True,
+                        bufsize=1,
+                        encoding="utf-8",
+                        errors="replace",
+                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                    )
+                    for line in iter(proc.stdout.readline, ""):
+                        line = line.rstrip()
+                        if line:
+                            self._log("    " + line)
+                    proc.wait()
+
+                    if proc.returncode != 0:
+                        failed.append(pkg)
+                        self._log(f"  ❌ {pkg} — hibakód: {proc.returncode}")
+                except Exception as e:
+                    failed.append(pkg)
+                    self._log(f"  ❌ {pkg}: {e}")
+
+            # Újraellenőrzés
+            self.after(200, self._after_deps_install, failed)
+
+        except Exception as e:
+            self._log(f"\n❌ Függőség telepítési hiba: {e}")
+            self.after(0, lambda: self._deps_status.configure(
+                text=L[self.lang]["deps_install_err"], text_color="#e74c3c"))
+            self.after(0, lambda: (
+                self._deps_install_btn.configure(
+                    state="normal", text=L[self.lang]["deps_install_missing"]),
+                self._deps_recheck_btn.configure(state="normal"),
+            ))
+
+    def _after_deps_install(self, failed):
+        self._deps_install_btn.configure(
+            text=L[self.lang]["deps_install_missing"])
+        self._deps_recheck_btn.configure(state="normal")
+
+        if failed:
+            self._log(f"\n⚠️  Sikertelen: {', '.join(failed)}")
+        else:
+            self._log(f"\n✅  {L[self.lang]['deps_install_done']}")
+
+        # Automatikus újraellenőrzés
+        self._check_dependencies()
 
     # ----------------------------------------------------------------
     #  Események
@@ -580,6 +920,7 @@ class InstallerApp(ctk.CTk):
         # Újraépítjük az ablakot
         for child in self.winfo_children():
             child.destroy()
+        self._deps_ok = False
         self._build_ui()
 
     def _browse(self):
@@ -621,6 +962,22 @@ class InstallerApp(ctk.CTk):
         self._start_install()
 
     def _start_install(self):
+        # Függőségek ellenőrzése
+        if not getattr(self, "_deps_ok", False):
+            messagebox.showwarning(
+                L[self.lang]["error_title"],
+                L[self.lang]["install_disabled_deps"],
+            )
+            return
+
+        # WinRAR temp figyelmeztetés
+        if is_winrar_temp(self.src):
+            messagebox.showerror(
+                L[self.lang]["error_title"],
+                L[self.lang]["error_winrar"],
+            )
+            return
+
         target = self.path_entry.get().strip()
         if not target:
             messagebox.showerror(L[self.lang]["error_title"],
@@ -688,7 +1045,7 @@ class InstallerApp(ctk.CTk):
             self._log(f"\n✅ {L[self.lang]['done']}")
             self._log(f"  {target}")
 
-            # Forrásmappa törlése, ha be van pipálva
+            # Forrásmappa törlése
             if self.opt_delete_source.get():
                 src_abs = os.path.abspath(self.src)
                 tgt_abs = os.path.abspath(self._target_path)
@@ -734,7 +1091,6 @@ class InstallerApp(ctk.CTk):
             self.after(400, self._offer_close)
 
     def _offer_close(self):
-        # Adjunk egy Bezárás gombot
         self.action_btn.configure(
             text=L[self.lang]["close_btn"],
             fg_color="#555555", hover_color="#666666",
@@ -775,7 +1131,6 @@ class InstallerApp(ctk.CTk):
                 "dbm_cleanup.bat"
             )
 
-            # A batch megvárja a telepítőt, majd töröl
             bat_content = (
                 "@echo off\n"
                 "timeout /t 2 /nobreak >nul\n"
@@ -796,6 +1151,7 @@ class InstallerApp(ctk.CTk):
 
         except Exception as e:
             self._log(f"  • Törlés ütemezési hiba: {e}")
+
 
 # ============================================================
 #  Indítás
