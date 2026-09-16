@@ -22,9 +22,21 @@ GITHUB_USER = "slowik1kiwokr"
 GITHUB_REPO = "Discord-Bot-Manager"
 GITHUB_BRANCH = "main"
 
-VERSION_URL = f"https://raw.githubusercontent.com/{GITHUB_USER}/{GITHUB_REPO}/{GITHUB_BRANCH}/version.txt"
-CHANGELOG_URL = f"https://raw.githubusercontent.com/{GITHUB_USER}/{GITHUB_REPO}/{GITHUB_BRANCH}/changelog.txt"
+# Mindkét helyen keressük: gyökér ÉS DBM mappa (fallback)
+_BASE = f"https://raw.githubusercontent.com/{GITHUB_USER}/{GITHUB_REPO}/{GITHUB_BRANCH}"
+VERSION_URLS = [
+    f"{_BASE}/DBM/version.txt",   # elsődleges (DBM mappában)
+    f"{_BASE}/version.txt",       # fallback (gyökérben)
+]
+CHANGELOG_URLS = [
+    f"{_BASE}/DBM/changelog.txt",
+    f"{_BASE}/changelog.txt",
+]
 ZIP_URL = f"https://github.com/{GITHUB_USER}/{GITHUB_REPO}/archive/refs/heads/{GITHUB_BRANCH}.zip"
+
+# Régi nevek — a többi rész még hivatkozhat rájuk
+VERSION_URL = VERSION_URLS[0]
+CHANGELOG_URL = CHANGELOG_URLS[0]
 
 PROTECTED_ITEMS = {
     "bots.json", "settings.json", "lang.json", "local_version.txt",
