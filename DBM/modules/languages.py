@@ -753,6 +753,22 @@ LANGUAGES = {
         "update_log_installed": "[UPDATE] Installed: v{version}",
         "update_log_restart": "[UPDATE] Restarting panel",
         "update_log_version_write_error": "[UPDATE] Version write error: {error}",
+                # --- ÚJ: up-to-date nézet ---
+        "update_header_uptodate": "✅  You are up to date!",
+        "update_header_new": "🚀  New version available!",
+        "update_status_uptodate": "✅  Up to date",
+        "update_status_available": "🔵  Update available",
+        "update_checked_at": "Checked at {time}",
+        "update_changelog_current": "📝  Current version changelog",
+        "update_no_changelog_current": "ℹ️  No changelog entry for your current version.",
+        "update_info_uptodate": "ℹ️   You already have the latest version. No update needed.",
+        "update_recheck_btn": "🔄  Check again",
+        "update_header_new": "🚀  New version available!",
+        "update_status_uptodate": "✅  Up to date",
+        "update_status_available": "🔵  Update available",
+        "update_changelog_current": "📝  Current version changelog",
+        "update_no_changelog_current": "ℹ️  No changelog entry for your current version.",
+        "update_info_uptodate": "ℹ️   You already have the latest version. No update needed.",
 
         # =============================================================
         #  BACKUP
@@ -2057,6 +2073,22 @@ LANGUAGES = {
         "update_log_installed": "[UPDATE] Telepítve: v{version}",
         "update_log_restart": "[UPDATE] Panel újraindítása",
         "update_log_version_write_error": "[UPDATE] Verzió írási hiba: {error}",
+                # --- ÚJ: up-to-date nézet ---
+        "update_header_uptodate": "✅  Naprakész vagy!",
+        "update_header_new": "🚀  Új verzió érhető el!",
+        "update_status_uptodate": "✅  Naprakész",
+        "update_status_available": "🔵  Frissítés elérhető",
+        "update_checked_at": "Ellenőrizve: {time}",
+        "update_changelog_current": "📝  Jelenlegi verzió changelogja",
+        "update_no_changelog_current": "ℹ️  A jelenlegi verziódhoz nincs changelog bejegyzés.",
+        "update_info_uptodate": "ℹ️   Már a legfrissebb verziót használod. Nincs teendő.",
+        "update_recheck_btn": "🔄  Újraellenőrzés",
+        "update_header_new": "🚀  Új verzió érhető el!",
+        "update_status_uptodate": "✅  Naprakész",
+        "update_status_available": "🔵  Frissítés elérhető",
+        "update_changelog_current": "📝  Jelenlegi verzió changelogja",
+        "update_no_changelog_current": "ℹ️  A jelenlegi verziódhoz nincs changelog bejegyzés.",
+        "update_info_uptodate": "ℹ️   Már a legfrissebb verziót használod. Nincs teendő.",
 
         # =============================================================
         #  BACKUP
