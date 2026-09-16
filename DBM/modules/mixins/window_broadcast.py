@@ -363,12 +363,12 @@ class WindowBroadcastMixin:
         content_scroll.pack(fill="both", expand=True)
 
         # Típus
-        ctk.CTkLabel(content_scroll, text=self.tr("common_type_lbl"),
+        ctk.CTkLabel(content_scroll, text=self.tr("broadcast_type_lbl"),
                       font=("Arial", 11, "bold"), anchor="w").pack(fill="x", pady=(4, 2))
 
         # Fix belső értékek
-        TYPE_MESSAGE_LABEL = self.tr("common_type_message")
-        TYPE_EMBED_LABEL = self.tr("common_type_embed")
+        TYPE_MESSAGE_LABEL = self.tr("broadcast_type_message")
+        TYPE_EMBED_LABEL = self.tr("broadcast_type_embed")
         type_var = ctk.StringVar(value=TYPE_MESSAGE_LABEL)
         ctk.CTkComboBox(content_scroll,
                          values=[TYPE_MESSAGE_LABEL, TYPE_EMBED_LABEL],
@@ -376,7 +376,7 @@ class WindowBroadcastMixin:
 
         # Üzenet frame
         msg_frame = ctk.CTkFrame(content_scroll, fg_color="transparent")
-        ctk.CTkLabel(msg_frame, text=self.tr("common_content_lbl"),
+        ctk.CTkLabel(msg_frame, text=self.tr("broadcast_content_lbl"),
                       font=("Arial", 11), anchor="w").pack(fill="x", pady=(0, 2))
         content_box = ctk.CTkTextbox(msg_frame, height=140, font=("Consolas", 11))
         content_box.pack(fill="x")
@@ -384,12 +384,12 @@ class WindowBroadcastMixin:
         # Embed frame
         embed_frame = ctk.CTkFrame(content_scroll, fg_color="transparent")
 
-        ctk.CTkLabel(embed_frame, text=self.tr("common_embed_title_lbl"),
+        ctk.CTkLabel(embed_frame, text=self.tr("broadcast_embed_title_lbl"),
                       font=("Arial", 11), anchor="w").pack(fill="x", pady=(0, 2))
         emb_title = ctk.CTkEntry(embed_frame, width=500, height=34)
         emb_title.pack(anchor="w")
 
-        ctk.CTkLabel(embed_frame, text=self.tr("common_embed_desc_lbl"),
+        ctk.CTkLabel(embed_frame, text=self.tr("broadcast_embed_desc_lbl"),
                       font=("Arial", 11), anchor="w").pack(fill="x", pady=(8, 2))
         emb_desc = ctk.CTkTextbox(embed_frame, height=120, font=("Arial", 11))
         emb_desc.pack(fill="x")
@@ -398,7 +398,7 @@ class WindowBroadcastMixin:
         color_row = ctk.CTkFrame(embed_frame, fg_color="transparent")
         color_row.pack(fill="x", pady=(8, 0))
 
-        ctk.CTkLabel(color_row, text=self.tr("common_color_lbl"),
+        ctk.CTkLabel(color_row, text=self.tr("broadcast_color_lbl"),
                       font=("Arial", 11)).pack(side="left")
         emb_color = ctk.CTkEntry(color_row, width=120, height=32)
         emb_color.insert(0, "#5865F2")
@@ -419,7 +419,7 @@ class WindowBroadcastMixin:
 
         emb_color.bind("<KeyRelease>", update_color)
 
-        # Gyors színek — meglévő color_* kulcsokat használjuk
+        # Gyors színek
         quick_colors = [
             ("color_blurple", "#5865F2"),
             ("color_green",   "#2ecc71"),
@@ -429,7 +429,7 @@ class WindowBroadcastMixin:
         ]
         color_quick = ctk.CTkFrame(embed_frame, fg_color="transparent")
         color_quick.pack(fill="x", pady=(4, 0))
-        ctk.CTkLabel(color_quick, text=self.tr("common_quick_colors_lbl"),
+        ctk.CTkLabel(color_quick, text=self.tr("broadcast_quick_lbl"),
                       font=("Arial", 10)).pack(side="left", padx=(0, 4))
         for name_key, hexcode in quick_colors:
             ctk.CTkButton(
@@ -443,12 +443,12 @@ class WindowBroadcastMixin:
                 ),
             ).pack(side="left", padx=2)
 
-        ctk.CTkLabel(embed_frame, text=self.tr("common_embed_footer_lbl"),
+        ctk.CTkLabel(embed_frame, text=self.tr("broadcast_footer_lbl"),
                       font=("Arial", 11), anchor="w").pack(fill="x", pady=(8, 2))
         emb_footer = ctk.CTkEntry(embed_frame, width=500, height=34)
         emb_footer.pack(anchor="w")
 
-        ctk.CTkLabel(embed_frame, text=self.tr("common_embed_thumb_lbl"),
+        ctk.CTkLabel(embed_frame, text=self.tr("broadcast_thumb_lbl"),
                       font=("Arial", 11), anchor="w").pack(fill="x", pady=(8, 2))
         emb_thumb = ctk.CTkEntry(embed_frame, width=500, height=34,
                                    placeholder_text="https://...")

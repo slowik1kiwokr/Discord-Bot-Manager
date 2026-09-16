@@ -8,8 +8,8 @@ import subprocess
 import datetime
 import json
 import re
-from tkinter import messagebox
 import queue
+from tkinter import messagebox
 
 import customtkinter as ctk
 
@@ -26,14 +26,13 @@ VERSION_URL = f"https://raw.githubusercontent.com/{GITHUB_USER}/{GITHUB_REPO}/{G
 CHANGELOG_URL = f"https://raw.githubusercontent.com/{GITHUB_USER}/{GITHUB_REPO}/{GITHUB_BRANCH}/changelog.txt"
 ZIP_URL = f"https://github.com/{GITHUB_USER}/{GITHUB_REPO}/archive/refs/heads/{GITHUB_BRANCH}.zip"
 
-# Védett fájlok
 PROTECTED_ITEMS = {
     "bots.json", "settings.json", "lang.json", "local_version.txt",
     "backups", "plugins", "logs", "panel_responses", "__pycache__",
     "icon.ico", "icon.jpg", "logo.jpg", "logo.png", "dc_logo.ico",
     "temp_app_icon.ico", "_icon_temp.ico",
     "panel_commands.json", "panel_broadcast_requests.json",
-    ".git", ".github", ".gitignore", "README.md", "LICENSE",
+    ".git", ".github", ".gitignore", "README.md", "README.txt", "LICENSE",
     "requirements.txt", "update.zip", "update_extract",
     "achievements.json", "streak.json", "panel_stats.json",
     "update_history.json",
@@ -69,7 +68,6 @@ class WindowGithubMixin:
 
     def _add_to_history(self, version, title, description):
         history = self._load_update_history()
-        # Ha már benne van, frissítjük
         history = [h for h in history if h.get("version") != version]
         history.insert(0, {
             "version": version,
@@ -77,24 +75,16 @@ class WindowGithubMixin:
             "description": description,
             "date": datetime.datetime.now().isoformat(timespec="seconds"),
         })
-        # Max 50 bejegyzés
         self._save_update_history(history[:50])
 
     def _parse_changelog(self, text):
-        """A changelog.txt-t szekciókra bontja.
-
-        Visszaad: [
-            {"version": "1.0.6", "title": "...", "content": "..."},
-            ...
-        ]
-        """
+        """A changelog.txt-t szekciókra bontja."""
         if not text:
             return []
 
         lines = text.split("\n")
         sections = []
         current = None
-
         version_pattern = re.compile(r"^[vV]?\s*(\d+\.\d+(?:\.\d+)?)", re.IGNORECASE)
         general_title = self.tr("update_changelog_general")
 
@@ -102,23 +92,18 @@ class WindowGithubMixin:
             stripped = line.strip()
             match = version_pattern.match(stripped)
             if match and len(stripped) < 60:
-                # Új verzió kezdete
                 if current:
                     sections.append(current)
-                # Verzió cím
                 version_str = match.group(1)
-                # A cím a többi rész (ha van)
-                title = stripped
                 current = {
                     "version": version_str,
-                    "title": title,
+                    "title": stripped,
                     "content": "",
                 }
             else:
                 if current is not None:
                     current["content"] += line + "\n"
                 elif stripped:
-                    # Ha még nincs verzió, az elejét egy "Általános" szekcióba tesszük
                     if not sections and current is None:
                         current = {
                             "version": "",
@@ -129,12 +114,9 @@ class WindowGithubMixin:
         if current:
             sections.append(current)
 
-        # Tisztítás: levágjuk a felesleges üres sorokat, elválasztó vonalakat
         for s in sections:
             content = s["content"]
-            # Levágjuk az elválasztó vonalakat (━━━, ===, ---)
             content = re.sub(r"^[━═=\-─]{5,}\s*$", "", content, flags=re.MULTILINE)
-            # Több egymást követő üres sor → 1
             content = re.sub(r"\n{3,}", "\n\n", content)
             s["content"] = content.strip()
 
@@ -149,7 +131,7 @@ class WindowGithubMixin:
         except Exception:
             return "0.0.0"
 
-    def fetch_remote_version(self, timeout=8):
+    def fetch_remote_version(self, timeout=10):
         try:
             req = urllib.request.Request(
                 VERSION_URL,
@@ -158,10 +140,10 @@ class WindowGithubMixin:
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 return r.read().decode("utf-8").strip()
         except Exception as e:
-            print(self.tr("update_log_version_fetch_error", error=e))
+            print(f"[UPDATE] Verzió lekérdezési hiba: {e}")
             return None
 
-    def fetch_changelog(self, timeout=8):
+    def fetch_changelog(self, timeout=10):
         try:
             req = urllib.request.Request(
                 CHANGELOG_URL,
@@ -169,95 +151,110 @@ class WindowGithubMixin:
             )
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 return r.read().decode("utf-8").strip()
-        except Exception:
+        except Exception as e:
+            print(f"[UPDATE] Changelog hiba: {e}")
             return ""
 
     # ==================================================================
-    #  Frissítés keresés (auto + manuális)
+    #  QUEUE-alapú frissítés-ellenőrzés (BIZTONOS!)
     # ==================================================================
-def check_for_updates(self, silent=True):
-    if not silent:
-        self.log_event("EVENT", self.tr("update_log_manual_check"))
+    def check_for_updates(self, silent=True):
+        """
+        silent=True  → csak akkor jelez, ha van új verzió
+        silent=False → MINDIG felugrik egy ablak (up-to-date is)
+        """
+        if not silent:
+            self.log_event("EVENT", self.tr("update_log_manual_check"))
 
-    # Queue inicializálás (egyszer fut le)
-    if not hasattr(self, "_update_check_queue"):
-        self._update_check_queue = queue.Queue()
-        self._poll_update_queue()
+        # Queue létrehozása (ha még nincs)
+        if not hasattr(self, "_update_queue"):
+            self._update_queue = queue.Queue()
+            self._poll_update_queue()
 
-    def worker():
-        remote = self.fetch_remote_version()
-        local = self.get_local_version()
-        # Az eredményt a queue-ba tesszük, NEM hívunk Tk-t közvetlenül
-        self._update_check_queue.put(("result", remote, local, silent))
+        def worker():
+            try:
+                remote = self.fetch_remote_version()
+                local = self.get_local_version()
 
-    threading.Thread(target=worker, daemon=True).start()
+                if remote is None:
+                    self._update_queue.put(("error", None, local, silent, None, None))
+                    return
 
+                changelog = self.fetch_changelog()
+                sections = self._parse_changelog(changelog)
 
-def _poll_update_queue(self):
-    """A main thread-en fut, 500ms-enként ellenőrzi a queue-t."""
-    if hasattr(self, "_update_check_queue"):
+                current_section = None
+                for s in sections:
+                    if (s["version"] == remote or
+                            s["version"].lstrip("v") == remote.lstrip("v")):
+                        current_section = s
+                        break
+                if not current_section and sections:
+                    current_section = sections[0]
+
+                self._update_queue.put(
+                    ("result", remote, local, silent, current_section, sections)
+                )
+            except Exception as e:
+                print(f"[UPDATE] Worker hiba: {e}")
+                self._update_queue.put(("error", None, self.get_local_version(),
+                                         silent, None, None))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _poll_update_queue(self):
+        """A main thread-en fut, 400ms-enként ellenőrzi a queue-t."""
         try:
             while True:
-                msg = self._update_check_queue.get_nowait()
-                if msg[0] == "result":
-                    _, remote, local, silent = msg
-                    self._process_update_result(remote, local, silent)
+                msg = self._update_queue.get_nowait()
+                self._handle_update_message(msg)
         except queue.Empty:
             pass
-    try:
-        self.after(500, self._poll_update_queue)
-    except Exception:
-        pass
+        except Exception as e:
+            print(f"[UPDATE] Queue hiba: {e}")
 
+        try:
+            self.after(400, self._poll_update_queue)
+        except Exception:
+            pass
 
-def _process_update_result(self, remote, local, silent):
-    """A main thread-en fut — itt már biztonságos Tk-t hívni."""
-    if remote is None:
-        if not silent:
-            messagebox.showerror(
-                self.tr("update_title"),
-                self.tr("update_conn_error")
-            )
-        return
+    def _handle_update_message(self, msg):
+        """A main thread-en fut — itt már biztonságos Tk-t hívni."""
+        kind = msg[0]
 
-    skipped = getattr(self, "skipped_version", None)
-    if skipped and skipped == remote:
-        return
+        if kind == "error":
+            _, _, local, silent, _, _ = msg
+            if not silent:
+                messagebox.showerror(
+                    self.tr("update_title"),
+                    self.tr("update_conn_error"),
+                )
+            return
 
-    if remote == local:
-        if not silent:
-            messagebox.showinfo(
-                self.tr("update_title"),
-                self.tr("update_up_to_date", version=local)
-            )
-        return
+        _, remote, local, silent, current_section, all_sections = msg
 
-    # ÚJ VERZIÓ VAN!
-    changelog = self.fetch_changelog()
-    sections = self._parse_changelog(changelog)
+        # Skip ellenőrzés (csak auto-check esetén)
+        skipped = getattr(self, "skipped_version", None)
+        if silent and skipped and skipped == remote:
+            return
 
-    current_section = None
-    for s in sections:
-        if s["version"] == remote or s["version"].lstrip("v") == remote.lstrip("v"):
-            current_section = s
-            break
+        # Egyeznek-e?
+        up_to_date = (remote == local) or (
+            remote.lstrip("v") == local.lstrip("v")
+        )
 
-    if not current_section and sections:
-        current_section = sections[0]
+        if up_to_date and silent:
+            return  # csendes módban ne zavarjuk
 
-    self.show_update_dialog(remote, local, current_section, sections)
+        # Ablak megnyitása
+        self.show_update_dialog(
+            remote, local, current_section, all_sections, up_to_date
+        )
 
+    # ==================================================================
+    #  Ütemezés
+    # ==================================================================
     def schedule_update_check(self, interval_minutes=None, run_now=True):
-        """Automatikus frissítés-ellenőrzés ütemezése.
-
-        interval_minutes:
-            0     → soha
-            1     → percenként
-            10    → 10 percenként
-            60    → óránként
-            1440  → naponta
-        """
-        # Régi ütemezés törlése
         try:
             if getattr(self, "_update_check_after_id", None):
                 self.after_cancel(self._update_check_after_id)
@@ -272,7 +269,6 @@ def _process_update_result(self, remote, local, silent):
             self.log_event("EVENT", self.tr("update_log_auto_disabled"))
             return
 
-        # Induláskor rögtön ellenőrzünk (ha kell)
         if run_now:
             self._update_check_after_id = self.after(
                 3000, lambda: self.check_for_updates(silent=True)
@@ -282,7 +278,6 @@ def _process_update_result(self, remote, local, silent):
                 interval_minutes * 60 * 1000,
                 lambda: self.check_for_updates(silent=True)
             )
-            # Újraütemezés a következő ciklusra
             self.after(
                 interval_minutes * 60 * 1000 + 5000,
                 lambda: self.schedule_update_check(
@@ -291,10 +286,11 @@ def _process_update_result(self, remote, local, silent):
             )
 
     # ==================================================================
-    #  Frissítés ablak
+    #  Frissítés ablak (mindkét esetre!)
     # ==================================================================
-    def show_update_dialog(self, remote_version, local_version, section, all_sections):
-        # AFK screen bezárása, hogy ne takarja ki az update ablakot
+    def show_update_dialog(self, remote_version, local_version,
+                            section, all_sections, up_to_date=False):
+        # AFK screen bezárása
         try:
             if hasattr(self, "_close_afk_screen"):
                 self._close_afk_screen()
@@ -304,144 +300,224 @@ def _process_update_result(self, remote, local, silent):
         except Exception:
             pass
 
-        # Flag: ne jelenjen meg az AFK screen, amíg ez az ablak nyitva van
         self._update_dialog_open = True
 
         win = ctk.CTkToplevel(self)
-        win.title(self.tr("update_window_title"))
+        win.title(self.tr("update_title"))
         try:
             win.attributes("-topmost", True)
             win.lift()
             win.focus_force()
         except Exception:
             pass
-        win.geometry("720x780")
+        win.geometry("740x800")
         win.minsize(640, 600)
         win.grab_set()
         win.resizable(False, False)
 
         win.update_idletasks()
-        x = (win.winfo_screenwidth() - 720) // 2
-        y = (win.winfo_screenheight() - 780) // 2
-        win.geometry(f"720x780+{x}+{y}")
+        x = (win.winfo_screenwidth() - 740) // 2
+        y = max(20, (win.winfo_screenheight() - 800) // 2)
+        win.geometry(f"740x800+{x}+{y}")
 
-        # --- Fejléc ---
-        header = ctk.CTkFrame(win, fg_color="#5865F2", corner_radius=0, height=100)
+        # ---------- Fejléc ----------
+        if up_to_date:
+            header_color = "#27ae60"
+            header_text = self.tr("update_header_uptodate")
+        else:
+            header_color = "#5865F2"
+            header_text = self.tr("update_header_new")
+
+        header = ctk.CTkFrame(win, fg_color=header_color,
+                                corner_radius=0, height=110)
         header.pack(fill="x")
         header.pack_propagate(False)
 
         ctk.CTkLabel(
-            header, text=self.tr("update_header"),
+            header, text=header_text,
             font=("Arial", 22, "bold"), text_color="white"
         ).pack(pady=(18, 2))
 
+        # Verzió összehasonlítás
+        if up_to_date:
+            version_line = f"v{local_version}  ✅"
+        else:
+            version_line = f"{local_version}    →    {remote_version}"
+
         ctk.CTkLabel(
-            header, text=f"{local_version}    →    {remote_version}",
-            font=("Consolas", 14, "bold"), text_color="#dcdcff"
+            header, text=version_line,
+            font=("Consolas", 14, "bold"), text_color="#ffffff"
         ).pack(pady=(0, 12))
 
-        # --- Changelog cím ---
-        title_text = self.tr("update_news_default")
-        if section and section.get("title"):
-            title_text = f"📝  {section['title']}"
+        # ---------- Státusz badge ----------
+        badge_frame = ctk.CTkFrame(win, fg_color="transparent")
+        badge_frame.pack(fill="x", padx=24, pady=(14, 6))
+
+        if up_to_date:
+            status_txt = self.tr("update_status_uptodate")
+            status_col = "#27ae60"
+        else:
+            status_txt = self.tr("update_status_available")
+            status_col = "#e67e22"
+
+        ctk.CTkLabel(
+            badge_frame, text=status_txt,
+            font=("Arial", 13, "bold"), text_color=status_col,
+            anchor="w",
+        ).pack(side="left")
+
+        ctk.CTkLabel(
+            badge_frame,
+            text=self.tr("update_checked_at",
+                          time=datetime.datetime.now().strftime("%H:%M:%S")),
+            font=("Arial", 10), text_color="#8a8e98",
+        ).pack(side="right")
+
+        # ---------- Changelog cím ----------
+        if up_to_date:
+            title_text = self.tr("update_changelog_current")
+        else:
+            if section and section.get("title"):
+                title_text = f"📝  {section['title']}"
+            else:
+                title_text = self.tr("update_news_default")
 
         ctk.CTkLabel(
             win, text=title_text,
-            font=("Arial", 15, "bold"), anchor="w", text_color="#ffffff"
-        ).pack(fill="x", padx=24, pady=(16, 4))
+            font=("Arial", 14, "bold"), anchor="w", text_color="#ffffff"
+        ).pack(fill="x", padx=24, pady=(8, 4))
 
-        # --- Changelog tartalom ---
-        changelog_frame = ctk.CTkFrame(win, fg_color="#0a0c10", corner_radius=10,
-                                         border_width=1, border_color="#2f3542")
+        # ---------- Changelog tartalom ----------
+        changelog_frame = ctk.CTkFrame(
+            win, fg_color="#0a0c10", corner_radius=10,
+            border_width=1, border_color="#2f3542"
+        )
         changelog_frame.pack(fill="both", expand=True, padx=24, pady=(0, 12))
 
         changelog_box = ctk.CTkTextbox(
             changelog_frame, font=("Consolas", 12), wrap="word",
             fg_color="transparent",
         )
-        changelog_box.pack(fill="both", expand=True, padx=4, pady=4)
+        changelog_box.pack(fill="both", expand=True, padx=6, pady=6)
 
         if section and section.get("content"):
             content = section["content"]
-            # Szép formázás
             content = content.replace("  • ", "  ▸  ").replace("  - ", "  ▸  ")
             changelog_box.insert("1.0", content)
         else:
-            changelog_box.insert("1.0", self.tr("update_no_changelog"))
+            if up_to_date:
+                changelog_box.insert("1.0", self.tr("update_no_changelog_current"))
+            else:
+                changelog_box.insert("1.0", self.tr("update_no_changelog"))
         changelog_box.configure(state="disabled")
 
-        # --- Info ---
+        # ---------- Info ----------
         info = ctk.CTkFrame(win, fg_color="#1a1d24", corner_radius=8,
                              border_width=1, border_color="#2f3542")
         info.pack(fill="x", padx=24, pady=(0, 10))
 
+        if up_to_date:
+            info_txt = self.tr("update_info_uptodate")
+        else:
+            info_txt = self.tr("update_safe_info")
+
         ctk.CTkLabel(
-            info,
-            text=self.tr("update_safe_info"),
+            info, text=info_txt,
             font=("Arial", 11), text_color="#b8bcc6"
         ).pack(padx=14, pady=10)
 
-        # --- Státusz ---
+        # ---------- Progress + status ----------
         status_label = ctk.CTkLabel(
             win, text="", font=("Arial", 11), text_color="#8a8e98"
         )
         status_label.pack(pady=(0, 4))
 
-        progress = ctk.CTkProgressBar(win, width=660, height=8,
+        progress = ctk.CTkProgressBar(win, width=680, height=8,
                                         progress_color="#5865F2")
         progress.set(0)
         progress.pack(pady=(0, 12))
 
-        # --- Gombok ---
+        # ---------- Gombok ----------
         btn_frame = ctk.CTkFrame(win, fg_color="transparent")
         btn_frame.pack(pady=(0, 8), fill="x", padx=24)
 
-        def start_download():
-            yes_btn.configure(state="disabled")
-            later_btn.configure(state="disabled")
-            skip_btn.configure(state="disabled")
-            history_btn.configure(state="disabled")
-            threading.Thread(
-                target=self._download_and_install,
-                args=(remote_version, win, status_label, progress),
-                daemon=True
-            ).start()
+        if up_to_date:
+            # Csak Bezárás + Előzmények
+            ctk.CTkButton(
+                btn_frame, text=self.tr("common_close_btn"),
+                fg_color="#555555", hover_color="#666666",
+                width=140, height=46, font=("Arial", 13, "bold"),
+                corner_radius=8,
+                command=lambda: (setattr(self, "_update_dialog_open", False),
+                                  win.destroy())
+            ).pack(side="left", padx=4)
 
-        yes_btn = ctk.CTkButton(
-            btn_frame, text=self.tr("update_download_btn"),
-            fg_color="#27ae60", hover_color="#2ecc71",
-            width=200, height=46, font=("Arial", 13, "bold"),
-            corner_radius=8, command=start_download
-        )
-        yes_btn.pack(side="left", padx=4)
+            ctk.CTkButton(
+                btn_frame, text=self.tr("update_recheck_btn"),
+                fg_color="#3498db", hover_color="#5dade2",
+                width=180, height=46, font=("Arial", 12),
+                corner_radius=8,
+                command=lambda: (win.destroy(),
+                                  self.after(200, lambda: self.check_for_updates(silent=False)))
+            ).pack(side="left", padx=4)
 
-        later_btn = ctk.CTkButton(
-            btn_frame, text=self.tr("update_later_btn"),
-            fg_color="#f39c12", hover_color="#e67e22",
-            width=130, height=46, font=("Arial", 13),
-            corner_radius=8,
-            command=lambda: (setattr(self, "_update_dialog_open", False), win.destroy())
-        )
+            ctk.CTkButton(
+                win, text=self.tr("update_history_btn"),
+                fg_color="transparent", hover_color="#2f3542",
+                text_color="#8a8e98", border_width=1, border_color="#2f3542",
+                width=300, height=34, font=("Arial", 11),
+                corner_radius=8,
+                command=lambda: self.open_update_history_window(all_sections)
+            ).pack(pady=(0, 14))
+        else:
+            # Frissítés elérhető
+            def start_download():
+                yes_btn.configure(state="disabled")
+                later_btn.configure(state="disabled")
+                skip_btn.configure(state="disabled")
+                history_btn.configure(state="disabled")
+                threading.Thread(
+                    target=self._download_and_install,
+                    args=(remote_version, win, status_label, progress),
+                    daemon=True
+                ).start()
 
-        skip_btn = ctk.CTkButton(
-            btn_frame, text=self.tr("update_skip_btn"),
-            fg_color="#7f8c8d", hover_color="#95a5a6",
-            width=130, height=46, font=("Arial", 13),
-            corner_radius=8,
-            command=lambda: self._skip_this_version(remote_version, win)
-        )
-        skip_btn.pack(side="left", padx=4)
+            yes_btn = ctk.CTkButton(
+                btn_frame, text=self.tr("update_download_btn"),
+                fg_color="#27ae60", hover_color="#2ecc71",
+                width=220, height=46, font=("Arial", 13, "bold"),
+                corner_radius=8, command=start_download
+            )
+            yes_btn.pack(side="left", padx=4)
 
-        # --- Előző frissítések gomb ---
-        history_btn = ctk.CTkButton(
-            win, text=self.tr("update_history_btn"),
-            fg_color="transparent", hover_color="#2f3542",
-            text_color="#8a8e98", border_width=1, border_color="#2f3542",
-            width=300, height=34, font=("Arial", 11),
-            corner_radius=8,
-            command=lambda: self.open_update_history_window(all_sections)
-        )
-        history_btn.pack(pady=(0, 14))
+            later_btn = ctk.CTkButton(
+                btn_frame, text=self.tr("update_later_btn"),
+                fg_color="#f39c12", hover_color="#e67e22",
+                width=130, height=46, font=("Arial", 13),
+                corner_radius=8,
+                command=lambda: (setattr(self, "_update_dialog_open", False),
+                                  win.destroy())
+            )
+            later_btn.pack(side="left", padx=4)
+
+            skip_btn = ctk.CTkButton(
+                btn_frame, text=self.tr("update_skip_btn"),
+                fg_color="#7f8c8d", hover_color="#95a5a6",
+                width=130, height=46, font=("Arial", 13),
+                corner_radius=8,
+                command=lambda: self._skip_this_version(remote_version, win)
+            )
+            skip_btn.pack(side="left", padx=4)
+
+            history_btn = ctk.CTkButton(
+                win, text=self.tr("update_history_btn"),
+                fg_color="transparent", hover_color="#2f3542",
+                text_color="#8a8e98", border_width=1, border_color="#2f3542",
+                width=300, height=34, font=("Arial", 11),
+                corner_radius=8,
+                command=lambda: self.open_update_history_window(all_sections)
+            )
+            history_btn.pack(pady=(0, 14))
 
     # ==================================================================
     #  Verzió kihagyás
@@ -472,7 +548,6 @@ def _process_update_result(self, remote, local, silent):
         y = (win.winfo_screenheight() - 720) // 2
         win.geometry(f"760x720+{x}+{y}")
 
-        # Fejléc
         header = ctk.CTkFrame(win, fg_color="#8e44ad", corner_radius=0, height=70)
         header.pack(fill="x")
         header.pack_propagate(False)
@@ -487,17 +562,12 @@ def _process_update_result(self, remote, local, silent):
             font=("Arial", 11), text_color="#e0c0f0"
         ).pack(side="right", padx=24)
 
-        # --- Tartalom ---
         scroll = ctk.CTkScrollableFrame(win, fg_color="transparent")
         scroll.pack(fill="both", expand=True, padx=12, pady=12)
 
-        # Szekciók: vagy a GitHub-ról jöttek, vagy helyi history
         sections = all_sections or []
         local_history = self._load_update_history()
         current_version = self.get_local_version()
-
-        # Összegyűjtjük a helyi history-t verzió szerint
-        history_map = {h.get("version"): h for h in local_history}
 
         if not sections and not local_history:
             ctk.CTkLabel(
@@ -505,16 +575,15 @@ def _process_update_result(self, remote, local, silent):
                 font=("Arial", 13), text_color="#6a6e78"
             ).pack(pady=60)
         else:
-            # Ha van GitHub changelog, azt használjuk
             for section in sections:
                 v = section.get("version", "")
                 if not v:
                     continue
 
-                is_current = (v == current_version or v.lstrip("v") == current_version.lstrip("v"))
+                is_current = (v == current_version or
+                               v.lstrip("v") == current_version.lstrip("v"))
                 is_newer = self._is_newer_version(v, current_version)
 
-                # Kártya
                 card = ctk.CTkFrame(
                     scroll,
                     fg_color="#0f1a24" if is_newer else "#0a0c10",
@@ -526,7 +595,6 @@ def _process_update_result(self, remote, local, silent):
                 )
                 card.pack(fill="x", pady=6, padx=4)
 
-                # Cím sor
                 title_row = ctk.CTkFrame(card, fg_color="transparent")
                 title_row.pack(fill="x", padx=14, pady=(12, 6))
 
@@ -549,7 +617,6 @@ def _process_update_result(self, remote, local, silent):
                         text_color="#2ecc71",
                     ).pack(side="right", padx=4)
 
-                # Tartalom
                 content_box = ctk.CTkTextbox(
                     card, height=160, font=("Consolas", 11),
                     wrap="word", fg_color="#050608"
@@ -561,7 +628,6 @@ def _process_update_result(self, remote, local, silent):
                 content_box.insert("1.0", content)
                 content_box.configure(state="disabled")
 
-            # Ha nincs GitHub changelog, de van helyi history
             if not sections and local_history:
                 for h in local_history:
                     card = ctk.CTkFrame(scroll, fg_color="#0a0c10", corner_radius=10,
@@ -576,7 +642,6 @@ def _process_update_result(self, remote, local, silent):
                         font=("Arial", 10), text_color="#6a6e78", anchor="w"
                     ).pack(fill="x", padx=14, pady=(0, 12))
 
-        # --- Alsó gombok ---
         btns = ctk.CTkFrame(win, fg_color="transparent")
         btns.pack(fill="x", padx=12, pady=(0, 12))
 
@@ -595,7 +660,6 @@ def _process_update_result(self, remote, local, silent):
         ).pack(side="right", padx=4)
 
     def _is_newer_version(self, v1, v2):
-        """Igaz, ha v1 > v2."""
         try:
             def parse(v):
                 v = v.lstrip("v")
@@ -638,7 +702,7 @@ def _process_update_result(self, remote, local, silent):
             full_root = os.path.join(extract_dir, root_folder)
             panel_folder = full_root
 
-            candidate = os.path.join(full_root, "panel")
+            candidate = os.path.join(full_root, "DBM")
             if os.path.isdir(candidate):
                 panel_folder = candidate
 
@@ -671,9 +735,8 @@ def _process_update_result(self, remote, local, silent):
                           "w", encoding="utf-8") as vf:
                     vf.write(f'version = "{remote_version}"\n')
             except Exception as e:
-                print(self.tr("update_log_version_write_error", error=e))
+                print(f"[UPDATE] version.py írási hiba: {e}")
 
-            # Changelog mentése a history-be
             try:
                 changelog_text = self.fetch_changelog()
                 sections = self._parse_changelog(changelog_text)
