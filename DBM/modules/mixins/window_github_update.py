@@ -144,28 +144,42 @@ class WindowGithubMixin:
             return "0.0.0"
 
     def fetch_remote_version(self, timeout=10):
+    last_error = None
+    for url in VERSION_URLS:
         try:
+            print(f"[UPDATE] Verzió próba: {url}")
             req = urllib.request.Request(
-                VERSION_URL,
+                url,
                 headers={"Cache-Control": "no-cache", "User-Agent": "DBM-Panel"},
             )
             with urllib.request.urlopen(req, timeout=timeout) as r:
-                return r.read().decode("utf-8").strip()
+                data = r.read().decode("utf-8").strip()
+                if data:
+                    print(f"[UPDATE] ✅ Verzió: {data}")
+                    return data
         except Exception as e:
-            print(f"[UPDATE] Verzió lekérdezési hiba: {e}")
-            return None
+            print(f"[UPDATE] ❌ {url} → {e}")
+            last_error = e
+    print(f"[UPDATE] Nem sikerült egyik URL-ről sem. Utolsó hiba: {last_error}")
+    return None
 
     def fetch_changelog(self, timeout=10):
-        try:
-            req = urllib.request.Request(
-                CHANGELOG_URL,
-                headers={"Cache-Control": "no-cache", "User-Agent": "DBM-Panel"},
-            )
-            with urllib.request.urlopen(req, timeout=timeout) as r:
-                return r.read().decode("utf-8").strip()
-        except Exception as e:
-            print(f"[UPDATE] Changelog hiba: {e}")
-            return ""
+        for url in CHANGELOG_URLS:
+            try:
+                print(f"[UPDATE] Changelog próba: {url}")
+                req = urllib.request.Request(
+                    url,
+                    headers={"Cache-Control": "no-cache", "User-Agent": "DBM-Panel"},
+                )
+                with urllib.request.urlopen(req, timeout=timeout) as r:
+                    data = r.read().decode("utf-8").strip()
+                    if data:
+                        print(f"[UPDATE] ✅ Changelog letöltve ({len(data)} byte)")
+                        return data
+            except Exception as e:
+                print(f"[UPDATE] ❌ {url} → {e}")
+        print("[UPDATE] Changelog nem elérhető egyik URL-en sem")
+        return ""
 
     # ==================================================================
     #  QUEUE-alapú frissítés-ellenőrzés (BIZTONOS!)
