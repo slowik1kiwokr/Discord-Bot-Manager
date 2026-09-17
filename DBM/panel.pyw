@@ -137,6 +137,7 @@ class BotManagerApp(
     def __init__(self):
         super().__init__()
 
+        self.sidebar_collapsed_sections = set()
         self.current_language = "English"
         self.selected_error_sound = "beep"
         self.minimize_to_tray_enabled = True
@@ -179,6 +180,10 @@ class BotManagerApp(
         self.is_loading = True
         self.bots = {}
         self.active_bot_key = "Main Bot"
+        # --- Csendes órák ---
+        self.quiet_hours_enabled = False
+        self.quiet_hours_start = "22:00"
+        self.quiet_hours_end = "06:00"
 
         self.load_config()
 
@@ -754,7 +759,8 @@ class BotManagerApp(
         self.sidebar_menu.pack(fill="both", expand=True, padx=2, pady=(0, 4))
         menu = self.sidebar_menu
 
-        def make_section(title_key, accent="#5865F2", bg_tint="#1e2129"):
+        def make_section(title_key, accent="#5865F2", bg_tint="#1e2129", section_id=None):
+            """Lenyitható szekció kártya. Visszaadja a TARTALOM frame-et."""
             card = ctk.CTkFrame(
                 menu,
                 fg_color=bg_tint,
@@ -764,15 +770,93 @@ class BotManagerApp(
             )
             card.pack(fill="x", padx=6, pady=(8, 4))
 
-            ctk.CTkLabel(
-                card,
+            # --- Fejléc (kattintható) ---
+            header = ctk.CTkFrame(card, fg_color="transparent", cursor="hand2")
+            header.pack(fill="x", padx=8, pady=(8, 4))
+
+            # Nyíl
+            arrow_lbl = ctk.CTkLabel(
+                header, text="▼",
+                font=("Arial", 10, "bold"),
+                text_color=accent,
+                width=18,
+                cursor="hand2",
+            )
+            arrow_lbl.pack(side="left", padx=(2, 4))
+
+            # Cím
+            title_lbl = ctk.CTkLabel(
+                header,
                 text=self.tr(title_key).upper(),
                 font=("Arial", 9, "bold"),
                 text_color=accent,
                 anchor="w",
-            ).pack(fill="x", padx=12, pady=(10, 6))
+                cursor="hand2",
+            )
+            title_lbl.pack(side="left", fill="x", expand=True)
 
-            return card
+            # --- Tartalom ---
+            content = ctk.CTkFrame(card, fg_color="transparent")
+            content.pack(fill="x", padx=4, pady=(0, 6))
+
+            # --- Állapot ---
+            collapsed = (
+                section_id is not None
+                and section_id in getattr(self, "sidebar_collapsed_sections", set())
+            )
+
+            state = {"collapsed": collapsed}
+
+            def apply_state():
+                if state["collapsed"]:
+                    content.pack_forget()
+                    arrow_lbl.configure(text="▶")
+                else:
+                    content.pack(fill="x", padx=4, pady=(0, 6))
+                    arrow_lbl.configure(text="▼")
+
+            def toggle(event=None):
+                state["collapsed"] = not state["collapsed"]
+                apply_state()
+
+                # Mentés
+                if section_id is not None:
+                    if not hasattr(self, "sidebar_collapsed_sections"):
+                        self.sidebar_collapsed_sections = set()
+                    if state["collapsed"]:
+                        self.sidebar_collapsed_sections.add(section_id)
+                    else:
+                        self.sidebar_collapsed_sections.discard(section_id)
+                    try:
+                        self.save_config()
+                    except Exception:
+                        pass
+
+            # Kattintás kötések
+            header.bind("<Button-1>", toggle)
+            arrow_lbl.bind("<Button-1>", toggle)
+            title_lbl.bind("<Button-1>", toggle)
+
+            # Hover effekt
+            def on_enter(e):
+                try:
+                    header.configure(fg_color="#2a2f3a")
+                except Exception:
+                    pass
+
+            def on_leave(e):
+                try:
+                    header.configure(fg_color="transparent")
+                except Exception:
+                    pass
+
+            header.bind("<Enter>", on_enter, add="+")
+            header.bind("<Leave>", on_leave, add="+")
+
+            # Kezdeti állapot
+            apply_state()
+
+            return content
 
         def nav_btn(parent, text, command, active=False, color=None, hover=None):
             if color:
@@ -813,7 +897,7 @@ class BotManagerApp(
         # ============================================================
         #  VEZÉRLÉS
         # ============================================================
-        card = make_section("control_section")
+        card = make_section("control_section", section_id="control")
         self.btn_start = action_btn(card, "▶   " + self.tr("bot_start_btn"), self.start_bot, "#27ae60")
         self.btn_restart = action_btn(card, "⟳   " + self.tr("bot_restart_btn"), self.restart_bot, "#d35400")
         self.btn_stop = action_btn(card, "■   " + self.tr("bot_stop_btn"), self.stop_bot, "#c0392b")
@@ -822,7 +906,7 @@ class BotManagerApp(
         # ============================================================
         #  TÖMEGES VEZÉRLÉS
         # ============================================================
-        card = make_section("bulk_control_section")
+        card = make_section("bulk_control_section", section_id="bulk_control")
         self.btn_start_all = nav_btn(card, "▶   " + self.tr("start_all_btn"), self.start_all_bots, color="#27ae60")
         self.btn_restart_all = nav_btn(card, "⟳   " + self.tr("restart_all_btn"), self.restart_all_bots, color="#d35400")
         self.btn_stop_all = nav_btn(card, "■   " + self.tr("stop_all_btn"), self.stop_all_bots, color="#c0392b")
@@ -831,7 +915,7 @@ class BotManagerApp(
         # ============================================================
         #  INTEGRÁCIÓ
         # ============================================================
-        card = make_section("tools_section")
+        card = make_section("tools_section", section_id="tools")
         self.btn_commander = nav_btn(card, self.tr("commander_btn"), self.open_commander_window, color="#f39c12")
         self.btn_plugins = nav_btn(card, self.tr("plugins_btn"), self.open_plugins_window, color="#8e44ad")
         self.btn_appearance = nav_btn(card, self.tr("appearance_btn"), self.open_bot_appearance_editor, color="#bb8fce")
@@ -841,7 +925,7 @@ class BotManagerApp(
         # ============================================================
         #  STATISZTIKA
         # ============================================================
-        card = make_section("stats_section")
+        card = make_section("stats_section", section_id="stats")
         self.btn_global_stats = nav_btn(card, self.tr("global_stats_btn"), self.open_global_stats_window, color="#2980b9")
         self.btn_dashboard = action_btn(card, "📐   " + self.tr("dashboard_widget_btn"), self.open_dashboard_window, "#5865F2")
         self.btn_animated = action_btn(card, "📈   " + self.tr("live_charts_btn"), self.open_animated_charts_window, "#e67e22")
@@ -855,7 +939,7 @@ class BotManagerApp(
         # ============================================================
         #  RENDSZER
         # ============================================================
-        card = make_section("system_section")
+        card = make_section("system_section", section_id="system")
         self.btn_settings = nav_btn(card, self.tr("settings_btn"), self.open_settings_window_v2, active=True, color="#3498db")
         self.btn_tutorial = nav_btn(card, self.tr("tutorial_btn"), self.open_tutorial_window, color="#e74c3c")
         self.btn_github_update = nav_btn(card, self.tr("github_update_btn"), lambda: self.update_from_github("manual"), color="#2980b9")
@@ -864,7 +948,7 @@ class BotManagerApp(
         # ============================================================
         #  AI FUNKCIOK
         # ============================================================
-        card = make_section("ai_section", accent="#00bcd4", bg_tint="#0f1a24")
+        card = make_section("ai_section", accent="#00bcd4", bg_tint="#0f1a24", section_id="ai")
         self.btn_ai_chat = action_btn(card, "🤖   " + self.tr("ai_assistant_btn"), self.open_ai_chat_window, "#5865F2")
         self.btn_ai_code = action_btn(card, "✨   " + self.tr("ai_code_gen_btn"), self.open_ai_code_generator, "#9b59b6")
         self.btn_ai_docs = action_btn(card, "📄   " + self.tr("ai_docs_btn"), self.open_ai_docs_generator, "#16a085")
@@ -872,7 +956,7 @@ class BotManagerApp(
         spacer(card, 6)
 
         # ============================================================
-        #  PANEL INFO KÁRTYA
+        #  PANEL INFO KÁRTYA (NEM lenyitható!)
         # ============================================================
         info_card = ctk.CTkFrame(
             menu,
@@ -1725,8 +1809,38 @@ class BotManagerApp(
                     self.append_log("EVENT", self.tr("auto_restart_event_msg"))
                     self.restart_bot()
 
+    def is_quiet_hours(self):
+        """Igaz, ha épp csendes órák vannak (ne szóljon a hiba hang)."""
+        if not getattr(self, "quiet_hours_enabled", False):
+            return False
+
+        start_str = getattr(self, "quiet_hours_start", "22:00")
+        end_str = getattr(self, "quiet_hours_end", "06:00")
+
+        try:
+            sh, sm = map(int, start_str.split(":"))
+            eh, em = map(int, end_str.split(":"))
+        except (ValueError, AttributeError):
+            return False
+
+        now = datetime.datetime.now()
+        now_min = now.hour * 60 + now.minute
+        start_min = sh * 60 + sm
+        end_min = eh * 60 + em
+
+        if start_min == end_min:
+            return False
+
+        if start_min < end_min:
+            return start_min <= now_min < end_min
+        else:
+            return now_min >= start_min or now_min < end_min
+
     def play_error_sound(self):
         if not self.sound_var.get():
+            return
+        # Csendes órák ellenőrzése
+        if self.is_quiet_hours():
             return
         try:
             from modules.sounds import play_error_sound_by_name
@@ -2379,6 +2493,7 @@ class BotManagerApp(
             print(f"Hiba bots.json mentéskor: {e}")
 
         settings_data = {
+            "sidebar_collapsed_sections": list(getattr(self, "sidebar_collapsed_sections", set())),
             "panel_id": config.PANEL_ID, "language": self.current_language,
             "minimize_to_tray": self.minimize_to_tray_enabled,
             "panel_password": self.panel_password,
@@ -2399,6 +2514,9 @@ class BotManagerApp(
             "afk_idle_seconds": getattr(self, "afk_idle_seconds", 60),
             "skipped_version": getattr(self, "skipped_version", ""),
             "update_check_interval_minutes": getattr(self, "update_check_interval_minutes", 60),
+            "quiet_hours_enabled": getattr(self, "quiet_hours_enabled", False),
+            "quiet_hours_start": getattr(self, "quiet_hours_start", "22:00"),
+            "quiet_hours_end": getattr(self, "quiet_hours_end", "06:00"),
         }
         try:
             with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
@@ -2508,6 +2626,17 @@ class BotManagerApp(
                 self.afk_idle_seconds = s_data.get("afk_idle_seconds", 60)
                 self.skipped_version = s_data.get("skipped_version", "")
                 self.update_check_interval_minutes = s_data.get("update_check_interval_minutes", 60)
+                self.quiet_hours_enabled = s_data.get("quiet_hours_enabled", False)
+                self.quiet_hours_start = s_data.get("quiet_hours_start", "22:00")
+                self.quiet_hours_end = s_data.get("quiet_hours_end", "06:00")
+
+                # --- Lenyitható szekciók betöltése ---
+                collapsed = s_data.get("sidebar_collapsed_sections", [])
+                if isinstance(collapsed, list):
+                    self.sidebar_collapsed_sections = set(collapsed)
+                else:
+                    self.sidebar_collapsed_sections = set()
+
             except Exception as e:
                 print(f"Hiba settings.json betöltéskor: {e}")
 

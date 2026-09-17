@@ -277,6 +277,74 @@ class WindowSettingsMixin:
             ),
         ).pack(side="left", padx=8)
 
+        # --- Csendes órák ---
+        ctk.CTkFrame(s, height=1, fg_color="#3a2f1f").pack(
+            fill="x", pady=(12, 8))
+
+        quiet_switch = ctk.CTkSwitch(
+            s, text=self.tr("settings_quiet_switch")
+        )
+        quiet_switch.pack(anchor="w", pady=(0, 6))
+        if getattr(self, "quiet_hours_enabled", False):
+            quiet_switch.select()
+
+        ctk.CTkLabel(
+            s, text=self.tr("settings_quiet_hint"),
+            font=("Arial", 10), text_color="#8a8e98",
+            justify="left", anchor="w", wraplength=440,
+        ).pack(fill="x", pady=(0, 8))
+
+        time_row = ctk.CTkFrame(s, fg_color="transparent")
+        time_row.pack(fill="x", pady=2)
+
+        ctk.CTkLabel(time_row, text=self.tr("settings_quiet_from_lbl"),
+                      font=("Arial", 11), text_color="#b8bcc6",
+                      width=100, anchor="w").pack(side="left")
+
+        quiet_start_entry = ctk.CTkEntry(time_row, width=90, height=32,
+                                            font=("Consolas", 12))
+        quiet_start_entry.insert(0, getattr(self, "quiet_hours_start", "22:00"))
+        quiet_start_entry.pack(side="left", padx=(0, 12))
+
+        ctk.CTkLabel(time_row, text=self.tr("settings_quiet_to_lbl"),
+                      font=("Arial", 11), text_color="#b8bcc6",
+                      width=30, anchor="w").pack(side="left")
+
+        quiet_end_entry = ctk.CTkEntry(time_row, width=90, height=32,
+                                          font=("Consolas", 12))
+        quiet_end_entry.insert(0, getattr(self, "quiet_hours_end", "06:00"))
+        quiet_end_entry.pack(side="left", padx=(12, 0))
+
+        # Élő státusz: csendes órák most?
+        quiet_status = ctk.CTkLabel(
+            s, text="", font=("Arial", 10), anchor="w"
+        )
+        quiet_status.pack(fill="x", pady=(6, 0))
+
+        def _refresh_quiet_status():
+            """Frissíti a státusz szöveget (aktív / inaktív)."""
+            try:
+                # Ideiglenesen beállítjuk a panel értékeit, hogy a metódus lássa
+                self.quiet_hours_enabled = bool(quiet_switch.get())
+                self.quiet_hours_start = quiet_start_entry.get().strip()
+                self.quiet_hours_end = quiet_end_entry.get().strip()
+
+                if self.is_quiet_hours():
+                    quiet_status.configure(
+                        text=self.tr("settings_quiet_now_active"),
+                        text_color="#e67e22")
+                else:
+                    quiet_status.configure(
+                        text=self.tr("settings_quiet_now_inactive"),
+                        text_color="#2ecc71")
+            except Exception:
+                pass
+
+        quiet_switch.configure(command=_refresh_quiet_status)
+        quiet_start_entry.bind("<KeyRelease>", lambda e: _refresh_quiet_status())
+        quiet_end_entry.bind("<KeyRelease>", lambda e: _refresh_quiet_status())
+        _refresh_quiet_status()
+
         # ---------- Naplók ----------
         s = self._settings_section(
             panel_scroll, self.tr("settings_sec_logs"), "📝",
@@ -556,6 +624,10 @@ class WindowSettingsMixin:
             self.panel_password = password_entry.get().strip()
             self.minimize_to_tray_enabled = bool(tray_switch.get())
             self.rpc_enabled = bool(rpc_switch.get())
+                        # Csendes órák
+            self.quiet_hours_enabled = bool(quiet_switch.get())
+            self.quiet_hours_start = quiet_start_entry.get().strip() or "22:00"
+            self.quiet_hours_end = quiet_end_entry.get().strip() or "06:00"
 
             # Fix kulcsok a megjelenített nevekből
             self.log_save_level = self._log_key_from_display(

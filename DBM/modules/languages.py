@@ -1326,6 +1326,12 @@ LANGUAGES = {
         "total_commands": "Total Commands",
         "errors": "Errors",
         "offline": "Offline",
+        "settings_quiet_switch": "  Quiet hours (no error sound)",
+        "settings_quiet_hint": "During this time range, error sounds are muted.\nIf start > end, the range spans midnight (e.g., 22:00 → 06:00).",
+        "settings_quiet_from_lbl": "From:",
+        "settings_quiet_to_lbl": "to",
+        "settings_quiet_now_active": "🔇 Quiet hours are active right now",
+        "settings_quiet_now_inactive": "🔊 Quiet hours are inactive",
     },
     "Magyar": {
         # =============================================================
@@ -2636,6 +2642,12 @@ LANGUAGES = {
         "test_mode_changed_msg": "Teszt mód: {status}",
         "settings_manually_saved_msg": "✅ Beállítások mentve",
         "file_not_found_msg": "Fájl nem található:\n{path}",
+        "settings_quiet_switch": "  Quiet hours (no error sound)",
+        "settings_quiet_hint": "During this time range, error sounds are muted.\nIf start > end, the range spans midnight (e.g., 22:00 → 06:00).",
+        "settings_quiet_from_lbl": "From:",
+        "settings_quiet_to_lbl": "to",
+        "settings_quiet_now_active": "🔇 Quiet hours are active right now",
+        "settings_quiet_now_inactive": "🔊 Quiet hours are inactive",
     },
 }
 

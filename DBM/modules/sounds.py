@@ -126,3 +126,27 @@ def play_error_sound_by_name(name, async_play=True):
 def get_all_sound_keys():
     """Visszaadja az összes elérhető hang kulcsát."""
     return list(SOUND_KEYS)
+
+def play_error_sound_safe(panel, name=None):
+    """
+    Hiba hang lejátszása — de csak akkor, ha nincs csendes óra.
+    
+    panel: a fő panel példány (self)
+    name:  a hang neve (opcionális; ha None, a panel beállításából veszi)
+    """
+    try:
+        # Csendes órák ellenőrzése
+        if hasattr(panel, "is_quiet_hours") and panel.is_quiet_hours():
+            print("[SOUND] 🔇 Csendes órák — hang kihagyva")
+            return
+
+        # Ha nincs megadva név, a panel beállításából vesszük
+        if name is None:
+            name = getattr(panel, "selected_error_sound", None)
+
+        if not name:
+            return
+
+        play_error_sound_by_name(name)
+    except Exception as e:
+        print(f"[SOUND] Hiba: {e}")
