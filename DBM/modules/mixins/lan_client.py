@@ -93,6 +93,7 @@ class LANClientMixin:
             inner, text="🔌 " + self.tr("lan_connect_btn"),
             fg_color="#27ae60", hover_color="#2ecc71",
             width=130, height=32, font=("Arial", 11, "bold"),
+            command=lambda: do_connect(),
         )
         connect_btn.pack(side="left")
 
@@ -334,7 +335,6 @@ class LANClientMixin:
                         command=lambda bk=bot.get("key"): send_cmd("stop", bk),
                     ).pack(side="left", padx=2)
 
-            connect_btn.configure(command=do_connect)
             client_state["thread"] = None
 
         # Bezárás
