@@ -278,6 +278,7 @@ class WindowSettingsMixin:
         # ---- Tab tárolók ----
         tab_buttons = {}       # key → {"btn", "indicator", "accent", "default_bg"}
         tab_frames = {}        # key → scrollable frame
+        vars_store = {} 
         anim_state = {"current": None}
 
         # Content frame-ek létrehozása
@@ -522,8 +523,6 @@ class WindowSettingsMixin:
             elif key == "lan":
                 build_lan(parent)
 
-        # ---- VÁLTOZÓK (később mentéshez) ----
-        vars_store = {}
 
         # ---- 1. SECURITY ----
         def build_security(parent):
@@ -859,11 +858,8 @@ class WindowSettingsMixin:
                 self.tr("update_interval_1hour"),
             )
             update_interval_var = ctk.StringVar(value=current_interval_label)
-            ctk.CTkComboBox(
-                c, values=[self.tr(k) for k, _ in UPDATE_INTERVAL_OPTIONS],
-                variable=update_interval_var, width=260,
-            ).pack(anchor="w")
-            vars_store["update_interval_var"] = update_interval_var
+            ctk.CTkComboBox(c, values=[self.tr(k) for k, _ in UPDATE_INTERVAL_OPTIONS], variable=update_interval_var, width=260).pack(anchor="w")
+            vars_store["update_interval_var"] = update_interval_var   # ← EZT ADD HOZZÁ
 
             btn_row = ctk.CTkFrame(c, fg_color="transparent")
             btn_row.pack(fill="x", pady=(12, 0))
@@ -1077,87 +1073,92 @@ class WindowSettingsMixin:
                 command=self.open_lan_client_window,
             ).pack(anchor="w")
 
+        # --- MINDEN TAB ELŐRE FELÉPÍTÉSE ---
+        for _key, _icon, _title, _accent, _bg in SETTINGS_TABS:
+            _frame = tab_frames[_key]
+            build_tab_content(_key, _frame)
+            _frame.pack_forget()
+
         # ============================================================
         #  MENTÉS
         # ============================================================
         def save_settings():
-            self.current_language = vars_store["language_var"].get()
-            self.panel_password = vars_store["password_entry"].get().strip()
-            self.minimize_to_tray_enabled = bool(vars_store["tray_switch"].get())
-            self.rpc_enabled = bool(vars_store["rpc_switch"].get())
+            print(f"[DEBUG] save_settings elindult")
+            print(f"[DEBUG] vars_store kulcsok: {list(vars_store.keys())}")
+            # --- Panel beállítások (biztonságos get) ---
+            _v = vars_store.get("language_var")
+            if _v is not None:
+                self.current_language = _v.get()
+
+            _v = vars_store.get("password_entry")
+            if _v is not None:
+                self.panel_password = _v.get().strip() or self.panel_password
+
+            _v = vars_store.get("tray_switch")
+            if _v is not None:
+                self.minimize_to_tray_enabled = bool(_v.get())
+
+            _v = vars_store.get("rpc_switch")
+            if _v is not None:
+                self.rpc_enabled = bool(_v.get())
 
             # Csendes órák
-            self.quiet_hours_enabled = bool(vars_store["quiet_switch"].get())
-            self.quiet_hours_start = (
-                vars_store["quiet_start_entry"].get().strip() or "22:00"
-            )
-            self.quiet_hours_end = (
-                vars_store["quiet_end_entry"].get().strip() or "06:00"
-            )
-
-                        # --- LAN ---
-            try:
-                new_port = int(vars_store["lan_port_entry"].get().strip())
-            except (ValueError, KeyError):
-                new_port = 8765
-
-            old_enabled = getattr(self, "lan_enabled", False)
-            old_port = getattr(self, "lan_port", 8765)
-            old_token = getattr(self, "lan_token", "")
-
-            self.lan_enabled = bool(vars_store["lan_allow_switch"].winfo_exists()
-                                     and vars_store.get("lan_allow_switch") is not None
-                                     and lan_switch.get())
-            self.lan_port = new_port
-            self.lan_token = vars_store["lan_token_entry"].get().strip()
-            self.lan_allow_control = bool(vars_store["lan_allow_switch"].get())
-
-            # Ha változott valami → újraindítjuk a szervert
-            if (old_enabled != self.lan_enabled or
-                    old_port != self.lan_port or
-                    old_token != self.lan_token):
-                if self.lan_enabled:
-                    self.restart_lan_server()
-                else:
-                    self.stop_lan_server()
-
+            _v = vars_store.get("quiet_switch")
+            if _v is not None:
+                self.quiet_hours_enabled = bool(_v.get())
+            _v = vars_store.get("quiet_start_entry")
+            if _v is not None:
+                self.quiet_hours_start = _v.get().strip() or "22:00"
+            _v = vars_store.get("quiet_end_entry")
+            if _v is not None:
+                self.quiet_hours_end = _v.get().strip() or "06:00"
 
             # Hang + log
-            self.log_save_level = self._log_key_from_display(
-                vars_store["log_display_var"].get()
-            )
-            self.selected_error_sound = self._sound_key_from_display(
-                vars_store["sound_display_var"].get()
-            )
+            _v = vars_store.get("log_display_var")
+            if _v is not None:
+                self.log_save_level = self._log_key_from_display(_v.get())
+            _v = vars_store.get("sound_display_var")
+            if _v is not None:
+                self.selected_error_sound = self._sound_key_from_display(_v.get())
 
             # AFK
-            self.afk_enabled = bool(vars_store["afk_switch"].get())
-            selected_timeout_label = vars_store["afk_timeout_var"].get()
-            for key, seconds in AFK_TIMEOUT_OPTIONS:
-                if self.tr(key) == selected_timeout_label:
-                    self.afk_idle_seconds = seconds
-                    break
+            _v = vars_store.get("afk_switch")
+            if _v is not None:
+                self.afk_enabled = bool(_v.get())
+            _v = vars_store.get("afk_timeout_var")
+            if _v is not None:
+                selected_timeout_label = _v.get()
+                for key, seconds in AFK_TIMEOUT_OPTIONS:
+                    if self.tr(key) == selected_timeout_label:
+                        self.afk_idle_seconds = seconds
+                        break
 
             # Backup
-            self.backup_enabled = bool(vars_store["backup_switch"].get())
-            self.backup_on_start = bool(vars_store["backup_start_switch"].get())
-            try:
-                self.backup_interval_hours = max(
-                    0, int(vars_store["backup_interval_entry"].get())
-                )
-            except ValueError:
-                status_lbl.configure(
-                    text=self.tr("settings_err_backup_interval"),
-                    text_color="#e74c3c",
-                )
-                return
+            _v = vars_store.get("backup_switch")
+            if _v is not None:
+                self.backup_enabled = bool(_v.get())
+            _v = vars_store.get("backup_start_switch")
+            if _v is not None:
+                self.backup_on_start = bool(_v.get())
+            _v = vars_store.get("backup_interval_entry")
+            if _v is not None:
+                try:
+                    self.backup_interval_hours = max(0, int(_v.get()))
+                except ValueError:
+                    status_lbl.configure(
+                        text=self.tr("settings_err_backup_interval"),
+                        text_color="#e74c3c",
+                    )
+                    return
 
             # GitHub update intervallum
-            selected_update_label = vars_store["update_interval_var"].get()
-            for key, minutes in UPDATE_INTERVAL_OPTIONS:
-                if self.tr(key) == selected_update_label:
-                    self.update_check_interval_minutes = minutes
-                    break
+            _v = vars_store.get("update_interval_var")
+            if _v is not None:
+                selected_update_label = _v.get()
+                for key, minutes in UPDATE_INTERVAL_OPTIONS:
+                    if self.tr(key) == selected_update_label:
+                        self.update_check_interval_minutes = minutes
+                        break
 
             try:
                 if getattr(self, "_update_check_after_id", None):
@@ -1172,17 +1173,98 @@ class WindowSettingsMixin:
                 ))
 
             # AI
-            self.ai_provider = vars_store["provider_var"].get()
-            self.ai_api_key = vars_store["ai_key_entry"].get().strip()
-            self.ai_model = vars_store["ai_model_entry"].get().strip()
+            _v = vars_store.get("provider_var")
+            if _v is not None:
+                self.ai_provider = _v.get()
+            _v = vars_store.get("ai_key_entry")
+            if _v is not None:
+                self.ai_api_key = _v.get().strip()
+            _v = vars_store.get("ai_model_entry")
+            if _v is not None:
+                self.ai_model = _v.get().strip()
+
+            # --- LAN ---
+            print(f"[DEBUG] LAN előtt, vars_store lan kulcsok: lan_switch={'lan_switch' in vars_store}")
+            lan_sw = vars_store.get("lan_switch")
+            lan_port_entry = vars_store.get("lan_port_entry")
+            lan_token_entry = vars_store.get("lan_token_entry")
+            lan_allow_sw = vars_store.get("lan_allow_switch")
+
+            if lan_sw is not None:
+                old_enabled = getattr(self, "lan_enabled", False)
+                old_port = getattr(self, "lan_port", 8765)
+                old_token = getattr(self, "lan_token", "")
+
+                print(f"[DEBUG] lan_enabled beállítva: {self.lan_enabled}")
+                self.lan_enabled = bool(lan_sw.get())
+
+                if lan_port_entry is not None:
+                    try:
+                        self.lan_port = int(lan_port_entry.get().strip())
+                    except (ValueError, AttributeError):
+                        self.lan_port = 8765
+
+                if lan_token_entry is not None:
+                    self.lan_token = lan_token_entry.get().strip()
+
+                if lan_allow_sw is not None:
+                    self.lan_allow_control = bool(lan_allow_sw.get())
+
+                # Szerver újraindítás, ha változott
+                if (old_enabled != self.lan_enabled
+                        or old_port != self.lan_port
+                        or old_token != self.lan_token):
+                    if self.lan_enabled:
+                        self.after(300, self.restart_lan_server)
+                    else:
+                        self.stop_lan_server()
+
+            # --- Bot beállítások ---
+            bot = self.bots.get(self.active_bot_key)
+            if bot:
+                _v = vars_store.get("test_switch")
+                if _v is not None:
+                    bot["test_mode"] = bool(_v.get())
+                _v = vars_store.get("crash_switch")
+                if _v is not None:
+                    bot["auto_restart_on_crash"] = bool(_v.get())
+                _v = vars_store.get("crash_delay_entry")
+                if _v is not None:
+                    try:
+                        bot["crash_restart_delay"] = max(1, int(_v.get()))
+                    except ValueError:
+                        status_lbl.configure(
+                            text=self.tr("settings_err_crash_delay"),
+                            text_color="#e74c3c",
+                        )
+                        return
+                _v = vars_store.get("testers_entry")
+                if _v is not None:
+                    bot["allowed_discord_ids"] = [
+                        x.strip() for x in _v.get().split(",")
+                        if x.strip().isdigit()
+                    ]
+                _v = vars_store.get("ram_entry")
+                if _v is not None:
+                    try:
+                        self.max_ram_mb = max(50, int(_v.get()))
+                    except ValueError:
+                        status_lbl.configure(
+                            text=self.tr("settings_err_ram"),
+                            text_color="#e74c3c",
+                        )
+                        return
 
             # Téma
-            selected_theme = vars_store["theme_var"].get()
-            if selected_theme != self.current_theme:
-                self.apply_theme_setting(selected_theme)
+            _v = vars_store.get("theme_var")
+            if _v is not None:
+                selected_theme = _v.get()
+                if selected_theme != self.current_theme:
+                    self.apply_theme_setting(selected_theme)
 
-            # Mentés
+            # --- MENTÉS ---
             self.save_config()
+            print(f"[DEBUG] save_config lefutott, self.lan_enabled = {getattr(self, 'lan_enabled', 'NINCS')}")
             self.update_ui_texts()
 
             status_lbl.configure(
@@ -1192,29 +1274,7 @@ class WindowSettingsMixin:
             self.notify(self.tr("settings_saved_toast"), "success", 2000)
             self.after(400, win.destroy)
 
-                        # --- LAN ---
-            try:
-                new_port = int(vars_store["lan_port_entry"].get().strip())
-            except (ValueError, KeyError):
-                new_port = 8765
-
-            old_enabled = getattr(self, "lan_enabled", False)
-            old_port = getattr(self, "lan_port", 8765)
-            old_token = getattr(self, "lan_token", "")
-
-            self.lan_enabled = bool(vars_store["lan_switch"].get())
-            self.lan_port = new_port
-            self.lan_token = vars_store["lan_token_entry"].get().strip()
-            self.lan_allow_control = bool(vars_store["lan_allow_switch"].get())
-
-            if (old_enabled != self.lan_enabled or
-                    old_port != self.lan_port or
-                    old_token != self.lan_token):
-                if self.lan_enabled:
-                    self.after(300, self.restart_lan_server)
-                else:
-                    self.stop_lan_server()
-
+        # Save gomb hozzákötése a mentés függvényhez
         save_btn.configure(command=save_settings)
 
         # ============================================================

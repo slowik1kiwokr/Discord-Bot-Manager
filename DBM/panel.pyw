@@ -2551,6 +2551,7 @@ class BotManagerApp(
             "quiet_hours_enabled": getattr(self, "quiet_hours_enabled", False),
             "quiet_hours_start": getattr(self, "quiet_hours_start", "22:00"),
             "quiet_hours_end": getattr(self, "quiet_hours_end", "06:00"),
+            # --- LAN ---
             "lan_enabled": getattr(self, "lan_enabled", False),
             "lan_port": getattr(self, "lan_port", 8765),
             "lan_token": getattr(self, "lan_token", ""),
@@ -2670,6 +2671,7 @@ class BotManagerApp(
                 self.quiet_hours_enabled = s_data.get("quiet_hours_enabled", False)
                 self.quiet_hours_start = s_data.get("quiet_hours_start", "22:00")
                 self.quiet_hours_end = s_data.get("quiet_hours_end", "06:00")
+                # --- LAN ---
                 self.lan_enabled = s_data.get("lan_enabled", False)
                 self.lan_port = s_data.get("lan_port", 8765)
                 self.lan_token = s_data.get("lan_token", "")
