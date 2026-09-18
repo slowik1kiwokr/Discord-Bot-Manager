@@ -67,6 +67,9 @@ from modules.mixins.ai_assistant import AIAssistantMixin
 from modules.mixins.achievements import AchievementsMixin
 from modules.mixins.streak import StreakMixin
 from modules.mixins.afk_screen import AfkScreenMixin
+from modules.mixins.lan_server import LANServerMixin
+from modules.mixins.lan_client import LANClientMixin
+from modules.mixins.bot_startup_animation import BotStartupAnimationMixin
 from modules.theme import (
     THEMES,
     DEFAULT_THEME,
@@ -132,10 +135,23 @@ class BotManagerApp(
     AchievementsMixin,
     StreakMixin,
     AfkScreenMixin,
+    BotStartupAnimationMixin,
+    LANServerMixin,       
+    LANClientMixin,  
     ctk.CTk,
 ):
     def __init__(self):
         super().__init__()
+        self.withdraw()
+
+        # --- Splash létrehozása a panel Tk-jából (Toplevel) ---
+        from modules.splash import SplashScreen
+        try:
+            self._splash = SplashScreen(self)
+            self._splash.update()
+        except Exception as e:
+            print(f"[SPLASH] Hiba: {e}")
+            self._splash = None
 
         self.sidebar_collapsed_sections = set()
         self.current_language = "English"
@@ -251,6 +267,10 @@ class BotManagerApp(
         self._ui_built = True
         self.log_event("INFO", self.tr("panel_started_log"))
         self.notify(self.tr("toast_panel_started"), "success", 3000)
+                # --- LAN szerver + kliens ---
+        self.init_lan_server()
+        self.init_lan_client()
+        self._setup_done = True
 
     def prompt_startup_password(self):
         pwd_win = ctk.CTkToplevel(self)
@@ -759,8 +779,9 @@ class BotManagerApp(
         self.sidebar_menu.pack(fill="both", expand=True, padx=2, pady=(0, 4))
         menu = self.sidebar_menu
 
-        def make_section(title_key, accent="#5865F2", bg_tint="#1e2129", section_id=None):
+        def make_section(title_key, accent="#0064D6", bg_tint="#1e2129", section_id=None):
             """Lenyitható szekció kártya. Visszaadja a TARTALOM frame-et."""
+            #bot vezérlő
             card = ctk.CTkFrame(
                 menu,
                 fg_color=bg_tint,
@@ -769,6 +790,7 @@ class BotManagerApp(
                 border_color=accent,
             )
             card.pack(fill="x", padx=6, pady=(8, 4))
+
 
             # --- Fejléc (kattintható) ---
             header = ctk.CTkFrame(card, fg_color="transparent", cursor="hand2")
@@ -897,53 +919,59 @@ class BotManagerApp(
         # ============================================================
         #  VEZÉRLÉS
         # ============================================================
-        card = make_section("control_section", section_id="control")
-        self.btn_start = action_btn(card, "▶   " + self.tr("bot_start_btn"), self.start_bot, "#27ae60")
-        self.btn_restart = action_btn(card, "⟳   " + self.tr("bot_restart_btn"), self.restart_bot, "#d35400")
-        self.btn_stop = action_btn(card, "■   " + self.tr("bot_stop_btn"), self.stop_bot, "#c0392b")
+        card = make_section("control_section", accent="#03f70f", bg_tint="#0f1a24", section_id="control")
+        self.btn_start = action_btn(card, "▶️   " + self.tr("bot_start_btn"), self.start_bot, "#27ae60")
+        self.btn_restart = action_btn(card, "🔄   " + self.tr("bot_restart_btn"), self.restart_bot, "#d35400")
+        self.btn_stop = action_btn(card, "⏸️   " + self.tr("bot_stop_btn"), self.stop_bot, "#c0392b")
         spacer(card, 6)
 
         # ============================================================
         #  TÖMEGES VEZÉRLÉS
         # ============================================================
-        card = make_section("bulk_control_section", section_id="bulk_control")
-        self.btn_start_all = nav_btn(card, "▶   " + self.tr("start_all_btn"), self.start_all_bots, color="#27ae60")
-        self.btn_restart_all = nav_btn(card, "⟳   " + self.tr("restart_all_btn"), self.restart_all_bots, color="#d35400")
-        self.btn_stop_all = nav_btn(card, "■   " + self.tr("stop_all_btn"), self.stop_all_bots, color="#c0392b")
+        card = make_section("bulk_control_section", accent="#ca0303", bg_tint="#0f1a24", section_id="bulk_control")
+        self.btn_start_all = nav_btn(card, "▶️   " + self.tr("start_all_btn"), self.start_all_bots, color="#27ae60")
+        self.btn_restart_all = nav_btn(card, "🔄   " + self.tr("restart_all_btn"), self.restart_all_bots, color="#d35400")
+        self.btn_stop_all = nav_btn(card, "⏸️   " + self.tr("stop_all_btn"), self.stop_all_bots, color="#c0392b")
         spacer(card, 6)
 
         # ============================================================
-        #  INTEGRÁCIÓ
+        #  BOT MANAGE
         # ============================================================
-        card = make_section("tools_section", section_id="tools")
-        self.btn_commander = nav_btn(card, self.tr("commander_btn"), self.open_commander_window, color="#f39c12")
-        self.btn_plugins = nav_btn(card, self.tr("plugins_btn"), self.open_plugins_window, color="#8e44ad")
-        self.btn_appearance = nav_btn(card, self.tr("appearance_btn"), self.open_bot_appearance_editor, color="#bb8fce")
-        self.btn_alapok = nav_btn(card, self.tr("integration_btn"), self.open_alapok_window, color="#9b59b6")
+        card = make_section("bot_manage", accent="#b9fc02", bg_tint="#0f1a24", section_id="bot_manage")
+        self.btn_commander = nav_btn(card, "🛠️  " + self.tr("commander_btn"), self.open_commander_window, color="#f39c12")
+        self.btn_broadcast = nav_btn(card, "📢  " + self.tr("broadcast_btn"), self.open_broadcast_window, color="#cb4335")
+        self.btn_backup = nav_btn(card, "💾  " + self.tr("backup_btn"), self.open_backup_manager, color="#9b59b6")
+        self.btn_sqlite = nav_btn(card, "🗃️  " + self.tr("sqlite_btn"), self.open_sqlite_viewer, color="#795548")
+
+        # ============================================================
+        #  RENDSZER
+        # ============================================================
+        card = make_section("system_section", accent="#3498db", bg_tint="#0f1a24", section_id="system")
+        self.btn_settings = nav_btn(card, "⚙️  " + self.tr("settings_btn"), self.open_settings_window_v2, active=True, color="#3498db")
+        self.btn_tutorial = nav_btn(card, "🎓  " + self.tr("tutorial_btn"), self.open_tutorial_window, color="#e74c3c")
+        self.btn_github_update = nav_btn(card, "🔄  " + self.tr("github_update_btn"), lambda: self.update_from_github("manual"), color="#2980b9")
+        self.btn_lan_client = nav_btn(card, "🔗  " + self.tr("lan_client_btn"), self.open_lan_client_window, color="#16a085")
+        spacer(card, 6)
+        # ============================================================
+        #  INTEGRÁCIÓ/panel
+        # ============================================================
+        card = make_section("tools_section", accent="#ffffff", bg_tint="#0f1a24", section_id="tools")
+        self.btn_plugins = nav_btn(card, "🧩  " + self.tr("plugins_btn"), self.open_plugins_window, color="#8e44ad")
+        self.btn_appearance = nav_btn(card, "🎨  " + self.tr("appearance_btn"), self.open_bot_appearance_editor, color="#bb8fce")
+        self.btn_alapok = nav_btn(card, "🔗  " + self.tr("integration_btn"), self.open_alapok_window, color="#9b59b6")
         spacer(card, 6)
 
         # ============================================================
         #  STATISZTIKA
         # ============================================================
-        card = make_section("stats_section", section_id="stats")
-        self.btn_global_stats = nav_btn(card, self.tr("global_stats_btn"), self.open_global_stats_window, color="#2980b9")
+        card = make_section("stats_section", accent="#00ff80", bg_tint="#0f1a24", section_id="stats")
+        self.btn_global_stats = nav_btn(card, "📈  " + self.tr("global_stats_btn"), self.open_global_stats_window, color="#2980b9")
         self.btn_dashboard = action_btn(card, "📐   " + self.tr("dashboard_widget_btn"), self.open_dashboard_window, "#5865F2")
         self.btn_animated = action_btn(card, "📈   " + self.tr("live_charts_btn"), self.open_animated_charts_window, "#e67e22")
         self.btn_panel_stats = action_btn(card, "📊   " + self.tr("panel_stats_btn"), self.open_panel_stats_window, "#8e44ad")
-        self.btn_report = nav_btn(card, self.tr("monthly_report_btn"), self.open_monthly_report_window, color="#2ecc71")
-        self.btn_broadcast = nav_btn(card, self.tr("broadcast_btn"), self.open_broadcast_window, color="#cb4335")
-        self.btn_backup = nav_btn(card, self.tr("backup_btn"), self.open_backup_manager, color="#9b59b6")
-        self.btn_sqlite = nav_btn(card, self.tr("sqlite_btn"), self.open_sqlite_viewer, color="#795548")
+        self.btn_report = nav_btn(card, "📊  " + self.tr("monthly_report_btn"), self.open_monthly_report_window, color="#2ecc71")
         spacer(card, 6)
 
-        # ============================================================
-        #  RENDSZER
-        # ============================================================
-        card = make_section("system_section", section_id="system")
-        self.btn_settings = nav_btn(card, self.tr("settings_btn"), self.open_settings_window_v2, active=True, color="#3498db")
-        self.btn_tutorial = nav_btn(card, self.tr("tutorial_btn"), self.open_tutorial_window, color="#e74c3c")
-        self.btn_github_update = nav_btn(card, self.tr("github_update_btn"), lambda: self.update_from_github("manual"), color="#2980b9")
-        spacer(card, 6)
 
         # ============================================================
         #  AI FUNKCIOK
@@ -1734,6 +1762,8 @@ class BotManagerApp(
         self.btn_stop_all.configure(text="■   " + self.tr("stop_all_btn"))
         self.btn_alapok.configure(text=self.tr("integration_btn"))
         self.btn_tutorial.configure(text=self.tr("tutorial_btn"))
+        if hasattr(self, "btn_lan_client"):
+            self.btn_lan_client.configure(text="🔗  " + self.tr("lan_client_btn"))
         self.btn_backup.configure(text=self.tr("backup_btn"))
         self.btn_sqlite.configure(text=self.tr("sqlite_btn"))
         self.btn_plugins.configure(text=self.tr("plugins_btn"))
@@ -2254,6 +2284,10 @@ class BotManagerApp(
                 bot["path"] = script_path
                 self.lbl_status.configure(text=self.tr("online_status"), text_color="#2ecc71")
                 self.append_log("SUCCESS", self.tr("bot_process_started_msg", pid=bot['process'].pid))
+                self.show_bot_startup_animation(
+                    self.active_bot_key,
+                    bot.get("emoji", "🤖"),
+                )
                 threading.Thread(target=self._read_bot_output, args=(self.active_bot_key,), daemon=True).start()
                 self.save_config()
             except Exception as e:
@@ -2517,6 +2551,13 @@ class BotManagerApp(
             "quiet_hours_enabled": getattr(self, "quiet_hours_enabled", False),
             "quiet_hours_start": getattr(self, "quiet_hours_start", "22:00"),
             "quiet_hours_end": getattr(self, "quiet_hours_end", "06:00"),
+            "lan_enabled": getattr(self, "lan_enabled", False),
+            "lan_port": getattr(self, "lan_port", 8765),
+            "lan_token": getattr(self, "lan_token", ""),
+            "lan_allow_control": getattr(self, "lan_allow_control", True),
+            "lan_client_host": getattr(self, "lan_client_host", ""),
+            "lan_client_port": getattr(self, "lan_client_port", 8765),
+            "lan_client_token": getattr(self, "lan_client_token", ""),
         }
         try:
             with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
@@ -2629,7 +2670,13 @@ class BotManagerApp(
                 self.quiet_hours_enabled = s_data.get("quiet_hours_enabled", False)
                 self.quiet_hours_start = s_data.get("quiet_hours_start", "22:00")
                 self.quiet_hours_end = s_data.get("quiet_hours_end", "06:00")
-
+                self.lan_enabled = s_data.get("lan_enabled", False)
+                self.lan_port = s_data.get("lan_port", 8765)
+                self.lan_token = s_data.get("lan_token", "")
+                self.lan_allow_control = s_data.get("lan_allow_control", True)
+                self.lan_client_host = s_data.get("lan_client_host", "")
+                self.lan_client_port = s_data.get("lan_client_port", 8765)
+                self.lan_client_token = s_data.get("lan_client_token", "")
                 # --- Lenyitható szekciók betöltése ---
                 collapsed = s_data.get("sidebar_collapsed_sections", [])
                 if isinstance(collapsed, list):
@@ -2686,6 +2733,15 @@ class BotManagerApp(
             tray.stop()
             self.tray_icon = None
 
+    def _reveal(self):
+        """A panel megjelenítése a splash után."""
+        try:
+            self.deiconify()
+            self.lift()
+            self.focus_force()
+        except Exception as e:
+            print(f"[REVEAL] Hiba: {e}")
+
     def perform_exit(self, icon=None, item=None):
         self.is_monitoring = False
         self.rpc_enabled = False
@@ -2703,19 +2759,19 @@ if __name__ == "__main__":
     import warnings
     warnings.filterwarnings("ignore", category=ResourceWarning)
 
-    splash = SplashScreen()
+    app = BotManagerApp()
 
-    def start_panel():
+    def finish_splash():
+        """A splash befejezése és a panel megjelenítése."""
         try:
-            splash.safe_destroy()
+            if getattr(app, "_splash", None) is not None:
+                app._splash.finish()
         except Exception:
-            try:
-                splash.destroy()
-            except Exception:
-                pass
+            pass
 
-        app = BotManagerApp()
-        app.mainloop()
+        # 1.2 sec múlva jelenjen meg a panel (fade-out közben)
+        app.after(1200, app._reveal)
 
-    splash.after(3000, start_panel)
-    splash.mainloop()
+    # 1.5 sec animáció után jöhet a panel
+    app.after(1500, finish_splash)
+    app.mainloop()

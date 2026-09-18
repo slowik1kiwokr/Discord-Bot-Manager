@@ -2,16 +2,13 @@ import webbrowser
 
 import customtkinter as ctk
 
-from modules.languages import LANGUAGES
-
 
 class WindowTutorialMixin:
     """Beépített tutorial / súgó ablak — kétnyelvű."""
 
     def open_tutorial_window(self):
         lang = getattr(self, "current_language", "English")
-        
-        # A korábbi beépített tartalomstruktúra megőrzése teljes hosszában
+
         tutorial_content = {
             "Magyar": [
                 {
@@ -70,6 +67,7 @@ Jobb oldal — Pro metrikák
 2. Kattints a Start Bot gombra
 3. A bal oldali státusz zöldre vált
 4. Az Élő naplók elkezdenek görögni
+5. Megjelenik a bot startup animáció 🤖
 
 ## Bot leállítása
 1. Kattints a Stop gombra
@@ -128,18 +126,31 @@ Ha a bot összeomlik, a panel:
 ## Settings ablak megnyitása
 Bal oldali menü → ⚙️ Beállítások
 
-## Panel Settings fül
+Az ablak bal oldalán 9 tab:
 
-Panel azonosító
-  • Egyedi azonosító, amivel a bot kapcsolódik
-  • Használd a 📋 Parancs másolása gombot
+  🔐 Biztonság
+  🎨 Megjelenés
+  🔔 Értesítések
+  📝 Naplók
+  💤 AFK képernyő
+  💾 Biztonsági mentés
+  🚀 GitHub
+  🤖 AI
+  🔗 LAN kapcsolat
+
+## 🔐 Biztonság
 
 Panel jelszó
   • Üresen hagyva: nincs védelem
   • Kitöltve: a panel induláskor kéri a jelszót
 
+## 🎨 Megjelenés
+
 Nyelv
   • English / Magyar (az egész panel átvált)
+
+Téma
+  • 6 beépített téma (DBM, Discord Sötét, Discord Zöld, stb.)
 
 Kicsinyítés tálcára
   • Ha be van kapcsolva, X-re a tálcára kerül
@@ -148,53 +159,85 @@ Kicsinyítés tálcára
 Discord Rich Presence
   • Discord profilodon megjelenik, hogy a panelt használod
 
+## 🔔 Értesítések
+
+Hiba hang
+  • Válassz hangot a legördülőből (8 hang)
+  • A 🔊 Teszt hang gombbal meghallgathatod
+
+Csendes órák
+  • Idősáv, amikor NEM szól a hiba hang
+  • Pl. 22:00 → 06:00 (éjszakai nyugalom)
+  • Részletek: 🔇 Csendes órák szekció
+
+## 📝 Naplók
+
 Napló mentési szint
   • Mindent mentse
   • Csak hibák
   • Csak események
   • Sikeres interakciók
 
-Hiba hang
-  • Válassz hangot a legördülőből (8 hang)
-  • A 🔊 Teszt hang gombbal meghallgathatod
+## 💤 AFK képernyő
+
+  • Tétlenség esetén teljes képernyős bot állapot nézet
+  • Időzítő: 15 mp / 30 mp / 1 perc / 2 / 5 / 10 / 30 perc
+  • Engedélyezés / letiltás
+  • 👁 Előnézet gomb
+
+## 💾 Biztonsági mentés
 
 Automatikus biztonsági mentés
   • Be/ki kapcsolható
-  • Panel indulásakor azonnal
-  • Időzített (pl. 24 óránként)
 
-## Bot Settings fül
+Mentés panelindításkor
+  • Induláskor azonnal készít egyet
 
-Maximum RAM használat
-  • Ha a bot túllépi, a panel figyelmeztet
-  • Opcionálisan automatikusan leállítja
+Időzített mentés gyakorisága
+  • Órában (pl. 24 = naponta)
+  • 0 = kikapcsolva
 
-Teszt mód
-  • Csak a megadott Discord ID-k használhatják a botot
+## 🚀 GitHub frissítés
 
-Tesztelők Discord ID-i
-  • Vesszővel elválasztva
-  • Pl.: 123456789012345678, 987654321098765432
+Ellenőrzés gyakorisága
+  • Soha / Percenként / 10 percenként / Óránként / Naponta
 
-Auto-Restart on Crash
-  • Ha a bot összeomlik, automatikusan újraindul
-  • Állítsd be a várakozási időt másodpercben
+Azonnali ellenőrzés gomb
+Előző frissítések gomb
 
 ## 🤖 AI beállítások
 
 Provider
-  • OpenAI (GPT) — fizetős, de profi
+  • OpenAI (GPT) — fizetős, profi
   • Anthropic (Claude) — fizetős
   • Ollama (helyi) — INGYENES, a gépeden fut
   • LM Studio (helyi) — INGYENES
 
 API kulcs
   • Csak OpenAI/Claude esetén kell
-  • Ollama/LM Studio esetén üresen hagyható
 
 Modell
   • Pl. gpt-4o-mini, llama3.2
-  • Hagyd üresen az alapértelmezettnek
+
+## 🔗 LAN kapcsolat
+
+Részletek: 🔗 LAN kapcsolat szekció
+
+  • LAN szerver engedélyezése
+  • Port és token beállítás
+  • Távoli vezérlés engedélyezése
+  • Kapcsolódás távoli panelhez
+
+## Bot Settings fül
+
+Maximum RAM használat
+  • Ha a bot túllépi, a panel figyelmeztet
+
+Teszt mód
+  • Csak a megadott Discord ID-k használhatják a botot
+
+Auto-Restart on Crash
+  • Ha a bot összeomlik, automatikusan újraindul
 """,
                 },
                 {
@@ -284,7 +327,7 @@ Jobb oldal — a kiválasztott plugin kódja
 3. Válassz sablont
 4. Létrehozás
 
-## Elérhető sablonok (14 db)
+## Elérhető sablonok (10 db)
 
 • Üres plugin
 • Esemény loggoló
@@ -294,9 +337,7 @@ Jobb oldal — a kiválasztott plugin kódja
 • Bot állapot figyelő
 • Hangjelzés hibánál
 • Egyszerű számológép ablak
-• Időjárás lekérdező (API példa)
 • Téma váltó gombok
-• Backup rotáció
 • Discord webhook értesítés
 
 ## Plugin szerkesztése
@@ -315,6 +356,12 @@ azonnal életbe lép (nem kell újraindítani a panelt).
 ## Plugin struktúra
 Minden pluginben kell egy setup_panel(panel) függvény.
 A panel paraméter a fő panel példány, amit használhatsz.
+
+## Példa plugin
+
+def setup_panel(panel):
+    panel.log_event("EVENT", "Plugin betöltve!")
+    # Itt a saját kódod
 """,
                 },
                 {
@@ -361,6 +408,11 @@ Időzített mentés gyakorisága
   • bots/<bot_nev>/ — minden bot adata
   • .db, .sqlite — adatbázisok
   • data/ mappa — szerver adatok
+
+## Tippek
+  • Készíts backup-ot minden nagyobb változtatás előtt
+  • Tárold külső drive-on is
+  • A régi mentéseket időnként törölheted
 """,
                 },
                 {
@@ -410,6 +462,11 @@ A letöltés után a panel kérdezi:
 ## Manuális ellenőrzés
 Bal oldali menü → 🔄 GitHub Frissítés
 Mindig megmutatja, van-e új verzió (akár van, akár nincs).
+
+## Ha naprakész vagy
+Zöld fejléc: „✅ Naprakész vagy!"
+Láthatod a jelenlegi verzió changelogját.
+Újraellenőrzés gomb.
 """,
                 },
                 {
@@ -532,7 +589,7 @@ Bal oldali menü → 📌 Alapok / Integráció
 3. Tutorial
   • Lépésről lépésre útmutató
 
-4. 🔧 Függőségek (ÚJ)
+4. 🔧 Függőségek
   • Megmutatja, melyik Python csomag van telepítve
   • ✅ Zöld pipa = telepítve
   • ❌ Piros X = hiányzik
@@ -609,7 +666,7 @@ A panel 4 AI funkciót tartalmaz. Az AI **helyben fut**
 (Ollama/LM Studio) vagy felhőben (OpenAI/Claude).
 
 ## ⚙️ AI beállítás
-Settings ablak → 🤖 AI beállítások
+Settings ablak → 🤖 AI fül
 
 Provider
   • OpenAI (GPT) — fizetős, profi
@@ -668,6 +725,9 @@ Használat:
 Az Ollama az első indításkor **10-30 másodpercig** is
 eltarthat, mert a modellt betölti a memóriába.
 Utána már gyors (2-5 másodperc).
+
+Ha lassú a gép, próbáld a kisebb modellt:
+  ollama pull llama3.2:1b
 """,
                 },
                 {
@@ -737,7 +797,6 @@ Fő ablak
 
 Botváltás
   • Ctrl + 1 … Ctrl + 9 — Bot kiválasztása index alapján
-  • Ctrl + Tab — Következő bot (ha támogatott)
 
 Súgó
   • F1 — Tutorial
@@ -753,9 +812,14 @@ Több bot kezelése
 
 Gyorsabb munka
   • Állítsd be az Auto-indítás-t a gyakran használt botoknál
-  • Használd a Bulk Control gombokat, ha mind induljon
-  • Kapcsold be az automatikus backup-ot (napi)
-  • Használd a hotkey-eket (Ctrl+S, Ctrl+B, Ctrl+R)
+  • Használd a Bulk Control gombokat
+  • Kapcsold be az automatikus backup-ot
+  • Használd a hotkey-eket
+
+Lenyitható szekciók
+  • Kattints a szekció fejlécére az összecsukáshoz
+  • Újra kattintva kinyílik
+  • Az állapot mentődik
 
 Hibakeresés
   • Ha a bot leáll, nézd meg a naplót ERROR szűrővel
@@ -769,7 +833,7 @@ Biztonság
   • A Discord tokent soha ne oszd meg
 
 Testreszabás
-  • Settings → Discord téma (4 beépített)
+  • Settings → Discord téma (6 beépített)
   • Settings → Hiba hang (8 választható)
   • 🎨 Megjelenés — bot emoji + szín
   • Pluginokkal tovább bővíthető
@@ -801,6 +865,346 @@ Nem jelenik meg a hőmérséklet
   • A Windows gyakran nem adja ki WMI-n
   • Telepítsd a LibreHardwareMonitor-t
   • Vagy hagyd figyelmen kívül (CPU % mutatja a terhelést)
+""",
+                },
+                {
+                    "id": "lan_connection",
+                    "title": "🔗 LAN kapcsolat",
+                    "content": """# 🔗 LAN kapcsolat — Két panel összekötése
+
+## Mi ez?
+A panel segítségével **két gépet** összeköthetsz a helyi hálózaton
+(LAN). Az egyik gépen futnak a botok, a másikról vezérelheted őket.
+
+Tipikus felhasználás:
+  • A laptopon futnak a botok és a panel
+  • Az asztali gépről egy kattintással indíthatod/leállíthatod őket
+  • Nem kell átmásolni semmit — minden a laptopon marad
+
+## Hogyan működik?
+
+Host gép (laptop)
+  • Itt futnak a botok
+  • Be van kapcsolva a LAN szerver
+  • Ő a „tulaj" — ő dönti el, ki férhet hozzá
+  • Egyedi tokent generál
+
+Kliens gép (asztali PC)
+  • Csatlakozik a hosthoz IP + port + token segítségével
+  • Látja az összes botot
+  • Indíthat / leállíthat / újraindíthat
+  • Nem kell neki saját bot
+
+## Beállítás — HOST oldal (laptop)
+
+1. Nyisd meg a Settings ablakot → 🔗 LAN fül
+2. Pipáld be: ☑ LAN szerver engedélyezése
+3. Állítsd be a portot (alapértelmezett: 8765)
+4. Másold ki a tokent (📋 gomb)
+5. ☑ Távoli vezérlés engedélyezése
+6. 💾 Mentés → a szerver elindul
+
+A státusz szöveg alul zöld lesz:
+  🟢 Szerver fut a 8765 porton
+
+## Beállítás — KLIENS oldal (PC)
+
+1. Kattints a sidebar-on: 🔗 Távoli panel
+2. Megnyílik a kapcsolódási ablak
+3. Írd be:
+   • Host: a laptop IP címe (pl. 192.168.1.100)
+   • Port: 8765
+   • Token: a hostról kimásolt token
+4. Kattints a 🔌 Kapcsolódás gombra
+
+Ha minden OK, a státusz zöld: 🟢 Csatlakozva
+Megjelennek a laptopon futó botok!
+
+## Hogyan találom meg a laptop IP címét?
+
+Windows-on:
+  1. Nyisd meg a PowerShell-t
+  2. Írd be: ipconfig
+  3. Keresd meg az „IPv4 Address" sort
+  4. Pl. 192.168.1.100 — ez a host IP
+
+Vagy:
+  • A laptopon: Settings → LAN fül → ott van kiírva
+  • Vagy használd a hostname-t (pl. LAPTOP-DBM.local)
+
+## Botok vezérlése a kliensről
+
+A kliens ablakban minden bot külön kártyán jelenik meg:
+
+  ▶  Zöld gomb — bot indítása
+  🔄  Narancs gomb — bot újraindítása
+  ⏸  Piros gomb — bot leállítása
+
+Alattuk látszik:
+  • Az aktuális állapot (FUT / LEÁLLT)
+  • RAM használat
+  • CPU használat
+  • Hibák száma
+
+A gombokra kattintva a host azonnal végrehajtja a parancsot.
+
+## Kapcsolódási naplók
+
+A kliens ablak alján egy napló mutatja:
+  • Mikor kapcsolódtál
+  • Milyen parancsokat küldtél
+  • Sikeres / sikertelen műveleteket
+  • Kapcsolódási hibákat
+
+## Biztonság
+
+⚠️ FONTOS: A LAN kapcsolat csak **helyi hálózaton** működik.
+Nem elérhető az internetről.
+
+Védelmi rétegek:
+  • 🔑 Token — csak az tud csatlakozni, aki ismeri
+  • ☑ Távoli vezérlés — kikapcsolható (csak olvasás mód)
+  • 🔒 LAN-only — nem megy ki a netre
+
+Ha a token kiszivárog, generálj újat:
+  • Settings → LAN fül → 🔄 gomb a token mellett
+
+## Gyakori problémák
+
+„Nincs kapcsolat" / „Host offline"
+  • Ellenőrizd, hogy a host LAN szervere fut-e
+  • Ellenőrizd a host IP-t (ipconfig)
+  • Ugyanazon a wifi-n vagytok?
+  • A Windows tűzfal engedi a portot?
+
+„Invalid token"
+  • A token nem egyezik
+  • Másold ki újra a hostról
+
+„Control disabled"
+  • A host kikapcsolta a távoli vezérlést
+  • Csak olvasni tudod
+
+„Port already in use"
+  • Másik program használja a portot
+  • Válassz másikat (pl. 8766)
+
+## Tippek
+
+  • Használd mindig ugyanazt a portot (8765)
+  • Mentsd el a tokent jelszókezelőbe
+  • Ha otthon vagy, kapcsold be a LAN szervert
+  • Ha nyilvános hálón vagy, kapcsold ki
+  • A kliens cache-eli az adatokat — host offline esetén
+    is látod az utolsó állapotot
+""",
+                },
+                {
+                    "id": "quiet_hours",
+                    "title": "🔇 Csendes órák",
+                    "content": """# 🔇 Csendes órák — Hangerő szabályozás
+
+## Mi ez?
+A csendes órák funkcióval **beállíthatsz egy idősávot**, amikor
+a panel **NEM ad ki hiba hangot**. Ez nagyon hasznos, ha nem
+akarsz éjjel felébredni a pittyogásra.
+
+## Probléma
+Alapértelmezésben a panel **minden hibánál** hangjelzést ad.
+Ha egy bot hajnali 3-kor elszáll, felébredhetsz rá.
+
+## Megoldás
+Állítsd be a csendes órákat: pl. 22:00 → 06:00 között
+a panel **némán marad**, de a naplók továbbra is rögzítődnek.
+
+## Beállítás
+
+1. Nyisd meg a Settings ablakot → 🔔 Értesítések
+2. Keresd meg a „Csendes órák" szekciót
+3. Pipáld be: ☑ Csendes órák
+4. Állítsd be az időt:
+   • Ettől: 22:00 (kezdés)
+   • Eddig: 06:00 (befejezés)
+5. A státusz azonnal frissül:
+   • 🔇 Csendes órák vannak most
+   • 🔊 Csendes órák nincsenek aktívak
+
+## Hogyan működik az időzítés?
+
+Ugyanazon a napon belül
+  Ha a kezdés < befejezés:
+  • Pl. 13:00 → 15:00
+  • Csak 13:00 és 15:00 között csendes
+
+Átnyúlik éjfélen
+  Ha a kezdés > befejezés:
+  • Pl. 22:00 → 06:00
+  • 22:00-tól másnap 06:00-ig csendes
+  • Ez a tipikus éjszakai beállítás
+
+Egész nap csendes
+  Ha a kezdés = befejezés:
+  • A funkció inaktív
+  • Nem ajánlott
+
+## Példák
+
+Éjszakai nyugalom
+  • Ettől: 23:00
+  • Eddig: 07:00
+  • Eredmény: 8 óra csend
+
+Munkaidő
+  • Ettől: 09:00
+  • Eddig: 17:00
+  • Eredmény: munkaidőben nincs pittyogás
+
+Hétvége
+  • Ettől: 08:00
+  • Eddig: 10:00
+  • Eredmény: szombat-vasárnap reggel csend
+
+## Mit NEM tilt le?
+
+A csendes órák **csak a hiba hangot** némítja.
+Továbbra is működik:
+  • ✅ Naplók írása (nem vesznek el hibaüzenetek)
+  • ✅ Toast értesítések (látod a felugró ablakot)
+  • ✅ Státuszjelzők (zöld/piros pontok)
+  • ✅ Crash Watchdog (újraindítás)
+
+Csak a **hangjelzés** marad el. A hibák továbbra is
+látszanak a naplókban és a statisztikákban.
+
+## Tippek
+
+  • Állítsd be az éjszakai időt (22:00 → 06:00)
+  • Ha megosztott gépen dolgozol, használd munkaidőre
+  • A 🔊 Teszt gombbal ellenőrizheted
+  • Kapcsold ki, ha mindig hallani akarod a hibákat
+  • A beállítás a settings.json-ban tárolódik
+""",
+                },
+                {
+                    "id": "animations",
+                    "title": "🎬 Animációk",
+                    "content": """# 🎬 Animációk és splash screen
+
+## Splash Screen (indítóképernyő)
+
+Amikor elindítod a panelt, egy **animált splash screen** jelenik meg:
+
+Látványos elemek
+  • 🌟 Neon ring — két színben forog (blurple + cyan)
+  • ✨ 18 részecske — keringenek a ring körül
+  • 🤖 Discord logó középen
+  • 📊 Progress bar — folyamatosan nő
+  • 💬 3 villogó pont
+  • 🎨 A cím színe pulzál (blurple ↔ cyan)
+
+Fázisok
+  1. Fade-in (0.5 másodperc)
+  2. Config betöltése
+  3. Modulok betöltése
+  4. Botok előkészítése
+  5. Felület építése
+  6. „Kész!" → fade-out
+
+**Fontos:** A panel **a háttérben épül**, miközben a splash
+animál. Nem kell várnod a fekete képernyőn!
+
+Amikor kész, a splash eltűnik, és a panel **azonnal használható**.
+
+## Bot indulás animáció
+
+Amikor rákattintasz a **▶ Bot indítása** gombra, egy rövid
+animáció fut le:
+
+  • 🎬 Overlay ablak (460×560)
+  • 🔄 Forgó körív a bot emojijával
+  • ✨ Színes részecskék
+  • 📝 3 státusz sor:
+    1. ○ Konfiguráció betöltése → ● → ✓
+    2. ○ Kapcsolódás a Discord API-hoz → ● → ✓
+    3. ○ Parancsok szinkronizálása → ● → ✓
+  • 📊 Progress bar
+  • Fade-out, amikor kész
+
+Ez kb. **2-3 másodperc** — utána a bot fut.
+
+## Lenyitható sidebar szekciók
+
+A bal oldali menü szekciói **összecsukhatók**:
+
+  • Kattints a szekció fejlécére → összecsukódik ▶
+  • Kattints újra → kinyílik ▼
+  • Az állapot **mentődik** a settings.json-ba
+  • Következő indításnál ugyanúgy marad
+
+Miért jó?
+  • Több hely a képernyőn
+  • Kevesebb zavaró elem
+  • Személyre szabható
+
+## Animált státuszjelző
+
+A bal felső sarokban a „ONLINE" / „OFFLINE" felirat:
+
+  • Ha a bot fut → zöld pont **lüktet**
+  • Ha leállt → piros pont statikus
+  • A bot emojija is látszik
+
+## Toast értesítések
+
+A panel jobb felső sarkában felugró üzenetek:
+
+  • ℹ️ Info — kék
+  • ✅ Success — zöld
+  • ⚠️ Warning — narancs
+  • ❌ Error — piros
+
+Automatikusan eltűnnek 2-4 másodperc után.
+A ✕ gombbal azonnal bezárhatók.
+
+## AFK képernyő
+
+Ha 60 másodpercig nem használod a panelt:
+
+  • 🌙 Teljes képernyős overlay jelenik meg
+  • Óra + dátum
+  • Az összes bot állapota élőben
+  • Zöld/piros pontok + futási idő
+  • Mozgasd meg az egeret → visszatérsz
+
+Beállítható: Settings → AFK képernyő
+  • Időzítő: 15 mp / 30 mp / 1 perc / 2 / 5 / 10 / 30 perc
+  • Engedélyezés/letiltás
+  • 👁 Előnézet gomb
+
+## Grafikon animációk
+
+  • 📈 Élő grafikonok — másodpercenként frissül
+  • 🖱️ Hover → érték megjelenik
+  • 🔍 Zoom gombbal
+  • ✋ Húzd a pan-hez
+
+## Settings ablak animációk
+
+Az új Settings ablak **tab-alapú**, animációkkal:
+
+  • Tab váltás → a kiválasztott tab háttere
+    szín-átmenettel vált
+  • Bal szélén egy színes sáv **felnő**
+  • Hover → a tab háttere világosabb lesz
+  • Kártyák egymás után **beúsznak** (stagger)
+
+## Tippek
+
+  • Ne zárd be a splash-t — várj 2-3 másodpercet
+  • A splash a háttérben építi a panelt
+  • Ha lassú a gép, a splash tovább látszik
+  • A sidebar állapot megmarad a következő indításnál
+  • Az AFK képernyő hasznos, ha elhagyod a gépet
 """,
                 },
             ],
@@ -861,6 +1265,7 @@ Right side — Pro metrics
 2. Click the Start Bot button
 3. The left status turns green
 4. Live logs start scrolling
+5. Bot startup animation appears 🤖
 
 ## Stopping a bot
 1. Click the Stop button
@@ -919,25 +1324,50 @@ If the bot crashes, the panel:
 ## Opening the Settings window
 Left menu → ⚙️ Settings
 
-## Panel Settings tab
+The window has 9 tabs on the left:
 
-Panel ID
-  • Unique identifier the bot connects with
-  • Use the 📋 Copy command button
+  🔐 Security
+  🎨 Appearance
+  🔔 Notifications
+  📝 Logs
+  💤 AFK Screen
+  💾 Backup
+  🚀 GitHub
+  🤖 AI
+  🔗 LAN Connection
+
+## 🔐 Security
 
 Panel password
   • Empty: no protection
-  • Filled: the panel asks for the password on launch
+  • Filled: the panel asks on launch
+
+## 🎨 Appearance
 
 Language
   • English / Magyar (whole panel switches)
 
+Theme
+  • 6 built-in themes (DBM, Discord Dark, Discord Green, etc.)
+
 Minimize to tray
-  • If enabled, X sends it to the system tray
-  • Right-click the tray icon → open
+  • If enabled, X sends to system tray
 
 Discord Rich Presence
-  • Shows on your Discord profile that you use the panel
+  • Shows on your Discord profile
+
+## 🔔 Notifications
+
+Error sound
+  • Choose a sound from the dropdown (8 options)
+  • Use 🔊 Test button to preview
+
+Quiet hours
+  • Time range when error sounds are muted
+  • E.g. 22:00 → 06:00 (overnight)
+  • Details: 🔇 Quiet Hours section
+
+## 📝 Logs
 
 Log save level
   • Save everything
@@ -945,32 +1375,34 @@ Log save level
   • Only events
   • Successful interactions
 
-Error sound
-  • Choose a sound from the dropdown (8 options)
-  • Use the 🔊 Test sound button to preview
+## 💤 AFK Screen
+
+  • Fullscreen bot status view when idle
+  • Timeout: 15s / 30s / 1m / 2 / 5 / 10 / 30 min
+  • Enable/disable
+  • 👁 Preview button
+
+## 💾 Backup
 
 Automatic backup
   • On/off toggle
-  • On panel startup
-  • Scheduled (e.g. every 24 hours)
 
-## Bot Settings tab
+Backup on panel startup
+  • Creates one immediately
 
-Maximum RAM usage
-  • If the bot exceeds it, the panel warns
-  • Optionally auto-terminates
+Scheduled backup interval
+  • In hours (e.g. 24 = daily)
+  • 0 = disabled
 
-Test mode
-  • Only specified Discord IDs can use the bot
+## 🚀 GitHub Updates
 
-Tester Discord IDs
-  • Comma-separated
+Check interval
+  • Never / Every minute / Every 10 minutes / Hourly / Daily
 
-Auto-Restart on Crash
-  • If the bot crashes, it restarts automatically
-  • Set the wait time in seconds
+Check now button
+Previous updates button
 
-## 🤖 AI settings
+## 🤖 AI Settings
 
 Provider
   • OpenAI (GPT) — paid, professional
@@ -980,11 +1412,29 @@ Provider
 
 API key
   • Only needed for OpenAI/Claude
-  • Leave empty for Ollama/LM Studio
 
 Model
   • E.g. gpt-4o-mini, llama3.2
-  • Leave empty for default
+
+## 🔗 LAN Connection
+
+Details: 🔗 LAN Connection section
+
+  • Enable LAN server
+  • Set port and token
+  • Allow remote control
+  • Connect to remote panel
+
+## Bot Settings tab
+
+Maximum RAM usage
+  • If exceeded, panel warns
+
+Test mode
+  • Only specified Discord IDs can use the bot
+
+Auto-Restart on Crash
+  • If bot crashes, restarts automatically
 """,
                 },
                 {
@@ -1074,7 +1524,7 @@ Right side — code of the selected plugin
 3. Choose a template
 4. Create
 
-## Available templates (14)
+## Available templates (10)
 
 • Empty plugin
 • Event logger
@@ -1084,9 +1534,7 @@ Right side — code of the selected plugin
 • Bot status watcher
 • Sound alert on error
 • Simple calculator window
-• Weather query (API example)
 • Theme switcher buttons
-• Backup rotation
 • Discord webhook notification
 
 ## Editing a plugin
@@ -1105,6 +1553,12 @@ changes immediately (no need to restart the panel).
 ## Plugin structure
 Every plugin must have a setup_panel(panel) function.
 The panel parameter is the main panel instance you can use.
+
+## Example plugin
+
+def setup_panel(panel):
+    panel.log_event("EVENT", "Plugin loaded!")
+    # Your code here
 """,
                 },
                 {
@@ -1151,6 +1605,11 @@ Scheduled backup interval
   • bots/<bot_name>/ — each bot's data
   • .db, .sqlite — databases
   • data/ folder — server data
+
+## Tips
+  • Backup before major changes
+  • Store on external drive too
+  • Clean up old backups periodically
 """,
                 },
                 {
@@ -1200,6 +1659,11 @@ After download, the panel asks:
 ## Manual check
 Left menu → 🔄 GitHub Update
 Always shows whether there's a new version.
+
+## When up to date
+Green header: "✅ You are up to date!"
+Shows current version changelog.
+Re-check button.
 """,
                 },
                 {
@@ -1300,7 +1764,7 @@ The panel and your bot work together. The bot gets an
 additional code that receives the panel's commands.
 
 ## Integration window
-Left menu → 📌 Alapok / Integráció
+Left menu → 📌 Basics / Integration
 
 ## 4 tabs
 
@@ -1317,7 +1781,7 @@ Left menu → 📌 Alapok / Integráció
 3. Tutorial
   • Step-by-step guide
 
-4. 🔧 Dependencies (NEW)
+4. 🔧 Dependencies
   • Shows which Python packages are installed
   • ✅ Green check = installed
   • ❌ Red X = missing
@@ -1383,7 +1847,7 @@ The panel has 4 AI features. The AI runs **locally**
 (Ollama/LM Studio) or in the cloud (OpenAI/Claude).
 
 ## ⚙️ AI Settings
-Settings window → 🤖 AI settings
+Settings window → 🤖 AI tab
 
 Provider
   • OpenAI (GPT) — paid, professional
@@ -1440,6 +1904,9 @@ Usage:
 Ollama may take **10-30 seconds** on the first request
 while it loads the model into memory.
 After that it's fast (2-5 seconds).
+
+If your PC is slow, try a smaller model:
+  ollama pull llama3.2:1b
 """,
                 },
                 {
@@ -1524,6 +1991,11 @@ Faster workflow
   • Turn on automatic backup
   • Use hotkeys
 
+Collapsible sections
+  • Click a section header to collapse
+  • Click again to expand
+  • State is saved
+
 Debugging
   • Check log with ERROR filter
   • stress command shows current CPU/RAM
@@ -1536,7 +2008,7 @@ Security
   • Never share the Discord token
 
 Customization
-  • Settings → Discord theme (4 built-in)
+  • Settings → Discord theme (6 built-in)
   • Settings → Error sound (8 options)
   • 🎨 Appearance — bot emoji + color
   • Extend with plugins
@@ -1567,6 +2039,345 @@ Temperature not showing
   • Windows often doesn't expose it via WMI
   • Install LibreHardwareMonitor
   • Or ignore it (CPU % shows load)
+""",
+                },
+                {
+                    "id": "lan_connection",
+                    "title": "🔗 LAN Connection",
+                    "content": """# 🔗 LAN Connection — Connect two panels
+
+## What is it?
+Connect **two computers** over the local network (LAN).
+Bots run on one machine, you control them from the other.
+
+Typical use:
+  • Bots and panel run on a laptop
+  • Control them from a desktop PC with one click
+  • No need to copy anything — everything stays on the laptop
+
+## How it works
+
+Host machine (laptop)
+  • Bots run here
+  • LAN server is enabled
+  • Owns all data
+  • Generates a unique token
+
+Client machine (desktop PC)
+  • Connects to the host via IP + port + token
+  • Sees all bots
+  • Can start / stop / restart
+  • No local bots needed
+
+## Setup — HOST side (laptop)
+
+1. Open Settings → 🔗 LAN tab
+2. Enable: ☑ LAN server enabled
+3. Set the port (default: 8765)
+4. Copy the token (📋 button)
+5. ☑ Allow remote control (start/stop/restart)
+6. 💾 Save → server starts
+
+Status text turns green:
+  🟢 Server running on port 8765
+
+## Setup — CLIENT side (PC)
+
+1. Sidebar → 🔗 Remote Panel
+2. The connection window opens
+3. Enter:
+   • Host: the laptop's IP (e.g. 192.168.1.100)
+   • Port: 8765
+   • Token: copied from the host
+4. Click 🔌 Connect
+
+If all goes well, status turns green: 🟢 Connected
+The laptop's bots appear!
+
+## Finding the laptop IP address
+
+On Windows:
+  1. Open PowerShell
+  2. Type: ipconfig
+  3. Find the "IPv4 Address" line
+  4. E.g. 192.168.1.100 — that's the host IP
+
+Or:
+  • On the laptop: Settings → LAN tab → shown there
+  • Or use hostname (e.g. LAPTOP-DBM.local)
+
+## Controlling bots from the client
+
+Each bot appears as a card in the client window:
+
+  ▶  Green button — start bot
+  🔄  Orange button — restart bot
+  ⏸  Red button — stop bot
+
+Below them you see:
+  • Current status (RUNNING / STOPPED)
+  • RAM usage
+  • CPU usage
+  • Error count
+
+Clicking a button executes the command on the host instantly.
+
+## Connection logs
+
+At the bottom of the client window, a log shows:
+  • When you connected
+  • Commands you sent
+  • Success / failure
+  • Connection errors
+
+## Security
+
+⚠️ IMPORTANT: LAN connection only works on the **local network**.
+Not accessible from the internet.
+
+Layers of protection:
+  • 🔑 Token — only those who know it can connect
+  • ☑ Remote control — can be disabled (read-only)
+  • 🔒 LAN-only — doesn't go out to the net
+
+If the token leaks, regenerate:
+  • Settings → LAN tab → 🔄 button next to token
+
+## Common issues
+
+"No connection" / "Host offline"
+  • Check host LAN server is running
+  • Check host IP (ipconfig)
+  • Same wifi?
+  • Windows firewall allows the port?
+
+"Invalid token"
+  • Token doesn't match
+  • Copy it again from the host
+
+"Control disabled"
+  • Host disabled remote control
+  • You can only view
+
+"Port already in use"
+  • Another program uses the port
+  • Choose a different one (e.g. 8766)
+
+## Tips
+
+  • Always use the same port (8765)
+  • Store the token in a password manager
+  • Enable LAN server at home
+  • Disable on public networks
+  • Client caches data — last state visible even when
+    host is offline
+""",
+                },
+                {
+                    "id": "quiet_hours",
+                    "title": "🔇 Quiet Hours",
+                    "content": """# 🔇 Quiet Hours — Volume control
+
+## What is it?
+Quiet Hours let you set a **time range** during which the panel
+**does NOT play error sounds**. Useful when you don't want
+to be woken up at night.
+
+## Problem
+By default, the panel **beeps on every error**.
+If a bot crashes at 3 AM, it may wake you up.
+
+## Solution
+Set quiet hours: e.g. 22:00 → 06:00, the panel stays
+**silent** but logs keep recording.
+
+## Setup
+
+1. Open Settings → 🔔 Notifications
+2. Find the "Quiet hours" section
+3. Enable: ☑ Quiet hours
+4. Set the time:
+   • From: 22:00 (start)
+   • To: 06:00 (end)
+5. Status updates instantly:
+   • 🔇 Quiet hours are active right now
+   • 🔊 Quiet hours are inactive
+
+## How the timing works
+
+Same day
+  If start < end:
+  • E.g. 13:00 → 15:00
+  • Quiet only between 13:00 and 15:00
+
+Spans midnight
+  If start > end:
+  • E.g. 22:00 → 06:00
+  • Quiet from 22:00 to 06:00 next day
+  • Typical overnight setting
+
+All day
+  If start = end:
+  • Feature inactive
+  • Not recommended
+
+## Examples
+
+Overnight silence
+  • From: 23:00
+  • To: 07:00
+  • Result: 8 hours of silence
+
+Working hours
+  • From: 09:00
+  • To: 17:00
+  • Result: no beeps during work
+
+Weekend
+  • From: 08:00
+  • To: 10:00
+  • Result: quiet weekend mornings
+
+## What is NOT silenced?
+
+Quiet hours **only mute error sounds**.
+Still working:
+  • ✅ Log writing (errors are recorded)
+  • ✅ Toast notifications (popup still appears)
+  • ✅ Status indicators (green/red dots)
+  • ✅ Crash Watchdog (restart)
+
+Only the **sound** is suppressed. Errors still show up
+in logs and statistics.
+
+## Tips
+
+  • Set overnight (22:00 → 06:00)
+  • Shared machine? Use working hours
+  • Use the 🔊 Test button to verify
+  • Disable if you always want to hear errors
+  • Stored in settings.json
+""",
+                },
+                {
+                    "id": "animations",
+                    "title": "🎬 Animations",
+                    "content": """# 🎬 Animations and splash screen
+
+## Splash Screen
+
+When you launch the panel, an **animated splash screen** appears:
+
+Visuals
+  • 🌟 Neon ring — rotates in two colors (blurple + cyan)
+  • ✨ 18 particles — orbit the ring
+  • 🤖 Discord logo in the center
+  • 📊 Progress bar — smoothly grows
+  • 💬 3 blinking dots
+  • 🎨 Title color pulses (blurple ↔ cyan)
+
+Phases
+  1. Fade-in (0.5 seconds)
+  2. Loading config
+  3. Loading modules
+  4. Preparing bots
+  5. Building interface
+  6. "Ready!" → fade-out
+
+**Important:** The panel builds **in the background** while
+the splash animates. No waiting on a black screen!
+
+When ready, the splash fades and the panel is **instantly usable**.
+
+## Bot startup animation
+
+When you click **▶ Start Bot**, a short animation plays:
+
+  • 🎬 Overlay window (460×560)
+  • 🔄 Rotating ring with the bot emoji
+  • ✨ Colorful particles
+  • 📝 3 status rows:
+    1. ○ Loading configuration → ● → ✓
+    2. ○ Connecting to Discord API → ● → ✓
+    3. ○ Syncing commands → ● → ✓
+  • 📊 Progress bar
+  • Fade-out when done
+
+This takes about **2-3 seconds** — then the bot runs.
+
+## Collapsible sidebar sections
+
+The left menu sections are **collapsible**:
+
+  • Click a section header → collapses ▶
+  • Click again → expands ▼
+  • State **saves** to settings.json
+  • Persists across restarts
+
+Why?
+  • More screen space
+  • Less clutter
+  • Personal customization
+
+## Animated status indicator
+
+Top-left "ONLINE" / "OFFLINE" text:
+
+  • Bot running → green dot **pulses**
+  • Stopped → static red dot
+  • Bot emoji is shown too
+
+## Toast notifications
+
+Popups in the top-right corner:
+
+  • ℹ️ Info — blue
+  • ✅ Success — green
+  • ⚠️ Warning — orange
+  • ❌ Error — red
+
+Auto-dismiss after 2-4 seconds.
+✕ button closes immediately.
+
+## AFK screen
+
+If you don't use the panel for 60 seconds:
+
+  • 🌙 Fullscreen overlay
+  • Clock + date
+  • All bot statuses live
+  • Green/red dots + uptime
+  • Move the mouse → return
+
+Configurable: Settings → AFK Screen
+  • Timeout: 15s / 30s / 1m / 2 / 5 / 10 / 30 min
+  • Enable/disable
+  • 👁 Preview button
+
+## Chart animations
+
+  • 📈 Live charts — refresh every second
+  • 🖱️ Hover → shows value
+  • 🔍 Zoom with scroll
+  • ✋ Drag to pan
+
+## Settings window animations
+
+The new Settings window is **tab-based** with animations:
+
+  • Tab switch → selected tab's background
+    animates through a color transition
+  • Left edge has a colored bar that **grows**
+  • Hover → background lightens
+  • Cards **slide in** one after another (stagger)
+
+## Tips
+
+  • Don't close the splash — wait 2-3 seconds
+  • The splash builds the panel in the background
+  • On slow machines, splash stays longer
+  • Sidebar state persists
+  • AFK screen is useful when away
 """,
                 },
             ],

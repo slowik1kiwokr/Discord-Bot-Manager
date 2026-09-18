@@ -8,9 +8,8 @@ import os
 from PIL import Image
 
 
-
 # =====================================================================
-#  AFK időzítő opciók — fix kulcs + másodperc
+#  Opciók — fix kulcs + érték
 # =====================================================================
 AFK_TIMEOUT_OPTIONS = [
     ("afk_timeout_15s", 15),
@@ -22,9 +21,6 @@ AFK_TIMEOUT_OPTIONS = [
     ("afk_timeout_30m", 1800),
 ]
 
-# =====================================================================
-#  GitHub update ellenőrzési opciók — fix kulcs + perc
-# =====================================================================
 UPDATE_INTERVAL_OPTIONS = [
     ("update_interval_never", 0),
     ("update_interval_1min", 1),
@@ -33,18 +29,106 @@ UPDATE_INTERVAL_OPTIONS = [
     ("update_interval_1day", 1440),
 ]
 
-# =====================================================================
-#  Log szint opciók — fix kulcs
-# =====================================================================
 LOG_LEVEL_KEYS = ["all", "errors", "events", "success"]
 
 
+# =====================================================================
+#  Tab definíciók — (id, ikon, cím kulcs, accent szín, kártya háttér)
+# =====================================================================
+SETTINGS_TABS = [
+    ("security",      "🔐", "settings_sec_security",      "#e74c3c", "#241014"),
+    ("appearance",    "🎨", "settings_sec_appearance",    "#9b59b6", "#1f1726"),
+    ("notifications", "🔔", "settings_sec_notifications", "#f39c12", "#231f0f"),
+    ("logs",          "📝", "settings_sec_logs",          "#3498db", "#152029"),
+    ("afk",           "💤", "settings_sec_afk",           "#00bcd4", "#0f1a24"),
+    ("backup",        "💾", "settings_sec_backup",        "#2980b9", "#101a26"),
+    ("github",        "🚀", "settings_sec_github",        "#3498db", "#101a26"),
+    ("ai",            "🤖", "settings_sec_ai",            "#8e44ad", "#1a1230"),
+    ("lan",           "🔗", "settings_sec_lan",           "#16a085", "#0f2318"),
+]
+
+
 class WindowSettingsMixin:
-    """Settings ablak — modern, színes kártyákkal."""
+    """Settings ablak — tab-alapú, animációkkal."""
 
     # ------------------------------------------------------------------
-    #  Segédfüggvények
+    #  Animációs segédfüggvények
     # ------------------------------------------------------------------
+    def _hex_lerp(self, c1, c2, t):
+        """Két hex szín között interpolál (t = 0..1)."""
+        c1 = c1.lstrip("#")
+        c2 = c2.lstrip("#")
+        r = int(int(c1[0:2], 16) + (int(c2[0:2], 16) - int(c1[0:2], 16)) * t)
+        g = int(int(c1[2:4], 16) + (int(c2[2:4], 16) - int(c1[2:4], 16)) * t)
+        b = int(int(c1[4:6], 16) + (int(c2[4:6], 16) - int(c1[4:6], 16)) * t)
+        return f"#{r:02x}{g:02x}{b:02x}"
+
+    def _animate_color(self, widget, start, end, steps=8, delay=20,
+                        attr="fg_color", key=None):
+        """Szín-átmenet animáció."""
+        if key:
+            key["_anim_id"] = key.get("_anim_id", 0) + 1
+            my_id = key["_anim_id"]
+        else:
+            my_id = None
+
+        def step(i=0):
+            if key is not None and key.get("_anim_id") != my_id:
+                return
+            if i > steps:
+                try:
+                    widget.configure(**{attr: end})
+                except Exception:
+                    pass
+                return
+            t = i / steps
+            t = 1 - (1 - t) ** 3  # ease out cubic
+            color = self._hex_lerp(start, end, t)
+            try:
+                widget.configure(**{attr: color})
+            except Exception:
+                return
+            try:
+                widget.after(delay, lambda: step(i + 1))
+            except Exception:
+                pass
+
+        step(0)
+
+    def _animate_int(self, getter, setter, start, end, steps=10, delay=15,
+                      ease=True, on_done=None):
+        """Egész érték animálása (pl. magasság, szélesség)."""
+
+        def step(i=0):
+            if i > steps:
+                try:
+                    setter(end)
+                except Exception:
+                    pass
+                if on_done:
+                    try:
+                        on_done()
+                    except Exception:
+                        pass
+                return
+            t = i / steps
+            if ease:
+                t = 1 - (1 - t) ** 3
+            value = int(start + (end - start) * t)
+            try:
+                setter(value)
+            except Exception:
+                return
+            try:
+                # A setter a widget.after-ját használjuk — a hívó ad egy widgetet
+                pass
+            except Exception:
+                pass
+            # A hívó ad egy widgetet, amin az after-t futtatjuk
+            # Ezért külön metódus kell, lásd lejjebb
+
+        step(0)
+
     def _center_on_screen(self, win, width, height):
         screen_w = win.winfo_screenwidth()
         screen_h = win.winfo_screenheight()
@@ -54,603 +138,1012 @@ class WindowSettingsMixin:
         y = (screen_h - height) // 2
         win.geometry(f"{width}x{height}+{x}+{y}")
 
-    def _settings_section(self, parent, title, icon, accent, bg_tint):
-        """Színes szekció kártya a beállításokhoz."""
+    def _settings_card(self, parent, accent, bg_tint):
+        """Színes kártya — accent border + tinted háttér."""
         card = ctk.CTkFrame(
-            parent, fg_color=bg_tint, corner_radius=10,
-            border_width=1, border_color=accent,
+            parent, fg_color=bg_tint, corner_radius=12,
+            border_width=2, border_color=accent,
         )
-        card.pack(fill="x", pady=6)
+        card.pack(fill="x", padx=18, pady=(0, 14))
+        return card
 
-        header = ctk.CTkFrame(card, fg_color="transparent")
-        header.pack(fill="x", padx=14, pady=(10, 6))
-
+    def _card_header(self, card, icon, title, accent):
+        """Kártya fejléc."""
+        h = ctk.CTkFrame(card, fg_color="transparent")
+        h.pack(fill="x", padx=16, pady=(12, 6))
         ctk.CTkLabel(
-            header,
-            text=f"{icon}   {title}",
-            font=("Arial", 12, "bold"),
-            text_color=accent,
-            anchor="w",
+            h, text=f"{icon}  {title}",
+            font=("Arial", 13, "bold"),
+            text_color=accent, anchor="w",
         ).pack(side="left")
-
+        ctk.CTkFrame(card, height=1, fg_color=accent, corner_radius=0).pack(
+            fill="x", padx=16, pady=(0, 10)
+        )
         content = ctk.CTkFrame(card, fg_color="transparent")
-        content.pack(fill="x", padx=14, pady=(0, 12))
+        content.pack(fill="x", padx=16, pady=(0, 14))
         return content
 
-    def _row_label(self, parent, text):
+    def _label(self, parent, text, color="#b8bcc6"):
         ctk.CTkLabel(
-            parent, text=text,
-            font=("Arial", 11),
-            text_color="#b8bcc6",
-            anchor="w",
+            parent, text=text, font=("Arial", 11),
+            text_color=color, anchor="w",
         ).pack(fill="x", pady=(6, 2))
 
+    # ------------------------------------------------------------------
+    #  Fordítás segédek
+    # ------------------------------------------------------------------
     def _sound_display_name(self, sound_key):
-        """A fix hang kulcs → megjelenítendő név (fordítva)."""
         return self.tr(f"sound_{sound_key}")
 
     def _sound_key_from_display(self, display_name):
-        """A megjelenített név → fix kulcs."""
         for key in SOUND_KEYS:
             if self.tr(f"sound_{key}") == display_name:
                 return key
         return "beep"
 
     def _log_display_name(self, log_key):
-        """A fix log szint kulcs → megjelenítendő név."""
         return self.tr(f"settings_log_{log_key}")
 
     def _log_key_from_display(self, display_name):
-        """A megjelenített név → fix kulcs."""
         for key in LOG_LEVEL_KEYS:
             if self.tr(f"settings_log_{key}") == display_name:
                 return key
         return "all"
 
     # ==================================================================
-    #  Settings ablak
+    #  Settings ablak — ÚJ dizájn
     # ==================================================================
     def open_settings_window_v2(self):
         win = ctk.CTkToplevel(self)
         win.title(self.tr("settings_title"))
-        self._center_on_screen(win, 720, 800)
-        win.minsize(560, 500)
+        self._center_on_screen(win, 860, 720)
+        win.minsize(760, 560)
         win.grab_set()
+        win.configure(fg_color="#0a0c10")
 
-        # --- Fejléc ---
-        header = ctk.CTkFrame(win, fg_color="#0f1a3a", corner_radius=0, height=80)
+        # ============================================================
+        #  FEJLÉC
+        # ============================================================
+        header = ctk.CTkFrame(win, fg_color="#0f1a3a", corner_radius=0, height=60)
         header.pack(fill="x")
         header.pack_propagate(False)
 
-        # Vékony cián csík a fejléc alján — „glow" effekt
-        glow_line = ctk.CTkFrame(header, height=2, fg_color="#3b82f6",
-                                  corner_radius=0)
-        glow_line.pack(side="bottom", fill="x")
+        ctk.CTkFrame(header, height=2, fg_color="#3b82f6",
+                     corner_radius=0).pack(side="bottom", fill="x")
 
-        # Bal oldal: ⚙️ + Settings
-        left_header = ctk.CTkFrame(header, fg_color="transparent")
-        left_header.pack(side="left", padx=(24, 0), pady=14)
+        left_h = ctk.CTkFrame(header, fg_color="transparent")
+        left_h.pack(side="left", padx=20, pady=14)
 
         ctk.CTkLabel(
-            left_header, text="⚙️",
-            font=("Segoe UI Emoji", 22),
+            left_h, text="⚙️", font=("Segoe UI Emoji", 20),
             text_color="#7dd3fc",
-        ).pack(side="left", padx=(0, 10))
+        ).pack(side="left", padx=(0, 8))
 
         ctk.CTkLabel(
-            left_header, text="Settings",
-            font=("Arial", 19, "bold"),
+            left_h, text="Settings", font=("Arial", 16, "bold"),
             text_color="#7dd3fc",
         ).pack(side="left")
 
-        # Jobb oldal: Discord Bot Manager
         ctk.CTkLabel(
             header, text="Discord Bot Manager",
-            font=("Arial", 24, "bold"),
-            text_color="#5fc8ff",
-        ).pack(side="right", padx=24, pady=14)
+            font=("Arial", 17, "bold"), text_color="#5fc8ff",
+        ).pack(side="right", padx=22)
 
-        # --- Alsó mentés sáv (fix) ---
-        save_bar = ctk.CTkFrame(win, fg_color="#151820", height=64, corner_radius=0)
-        save_bar.pack(side="bottom", fill="x")
-        save_bar.pack_propagate(False)
+        # ============================================================
+        #  ALSÓ SÁV
+        # ============================================================
+        bottom = ctk.CTkFrame(win, fg_color="#0f1420",
+                                corner_radius=0, height=58)
+        bottom.pack(side="bottom", fill="x")
+        bottom.pack_propagate(False)
+
+        ctk.CTkFrame(bottom, height=1, fg_color="#1e2430",
+                     corner_radius=0).pack(side="top", fill="x")
 
         status_lbl = ctk.CTkLabel(
-            save_bar, text="", font=("Arial", 11), text_color="#8a8e98"
+            bottom, text="", font=("Arial", 11), text_color="#8a8e98"
         )
-        status_lbl.pack(side="left", padx=20)
+        status_lbl.pack(side="left", padx=22)
 
         save_btn = ctk.CTkButton(
-            save_bar, text=self.tr("settings_save_close_btn"),
+            bottom, text=self.tr("settings_save_close_btn"),
             fg_color="#27ae60", hover_color="#2ecc71",
-            width=200, height=42, font=("Arial", 13, "bold"),
+            width=180, height=38, font=("Arial", 12, "bold"),
             corner_radius=8,
         )
-        save_btn.pack(side="right", padx=16, pady=11)
+        save_btn.pack(side="right", padx=20, pady=10)
 
-        # --- Tabview ---
-        tabs = ctk.CTkTabview(
-            win, fg_color="#0d0f14",
-            segmented_button_selected_color="#5865F2",
-            segmented_button_selected_hover_color="#4752C4",
-        )
-        tabs.pack(fill="both", expand=True, padx=12, pady=(12, 0))
-        panel_tab = tabs.add(self.tr("settings_tab_panel"))
-        bot_tab = tabs.add(self.tr("settings_tab_bot"))
+        # ============================================================
+        #  TÖRZS — Sidebar + Content
+        # ============================================================
+        body = ctk.CTkFrame(win, fg_color="transparent")
+        body.pack(fill="both", expand=True)
 
-        # ==============================================================
-        #  PANEL TAB
-        # ==============================================================
-        panel_scroll = ctk.CTkScrollableFrame(panel_tab, fg_color="transparent")
-        panel_scroll.pack(fill="both", expand=True)
+        # --- BAL: Sidebar ---
+        sidebar = ctk.CTkFrame(body, fg_color="#0d0f14",
+                                width=210, corner_radius=0)
+        sidebar.pack(side="left", fill="y")
+        sidebar.pack_propagate(False)
 
-        # ---------- Biztonság ----------
-        s = self._settings_section(
-            panel_scroll, self.tr("settings_sec_security"), "🔐",
-            accent="#e74c3c", bg_tint="#241014",
-        )
-        self._row_label(s, self.tr("settings_password_lbl"))
-        password_entry = ctk.CTkEntry(s, show="*", width=300, placeholder_text="••••••••")
-        if self.panel_password:
-            password_entry.insert(0, self.panel_password)
-        password_entry.pack(anchor="w")
+        ctk.CTkFrame(sidebar, width=1, fg_color="#1e2430",
+                     corner_radius=0).pack(side="right", fill="y")
 
-        # ---------- Megjelenés ----------
-        s = self._settings_section(
-            panel_scroll, self.tr("settings_sec_appearance"), "🎨",
-            accent="#9b59b6", bg_tint="#1f1726",
-        )
+        tabs_container = ctk.CTkFrame(sidebar, fg_color="transparent")
+        tabs_container.pack(fill="both", expand=True, padx=10, pady=14)
 
-        lang_frame = ctk.CTkFrame(s, fg_color="transparent")
-        lang_frame.pack(fill="x", pady=2)
-        ctk.CTkLabel(
-            lang_frame, text=self.tr("settings_language_lbl"),
-            font=("Arial", 11), text_color="#b8bcc6",
-            width=140, anchor="w",
-        ).pack(side="left")
-        language_var = ctk.StringVar(value=self.current_language)
-        ctk.CTkComboBox(
-            lang_frame, values=["English", "Magyar"],
-            variable=language_var, width=200,
-            command=self.apply_language,
-        ).pack(side="left")
+        # --- JOBB: Content ---
+        content_wrap = ctk.CTkFrame(body, fg_color="#0a0c10", corner_radius=0)
+        content_wrap.pack(side="right", fill="both", expand=True)
 
-        theme_frame = ctk.CTkFrame(s, fg_color="transparent")
-        theme_frame.pack(fill="x", pady=(8, 2))
-        ctk.CTkLabel(
-            theme_frame, text=self.tr("settings_theme_lbl"),
-            font=("Arial", 11), text_color="#b8bcc6",
-            width=140, anchor="w",
-        ).pack(side="left")
-        theme_var = ctk.StringVar(value=self.current_theme)
-        ctk.CTkComboBox(
-            theme_frame,
-            values=get_theme_names(),
-            variable=theme_var, width=220,
-        ).pack(side="left")
+        # ---- Tab tárolók ----
+        tab_buttons = {}       # key → {"btn", "indicator", "accent", "default_bg"}
+        tab_frames = {}        # key → scrollable frame
+        anim_state = {"current": None}
 
-        tray_switch = ctk.CTkSwitch(s, text=self.tr("settings_tray_switch"))
-        tray_switch.pack(anchor="w", pady=(10, 2))
-        if self.minimize_to_tray_enabled:
-            tray_switch.select()
+        # Content frame-ek létrehozása
+        for key, icon, title_key, accent, bg in SETTINGS_TABS:
+            sf = ctk.CTkScrollableFrame(content_wrap, fg_color="transparent")
+            tab_frames[key] = sf
 
-        rpc_switch = ctk.CTkSwitch(s, text=self.tr("settings_rpc_switch"))
-        rpc_switch.pack(anchor="w", pady=2)
-        if self.rpc_enabled:
-            rpc_switch.select()
+        # ---- Sidebar tab gombok ----
+        def make_tab_button(key, icon, title_key, accent, bg):
+            row = ctk.CTkFrame(
+                tabs_container, fg_color="transparent",
+                corner_radius=8, height=42,
+            )
+            row.pack(fill="x", pady=2)
+            row.pack_propagate(False)
 
-        # ---------- Értesítések ----------
-        s = self._settings_section(
-            panel_scroll, self.tr("settings_sec_notifications"), "🔔",
-            accent="#f39c12", bg_tint="#231f0f",
-        )
+            # Bal oldali indicator (accent sáv)
+            indicator = ctk.CTkFrame(
+                row, width=3, height=0, fg_color=accent,
+                corner_radius=2,
+            )
+            indicator.pack(side="left", padx=(0, 0), pady=0)
 
-        ctk.CTkLabel(
-            s, text=self.tr("settings_error_sound_lbl"),
-            font=("Arial", 11), text_color="#b8bcc6",
-            anchor="w",
-        ).pack(fill="x", pady=(2, 2))
+            # Ikon
+            icon_lbl = ctk.CTkLabel(
+                row, text=icon, font=("Segoe UI Emoji", 15),
+                text_color="#8a8e98", width=32,
+            )
+            icon_lbl.pack(side="left", padx=(10, 6))
 
-        # Hang: a combobox fix kulcsokat tartalmaz, de a megjelenítés fordítva
-        sound_display_values = [self.tr(f"sound_{k}") for k in SOUND_KEYS]
-        sound_display_var = ctk.StringVar(
-            value=self._sound_display_name(self.selected_error_sound)
-        )
+            # Szöveg
+            text_lbl = ctk.CTkLabel(
+                row, text=self.tr(title_key),
+                font=("Arial", 12),
+                text_color="#b8bcc6", anchor="w",
+            )
+            text_lbl.pack(side="left", fill="x", expand=True)
 
-        def on_sound_change(choice_display):
-            key = self._sound_key_from_display(choice_display)
-            play_error_sound_by_key(key)
+            tab_buttons[key] = {
+                "row": row,
+                "indicator": indicator,
+                "icon_lbl": icon_lbl,
+                "text_lbl": text_lbl,
+                "accent": accent,
+                "default_bg": "#0d0f14",
+                "hover_bg": "#1a2030",
+                "active_bg": "#1e2430",
+                "_anim_id": 0,
+            }
 
-        sound_frame = ctk.CTkFrame(s, fg_color="transparent")
-        sound_frame.pack(fill="x")
-        ctk.CTkComboBox(
-            sound_frame, values=sound_display_values,
-            variable=sound_display_var,
-            width=240, command=on_sound_change,
-        ).pack(side="left")
-        ctk.CTkButton(
-            sound_frame, text=self.tr("settings_sound_test_btn"),
-            width=100, height=28,
-            fg_color="#3498db", hover_color="#5dade2",
-            command=lambda: play_error_sound_by_key(
-                self._sound_key_from_display(sound_display_var.get())
-            ),
-        ).pack(side="left", padx=8)
+            # Kattintás
+            for w in (row, icon_lbl, text_lbl):
+                w.bind("<Button-1>", lambda e, k=key: switch_tab(k))
 
-        # --- Csendes órák ---
-        ctk.CTkFrame(s, height=1, fg_color="#3a2f1f").pack(
-            fill="x", pady=(12, 8))
+            # Hover
+            def on_enter(e, k=key):
+                if anim_state["current"] == k:
+                    return
+                info = tab_buttons[k]
+                self._animate_color(
+                    info["row"], info["default_bg"], info["hover_bg"],
+                    steps=5, delay=15, attr="fg_color", key=info,
+                )
 
-        quiet_switch = ctk.CTkSwitch(
-            s, text=self.tr("settings_quiet_switch")
-        )
-        quiet_switch.pack(anchor="w", pady=(0, 6))
-        if getattr(self, "quiet_hours_enabled", False):
-            quiet_switch.select()
+            def on_leave(e, k=key):
+                if anim_state["current"] == k:
+                    return
+                info = tab_buttons[k]
+                self._animate_color(
+                    info["row"], info["hover_bg"], info["default_bg"],
+                    steps=5, delay=15, attr="fg_color", key=info,
+                )
 
-        ctk.CTkLabel(
-            s, text=self.tr("settings_quiet_hint"),
-            font=("Arial", 10), text_color="#8a8e98",
-            justify="left", anchor="w", wraplength=440,
-        ).pack(fill="x", pady=(0, 8))
+            row.bind("<Enter>", on_enter)
+            row.bind("<Leave>", on_leave)
+            icon_lbl.bind("<Enter>", on_enter)
+            icon_lbl.bind("<Leave>", on_leave)
+            text_lbl.bind("<Enter>", on_enter)
+            text_lbl.bind("<Leave>", on_leave)
 
-        time_row = ctk.CTkFrame(s, fg_color="transparent")
-        time_row.pack(fill="x", pady=2)
+        for key, icon, title_key, accent, bg in SETTINGS_TABS:
+            make_tab_button(key, icon, title_key, accent, bg)
 
-        ctk.CTkLabel(time_row, text=self.tr("settings_quiet_from_lbl"),
-                      font=("Arial", 11), text_color="#b8bcc6",
-                      width=100, anchor="w").pack(side="left")
+        # ---- Tab váltás animációval ----
+        def _animate_indicator(key, target_h):
+            info = tab_buttons[key]
+            ind = info["indicator"]
 
-        quiet_start_entry = ctk.CTkEntry(time_row, width=90, height=32,
-                                            font=("Consolas", 12))
-        quiet_start_entry.insert(0, getattr(self, "quiet_hours_start", "22:00"))
-        quiet_start_entry.pack(side="left", padx=(0, 12))
+            def setter(h):
+                try:
+                    ind.configure(height=max(0, h))
+                except Exception:
+                    pass
 
-        ctk.CTkLabel(time_row, text=self.tr("settings_quiet_to_lbl"),
-                      font=("Arial", 11), text_color="#b8bcc6",
-                      width=30, anchor="w").pack(side="left")
+            steps = 8
+            delay = 15
 
-        quiet_end_entry = ctk.CTkEntry(time_row, width=90, height=32,
-                                          font=("Consolas", 12))
-        quiet_end_entry.insert(0, getattr(self, "quiet_hours_end", "06:00"))
-        quiet_end_entry.pack(side="left", padx=(12, 0))
+            def step(i=0):
+                if i > steps:
+                    setter(target_h)
+                    return
+                t = i / steps
+                t = 1 - (1 - t) ** 3
+                setter(int(target_h * t))
+                ind.after(delay, lambda: step(i + 1))
 
-        # Élő státusz: csendes órák most?
-        quiet_status = ctk.CTkLabel(
-            s, text="", font=("Arial", 10), anchor="w"
-        )
-        quiet_status.pack(fill="x", pady=(6, 0))
+            step(0)
 
-        def _refresh_quiet_status():
-            """Frissíti a státusz szöveget (aktív / inaktív)."""
+        def switch_tab(new_key, animate=True):
+            old_key = anim_state["current"]
+            if old_key == new_key:
+                return
+
+            # Régi tab elrejtése
+            if old_key and old_key in tab_buttons:
+                old_info = tab_buttons[old_key]
+                old_info["_anim_id"] += 1
+                # Indicator összecsukás
+                try:
+                    old_info["indicator"].configure(height=0)
+                except Exception:
+                    pass
+                # Szín vissza
+                try:
+                    old_info["row"].configure(fg_color=old_info["default_bg"])
+                except Exception:
+                    pass
+                try:
+                    old_info["icon_lbl"].configure(text_color="#8a8e98")
+                except Exception:
+                    pass
+                try:
+                    old_info["text_lbl"].configure(text_color="#b8bcc6")
+                except Exception:
+                    pass
+                # Frame elrejtés
+                try:
+                    tab_frames[old_key].pack_forget()
+                except Exception:
+                    pass
+
+            # Új tab megjelenítés
+            anim_state["current"] = new_key
+            new_info = tab_buttons[new_key]
+
+            # Content fade-in
+            sf = tab_frames[new_key]
+            sf.pack(fill="both", expand=True, padx=0, pady=0)
+
+            # Gombok színe
+            new_info["_anim_id"] += 1
+            my_id = new_info["_anim_id"]
+
+            def bg_anim(i=0):
+                if new_info["_anim_id"] != my_id:
+                    return
+                steps = 6
+                delay = 15
+                if i > steps:
+                    try:
+                        new_info["row"].configure(fg_color=new_info["active_bg"])
+                    except Exception:
+                        pass
+                    return
+                t = i / steps
+                t = 1 - (1 - t) ** 3
+                color = self._hex_lerp(
+                    new_info["default_bg"], new_info["active_bg"], t
+                )
+                try:
+                    new_info["row"].configure(fg_color=color)
+                except Exception:
+                    pass
+                new_info["row"].after(delay, lambda: bg_anim(i + 1))
+
+            bg_anim(0)
+
+            # Ikon + szöveg accent színre
             try:
-                # Ideiglenesen beállítjuk a panel értékeit, hogy a metódus lássa
-                self.quiet_hours_enabled = bool(quiet_switch.get())
-                self.quiet_hours_start = quiet_start_entry.get().strip()
-                self.quiet_hours_end = quiet_end_entry.get().strip()
-
-                if self.is_quiet_hours():
-                    quiet_status.configure(
-                        text=self.tr("settings_quiet_now_active"),
-                        text_color="#e67e22")
-                else:
-                    quiet_status.configure(
-                        text=self.tr("settings_quiet_now_inactive"),
-                        text_color="#2ecc71")
+                new_info["icon_lbl"].configure(text_color=new_info["accent"])
+                new_info["text_lbl"].configure(text_color=new_info["accent"])
             except Exception:
                 pass
 
-        quiet_switch.configure(command=_refresh_quiet_status)
-        quiet_start_entry.bind("<KeyRelease>", lambda e: _refresh_quiet_status())
-        quiet_end_entry.bind("<KeyRelease>", lambda e: _refresh_quiet_status())
-        _refresh_quiet_status()
+            # Indicator animáció (felfelé nő)
+            row_h = new_info["row"].winfo_height()
+            if row_h <= 1:
+                row_h = 38
+            _animate_indicator(new_key, row_h - 8)
 
-        # ---------- Naplók ----------
-        s = self._settings_section(
-            panel_scroll, self.tr("settings_sec_logs"), "📝",
-            accent="#3498db", bg_tint="#152029",
-        )
-        ctk.CTkLabel(
-            s, text=self.tr("settings_log_level_lbl"),
-            font=("Arial", 11), text_color="#b8bcc6",
-            anchor="w",
-        ).pack(fill="x", pady=(2, 2))
+            # Kártyák stagger animációja (ha még nem voltak "belépve")
+            if not sf.winfo_children():
+                build_tab_content(new_key, sf)
+            # Belépő animáció minden alkalommal
+            stagger_cards(sf)
 
-        # Log szint: combobox fix kulcsok → megjelenítés fordítva
-        log_display_values = [
-            self.tr(f"settings_log_{k}") for k in LOG_LEVEL_KEYS
-        ]
-        log_display_var = ctk.StringVar(
-            value=self._log_display_name(self.log_save_level)
-        )
-        ctk.CTkComboBox(
-            s, values=log_display_values,
-            variable=log_display_var, width=280,
-        ).pack(anchor="w")
+        def stagger_cards(container):
+            """A kártyák egymás után jelennek meg (fade + slide)."""
+            kids = list(container.winfo_children())
+            if not kids:
+                return
 
-        # ---------- AFK Screen ----------
-        s = self._settings_section(
-            panel_scroll, self.tr("settings_sec_afk"), "💤",
-            accent="#00bcd4", bg_tint="#0f1a24",
-        )
+            # Kezdetben mind rejtve
+            for k in kids:
+                try:
+                    k.pack_forget()
+                except Exception:
+                    pass
 
-        ctk.CTkLabel(
-            s,
-            text=self.tr("settings_afk_hint"),
-            font=("Arial", 10), text_color="#8a8e98",
-            justify="left", anchor="w",
-        ).pack(fill="x", pady=(2, 8))
+            def show_one(i=0):
+                if i >= len(kids):
+                    return
+                k = kids[i]
+                try:
+                    k.pack(fill="x", padx=18, pady=(0, 14), before=None)
+                except Exception:
+                    pass
+                container.after(60, lambda: show_one(i + 1))
 
-        afk_switch = ctk.CTkSwitch(s, text=self.tr("settings_afk_switch"))
-        afk_switch.pack(anchor="w", pady=(0, 8))
-        if getattr(self, "afk_enabled", True):
-            afk_switch.select()
+            show_one(0)
 
-        ctk.CTkLabel(
-            s, text=self.tr("settings_afk_timeout_lbl"),
-            font=("Arial", 11), text_color="#b8bcc6",
-            anchor="w",
-        ).pack(fill="x", pady=(4, 2))
+        # ============================================================
+        #  TARTALOM ÉPÍTÉS — minden tabhoz
+        # ============================================================
+        def build_tab_content(key, parent):
+            if key == "security":
+                build_security(parent)
+            elif key == "appearance":
+                build_appearance(parent)
+            elif key == "notifications":
+                build_notifications(parent)
+            elif key == "logs":
+                build_logs(parent)
+            elif key == "afk":
+                build_afk(parent)
+            elif key == "backup":
+                build_backup(parent)
+            elif key == "github":
+                build_github(parent)
+            elif key == "ai":
+                build_ai(parent)
+            elif key == "lan":
+                build_lan(parent)
 
-        afk_timeout_labels = [self.tr(k) for k, _ in AFK_TIMEOUT_OPTIONS]
-        current_seconds = getattr(self, "afk_idle_seconds", 60)
-        current_label = next(
-            (self.tr(k) for k, val in AFK_TIMEOUT_OPTIONS if val == current_seconds),
-            self.tr("afk_timeout_1m"),
-        )
-        afk_timeout_var = ctk.StringVar(value=current_label)
-        ctk.CTkComboBox(
-            s, values=afk_timeout_labels,
-            variable=afk_timeout_var, width=200,
-        ).pack(anchor="w")
+        # ---- VÁLTOZÓK (később mentéshez) ----
+        vars_store = {}
 
-        ctk.CTkButton(
-            s, text=self.tr("settings_afk_preview_btn"), height=30,
-            fg_color="#16a085", hover_color="#1abc9c",
-            width=200,
-            command=self._afk_preview,
-        ).pack(anchor="w", pady=(8, 0))
+        # ---- 1. SECURITY ----
+        def build_security(parent):
+            accent, bg = "#e74c3c", "#241014"
+            card = ctk.CTkFrame(
+                parent, fg_color=bg, corner_radius=12,
+                border_width=2, border_color=accent,
+            )
+            card.pack(fill="x", padx=18, pady=(14, 14))
+            c = self._card_header(card, "🔐", self.tr("settings_sec_security"), accent)
 
-        # ---------- Backup ----------
-        s = self._settings_section(
-            panel_scroll, self.tr("settings_sec_backup"), "💾",
-            accent="#2980b9", bg_tint="#101a26",
-        )
+            self._label(c, self.tr("settings_password_lbl"))
+            password_entry = ctk.CTkEntry(
+                c, show="*", width=320, placeholder_text="••••••••"
+            )
+            if self.panel_password:
+                password_entry.insert(0, self.panel_password)
+            password_entry.pack(anchor="w")
+            vars_store["password_entry"] = password_entry
 
-        backup_switch = ctk.CTkSwitch(s, text=self.tr("settings_backup_switch"))
-        backup_switch.pack(anchor="w", pady=2)
-        if self.backup_enabled:
-            backup_switch.select()
+        # ---- 2. APPEARANCE ----
+        def build_appearance(parent):
+            accent, bg = "#9b59b6", "#1f1726"
+            card = ctk.CTkFrame(
+                parent, fg_color=bg, corner_radius=12,
+                border_width=2, border_color=accent,
+            )
+            card.pack(fill="x", padx=18, pady=(14, 14))
+            c = self._card_header(card, "🎨", self.tr("settings_sec_appearance"), accent)
 
-        backup_start_switch = ctk.CTkSwitch(
-            s, text=self.tr("settings_backup_start_switch")
-        )
-        backup_start_switch.pack(anchor="w", pady=2)
-        if self.backup_on_start:
-            backup_start_switch.select()
+            lang_row = ctk.CTkFrame(c, fg_color="transparent")
+            lang_row.pack(fill="x", pady=4)
+            ctk.CTkLabel(
+                lang_row, text=self.tr("settings_language_lbl"),
+                font=("Arial", 11), text_color="#b8bcc6",
+                width=130, anchor="w",
+            ).pack(side="left")
+            language_var = ctk.StringVar(value=self.current_language)
+            ctk.CTkComboBox(
+                lang_row, values=["English", "Magyar"],
+                variable=language_var, width=200,
+                command=self.apply_language,
+            ).pack(side="left")
+            vars_store["language_var"] = language_var
 
-        ctk.CTkLabel(
-            s, text=self.tr("settings_backup_interval_lbl"),
-            font=("Arial", 11), text_color="#b8bcc6",
-            anchor="w",
-        ).pack(fill="x", pady=(8, 2))
-        backup_interval_entry = ctk.CTkEntry(s, width=100)
-        backup_interval_entry.insert(0, str(self.backup_interval_hours))
-        backup_interval_entry.pack(anchor="w")
+            theme_row = ctk.CTkFrame(c, fg_color="transparent")
+            theme_row.pack(fill="x", pady=(8, 4))
+            ctk.CTkLabel(
+                theme_row, text=self.tr("settings_theme_lbl"),
+                font=("Arial", 11), text_color="#b8bcc6",
+                width=130, anchor="w",
+            ).pack(side="left")
+            theme_var = ctk.StringVar(value=self.current_theme)
+            ctk.CTkComboBox(
+                theme_row, values=get_theme_names(),
+                variable=theme_var, width=220,
+            ).pack(side="left")
+            vars_store["theme_var"] = theme_var
 
-        ctk.CTkButton(
-            s, text=self.tr("settings_backup_manager_btn"), height=32,
-            fg_color="#3498db", hover_color="#5dade2",
-            width=240,
-            command=self.open_backup_manager,
-        ).pack(anchor="w", pady=(10, 0))
+            tray_switch = ctk.CTkSwitch(c, text=self.tr("settings_tray_switch"))
+            tray_switch.pack(anchor="w", pady=(12, 2))
+            if self.minimize_to_tray_enabled:
+                tray_switch.select()
+            vars_store["tray_switch"] = tray_switch
 
-        # ---------- GitHub frissítés ----------
-        s = self._settings_section(
-            panel_scroll, self.tr("settings_sec_github"), "🚀",
-            accent="#3498db", bg_tint="#101a26",
-        )
+            rpc_switch = ctk.CTkSwitch(c, text=self.tr("settings_rpc_switch"))
+            rpc_switch.pack(anchor="w", pady=2)
+            if self.rpc_enabled:
+                rpc_switch.select()
+            vars_store["rpc_switch"] = rpc_switch
 
-        ctk.CTkLabel(
-            s,
-            text=self.tr("settings_github_hint"),
-            font=("Arial", 10), text_color="#8a8e98",
-            justify="left", anchor="w",
-            wraplength=460,
-        ).pack(fill="x", pady=(2, 8))
+        # ---- 3. NOTIFICATIONS ----
+        def build_notifications(parent):
+            accent, bg = "#f39c12", "#231f0f"
+            card = ctk.CTkFrame(
+                parent, fg_color=bg, corner_radius=12,
+                border_width=2, border_color=accent,
+            )
+            card.pack(fill="x", padx=18, pady=(14, 14))
+            c = self._card_header(card, "🔔", self.tr("settings_sec_notifications"), accent)
 
-        ctk.CTkLabel(
-            s, text=self.tr("settings_update_interval_lbl"),
-            font=("Arial", 11), text_color="#b8bcc6",
-            anchor="w",
-        ).pack(fill="x", pady=(2, 2))
+            ctk.CTkLabel(
+                c, text=self.tr("settings_error_sound_lbl"),
+                font=("Arial", 11), text_color="#b8bcc6", anchor="w",
+            ).pack(fill="x", pady=(2, 4))
 
-        current_minutes = getattr(self, "update_check_interval_minutes", 60)
-        current_interval_label = next(
-            (self.tr(k) for k, m in UPDATE_INTERVAL_OPTIONS if m == current_minutes),
-            self.tr("update_interval_1hour"),
-        )
+            sound_display_values = [self.tr(f"sound_{k}") for k in SOUND_KEYS]
+            sound_display_var = ctk.StringVar(
+                value=self._sound_display_name(self.selected_error_sound)
+            )
 
-        update_interval_var = ctk.StringVar(value=current_interval_label)
-        ctk.CTkComboBox(
-            s, values=[self.tr(k) for k, _ in UPDATE_INTERVAL_OPTIONS],
-            variable=update_interval_var, width=260,
-        ).pack(anchor="w")
+            def on_sound_change(choice_display):
+                k = self._sound_key_from_display(choice_display)
+                play_error_sound_by_key(k)
 
-        ctk.CTkButton(
-            s, text=self.tr("settings_update_check_now_btn"), height=30,
-            fg_color="#2980b9", hover_color="#3498db",
-            width=200,
-            command=lambda: self.check_for_updates(silent=False),
-        ).pack(anchor="w", pady=(10, 0))
+            sound_row = ctk.CTkFrame(c, fg_color="transparent")
+            sound_row.pack(fill="x")
+            ctk.CTkComboBox(
+                sound_row, values=sound_display_values,
+                variable=sound_display_var,
+                width=240, command=on_sound_change,
+            ).pack(side="left")
+            ctk.CTkButton(
+                sound_row, text=self.tr("settings_sound_test_btn"),
+                width=100, height=28,
+                fg_color="#3498db", hover_color="#5dade2",
+                command=lambda: play_error_sound_by_key(
+                    self._sound_key_from_display(sound_display_var.get())
+                ),
+            ).pack(side="left", padx=8)
+            vars_store["sound_display_var"] = sound_display_var
 
-        ctk.CTkButton(
-            s, text=self.tr("settings_update_history_btn"), height=30,
-            fg_color="#8e44ad", hover_color="#9b59b6",
-            width=200,
-            command=lambda: self.open_update_history_window(),
-        ).pack(anchor="w", pady=(4, 0))
+            # Elválasztó
+            ctk.CTkFrame(c, height=1, fg_color="#3a2f1f").pack(
+                fill="x", pady=(14, 10)
+            )
 
-        # ---------- AI ----------
-        s = self._settings_section(
-            panel_scroll, self.tr("settings_sec_ai"), "🤖",
-            accent="#8e44ad", bg_tint="#1a1230",
-        )
+            # Csendes órák
+            quiet_switch = ctk.CTkSwitch(c, text=self.tr("settings_quiet_switch"))
+            quiet_switch.pack(anchor="w", pady=(0, 6))
+            if getattr(self, "quiet_hours_enabled", False):
+                quiet_switch.select()
 
-        ctk.CTkLabel(
-            s, text=self.tr("ai_settings_provider_lbl"),
-            font=("Arial", 11), text_color="#b8bcc6",
-            anchor="w",
-        ).pack(fill="x", pady=(2, 2))
-        provider_var = ctk.StringVar(
-            value=getattr(self, "ai_provider", "OpenAI (GPT)")
-        )
-        ctk.CTkComboBox(
-            s,
-            values=[
-                "OpenAI (GPT)", "Anthropic (Claude)",
-                "Ollama (local)", "LM Studio (local)",
-            ],
-            variable=provider_var, width=280,
-        ).pack(anchor="w")
+            ctk.CTkLabel(
+                c, text=self.tr("settings_quiet_hint"),
+                font=("Arial", 10), text_color="#8a8e98",
+                justify="left", anchor="w", wraplength=440,
+            ).pack(fill="x", pady=(0, 8))
 
-        ctk.CTkLabel(
-            s, text=self.tr("ai_settings_key_lbl"),
-            font=("Arial", 11), text_color="#b8bcc6",
-            anchor="w",
-        ).pack(fill="x", pady=(8, 2))
-        ai_key_entry = ctk.CTkEntry(
-            s, show="*", width=380, placeholder_text="sk-..."
-        )
-        if getattr(self, "ai_api_key", ""):
-            ai_key_entry.insert(0, self.ai_api_key)
-        ai_key_entry.pack(anchor="w")
+            time_row = ctk.CTkFrame(c, fg_color="transparent")
+            time_row.pack(fill="x", pady=2)
 
-        ctk.CTkLabel(
-            s, text=self.tr("settings_ai_model_lbl"),
-            font=("Arial", 11), text_color="#b8bcc6",
-            anchor="w",
-        ).pack(fill="x", pady=(8, 2))
-        ai_model_entry = ctk.CTkEntry(
-            s, width=280, placeholder_text=getattr(self, "ai_model", "")
-        )
-        ai_model_entry.pack(anchor="w")
+            ctk.CTkLabel(
+                time_row, text=self.tr("settings_quiet_from_lbl"),
+                font=("Arial", 11), text_color="#b8bcc6",
+                width=100, anchor="w",
+            ).pack(side="left")
+            quiet_start_entry = ctk.CTkEntry(
+                time_row, width=90, height=32, font=("Consolas", 12)
+            )
+            quiet_start_entry.insert(0, getattr(self, "quiet_hours_start", "22:00"))
+            quiet_start_entry.pack(side="left", padx=(0, 12))
 
-        # ==============================================================
-        #  BOT TAB
-        # ==============================================================
-        bot_scroll = ctk.CTkScrollableFrame(bot_tab, fg_color="transparent")
-        bot_scroll.pack(fill="both", expand=True)
+            ctk.CTkLabel(
+                time_row, text=self.tr("settings_quiet_to_lbl"),
+                font=("Arial", 11), text_color="#b8bcc6",
+                width=30, anchor="w",
+            ).pack(side="left")
+            quiet_end_entry = ctk.CTkEntry(
+                time_row, width=90, height=32, font=("Consolas", 12)
+            )
+            quiet_end_entry.insert(0, getattr(self, "quiet_hours_end", "06:00"))
+            quiet_end_entry.pack(side="left", padx=(12, 0))
 
-        bot = self.bots[self.active_bot_key]
+            quiet_status = ctk.CTkLabel(
+                c, text="", font=("Arial", 10), anchor="w"
+            )
+            quiet_status.pack(fill="x", pady=(8, 0))
 
-        # ---------- Erőforrások ----------
-        s = self._settings_section(
-            bot_scroll, self.tr("settings_sec_resources"), "💻",
-            accent="#2ecc71", bg_tint="#16231a",
-        )
-        ctk.CTkLabel(
-            s, text=self.tr("settings_max_ram_lbl"),
-            font=("Arial", 11), text_color="#b8bcc6",
-            anchor="w",
-        ).pack(fill="x", pady=(2, 2))
-        ram_entry = ctk.CTkEntry(s, width=180)
-        ram_entry.insert(0, str(self.max_ram_mb))
-        ram_entry.pack(anchor="w")
+            def refresh_quiet_status():
+                try:
+                    self.quiet_hours_enabled = bool(quiet_switch.get())
+                    self.quiet_hours_start = quiet_start_entry.get().strip()
+                    self.quiet_hours_end = quiet_end_entry.get().strip()
+                    if self.is_quiet_hours():
+                        quiet_status.configure(
+                            text=self.tr("settings_quiet_now_active"),
+                            text_color="#e67e22",
+                        )
+                    else:
+                        quiet_status.configure(
+                            text=self.tr("settings_quiet_now_inactive"),
+                            text_color="#2ecc71",
+                        )
+                except Exception:
+                    pass
 
-        ctk.CTkLabel(
-            s,
-            text=self.tr("settings_max_ram_hint"),
-            font=("Arial", 10), text_color="#7a8090",
-            anchor="w",
-        ).pack(fill="x", pady=(4, 0))
+            quiet_switch.configure(command=refresh_quiet_status)
+            quiet_start_entry.bind(
+                "<KeyRelease>", lambda e: refresh_quiet_status()
+            )
+            quiet_end_entry.bind(
+                "<KeyRelease>", lambda e: refresh_quiet_status()
+            )
+            refresh_quiet_status()
 
-        # ---------- Teszt mód ----------
-        s = self._settings_section(
-            bot_scroll, self.tr("settings_sec_test_mode"), "🧪",
-            accent="#e67e22", bg_tint="#241c12",
-        )
-        test_switch = ctk.CTkSwitch(s, text=self.tr("settings_test_switch"))
-        test_switch.pack(anchor="w", pady=2)
-        if bot.get("test_mode", False):
-            test_switch.select()
+            vars_store["quiet_switch"] = quiet_switch
+            vars_store["quiet_start_entry"] = quiet_start_entry
+            vars_store["quiet_end_entry"] = quiet_end_entry
 
-        ctk.CTkLabel(
-            s, text=self.tr("settings_testers_lbl"),
-            font=("Arial", 11), text_color="#b8bcc6",
-            anchor="w",
-        ).pack(fill="x", pady=(8, 2))
-        testers_entry = ctk.CTkEntry(
-            s, width=420,
-            placeholder_text="123456789012345678, 987654321098765432",
-        )
-        testers_entry.insert(
-            0, ", ".join(str(v) for v in bot.get("allowed_discord_ids", []))
-        )
-        testers_entry.pack(anchor="w")
+        # ---- 4. LOGS ----
+        def build_logs(parent):
+            accent, bg = "#3498db", "#152029"
+            card = ctk.CTkFrame(
+                parent, fg_color=bg, corner_radius=12,
+                border_width=2, border_color=accent,
+            )
+            card.pack(fill="x", padx=18, pady=(14, 14))
+            c = self._card_header(card, "📝", self.tr("settings_sec_logs"), accent)
 
-        ctk.CTkLabel(
-            s,
-            text=self.tr("settings_testers_hint"),
-            font=("Arial", 10), text_color="#7a8090",
-            anchor="w",
-        ).pack(fill="x", pady=(4, 0))
+            ctk.CTkLabel(
+                c, text=self.tr("settings_log_level_lbl"),
+                font=("Arial", 11), text_color="#b8bcc6", anchor="w",
+            ).pack(fill="x", pady=(2, 4))
 
-        # ---------- Crash kezelés ----------
-        s = self._settings_section(
-            bot_scroll, self.tr("settings_sec_crash"), "🔄",
-            accent="#e74c3c", bg_tint="#241014",
-        )
-        crash_switch = ctk.CTkSwitch(s, text=self.tr("settings_crash_switch"))
-        crash_switch.pack(anchor="w", pady=2)
-        if bot.get("auto_restart_on_crash", False):
-            crash_switch.select()
+            log_display_values = [
+                self.tr(f"settings_log_{k}") for k in LOG_LEVEL_KEYS
+            ]
+            log_display_var = ctk.StringVar(
+                value=self._log_display_name(self.log_save_level)
+            )
+            ctk.CTkComboBox(
+                c, values=log_display_values,
+                variable=log_display_var, width=280,
+            ).pack(anchor="w")
+            vars_store["log_display_var"] = log_display_var
 
-        ctk.CTkLabel(
-            s, text=self.tr("settings_crash_delay_lbl"),
-            font=("Arial", 11), text_color="#b8bcc6",
-            anchor="w",
-        ).pack(fill="x", pady=(8, 2))
-        crash_delay_entry = ctk.CTkEntry(s, width=100)
-        crash_delay_entry.insert(0, str(bot.get("crash_restart_delay", 10)))
-        crash_delay_entry.pack(anchor="w")
+        # ---- 5. AFK ----
+        def build_afk(parent):
+            accent, bg = "#00bcd4", "#0f1a24"
+            card = ctk.CTkFrame(
+                parent, fg_color=bg, corner_radius=12,
+                border_width=2, border_color=accent,
+            )
+            card.pack(fill="x", padx=18, pady=(14, 14))
+            c = self._card_header(card, "💤", self.tr("settings_sec_afk"), accent)
 
-        # ==============================================================
-        #  Mentés
-        # ==============================================================
+            ctk.CTkLabel(
+                c, text=self.tr("settings_afk_hint"),
+                font=("Arial", 10), text_color="#8a8e98",
+                justify="left", anchor="w",
+            ).pack(fill="x", pady=(2, 8))
+
+            afk_switch = ctk.CTkSwitch(c, text=self.tr("settings_afk_switch"))
+            afk_switch.pack(anchor="w", pady=(0, 8))
+            if getattr(self, "afk_enabled", True):
+                afk_switch.select()
+            vars_store["afk_switch"] = afk_switch
+
+            ctk.CTkLabel(
+                c, text=self.tr("settings_afk_timeout_lbl"),
+                font=("Arial", 11), text_color="#b8bcc6", anchor="w",
+            ).pack(fill="x", pady=(4, 2))
+
+            afk_timeout_labels = [self.tr(k) for k, _ in AFK_TIMEOUT_OPTIONS]
+            current_seconds = getattr(self, "afk_idle_seconds", 60)
+            current_label = next(
+                (self.tr(k) for k, val in AFK_TIMEOUT_OPTIONS
+                 if val == current_seconds),
+                self.tr("afk_timeout_1m"),
+            )
+            afk_timeout_var = ctk.StringVar(value=current_label)
+            ctk.CTkComboBox(
+                c, values=afk_timeout_labels,
+                variable=afk_timeout_var, width=200,
+            ).pack(anchor="w")
+            vars_store["afk_timeout_var"] = afk_timeout_var
+
+            ctk.CTkButton(
+                c, text=self.tr("settings_afk_preview_btn"),
+                height=32, fg_color="#16a085", hover_color="#1abc9c",
+                width=200, command=self._afk_preview,
+            ).pack(anchor="w", pady=(10, 0))
+
+        # ---- 6. BACKUP ----
+        def build_backup(parent):
+            accent, bg = "#2980b9", "#101a26"
+            card = ctk.CTkFrame(
+                parent, fg_color=bg, corner_radius=12,
+                border_width=2, border_color=accent,
+            )
+            card.pack(fill="x", padx=18, pady=(14, 14))
+            c = self._card_header(card, "💾", self.tr("settings_sec_backup"), accent)
+
+            backup_switch = ctk.CTkSwitch(
+                c, text=self.tr("settings_backup_switch")
+            )
+            backup_switch.pack(anchor="w", pady=2)
+            if self.backup_enabled:
+                backup_switch.select()
+            vars_store["backup_switch"] = backup_switch
+
+            backup_start_switch = ctk.CTkSwitch(
+                c, text=self.tr("settings_backup_start_switch")
+            )
+            backup_start_switch.pack(anchor="w", pady=2)
+            if self.backup_on_start:
+                backup_start_switch.select()
+            vars_store["backup_start_switch"] = backup_start_switch
+
+            ctk.CTkLabel(
+                c, text=self.tr("settings_backup_interval_lbl"),
+                font=("Arial", 11), text_color="#b8bcc6", anchor="w",
+            ).pack(fill="x", pady=(10, 2))
+            backup_interval_entry = ctk.CTkEntry(c, width=100)
+            backup_interval_entry.insert(0, str(self.backup_interval_hours))
+            backup_interval_entry.pack(anchor="w")
+            vars_store["backup_interval_entry"] = backup_interval_entry
+
+            ctk.CTkButton(
+                c, text=self.tr("settings_backup_manager_btn"),
+                height=32, fg_color="#3498db", hover_color="#5dade2",
+                width=240, command=self.open_backup_manager,
+            ).pack(anchor="w", pady=(12, 0))
+
+        # ---- 7. GITHUB ----
+        def build_github(parent):
+            accent, bg = "#3498db", "#101a26"
+            card = ctk.CTkFrame(
+                parent, fg_color=bg, corner_radius=12,
+                border_width=2, border_color=accent,
+            )
+            card.pack(fill="x", padx=18, pady=(14, 14))
+            c = self._card_header(card, "🚀", self.tr("settings_sec_github"), accent)
+
+            ctk.CTkLabel(
+                c, text=self.tr("settings_github_hint"),
+                font=("Arial", 10), text_color="#8a8e98",
+                justify="left", anchor="w", wraplength=460,
+            ).pack(fill="x", pady=(2, 8))
+
+            ctk.CTkLabel(
+                c, text=self.tr("settings_update_interval_lbl"),
+                font=("Arial", 11), text_color="#b8bcc6", anchor="w",
+            ).pack(fill="x", pady=(2, 4))
+
+            current_minutes = getattr(
+                self, "update_check_interval_minutes", 60
+            )
+            current_interval_label = next(
+                (self.tr(k) for k, m in UPDATE_INTERVAL_OPTIONS
+                 if m == current_minutes),
+                self.tr("update_interval_1hour"),
+            )
+            update_interval_var = ctk.StringVar(value=current_interval_label)
+            ctk.CTkComboBox(
+                c, values=[self.tr(k) for k, _ in UPDATE_INTERVAL_OPTIONS],
+                variable=update_interval_var, width=260,
+            ).pack(anchor="w")
+            vars_store["update_interval_var"] = update_interval_var
+
+            btn_row = ctk.CTkFrame(c, fg_color="transparent")
+            btn_row.pack(fill="x", pady=(12, 0))
+
+            ctk.CTkButton(
+                btn_row, text=self.tr("settings_update_check_now_btn"),
+                height=32, fg_color="#2980b9", hover_color="#3498db",
+                width=180,
+                command=lambda: self.check_for_updates(silent=False),
+            ).pack(side="left", padx=(0, 6))
+
+            ctk.CTkButton(
+                btn_row, text=self.tr("settings_update_history_btn"),
+                height=32, fg_color="#8e44ad", hover_color="#9b59b6",
+                width=180,
+                command=lambda: self.open_update_history_window(),
+            ).pack(side="left")
+
+        # ---- 8. AI ----
+        def build_ai(parent):
+            accent, bg = "#8e44ad", "#1a1230"
+            card = ctk.CTkFrame(
+                parent, fg_color=bg, corner_radius=12,
+                border_width=2, border_color=accent,
+            )
+            card.pack(fill="x", padx=18, pady=(14, 14))
+            c = self._card_header(card, "🤖", self.tr("settings_sec_ai"), accent)
+
+            ctk.CTkLabel(
+                c, text=self.tr("ai_settings_provider_lbl"),
+                font=("Arial", 11), text_color="#b8bcc6", anchor="w",
+            ).pack(fill="x", pady=(2, 4))
+            provider_var = ctk.StringVar(
+                value=getattr(self, "ai_provider", "OpenAI (GPT)")
+            )
+            ctk.CTkComboBox(
+                c,
+                values=[
+                    "OpenAI (GPT)", "Anthropic (Claude)",
+                    "Ollama (local)", "LM Studio (local)",
+                ],
+                variable=provider_var, width=280,
+            ).pack(anchor="w")
+            vars_store["provider_var"] = provider_var
+
+            ctk.CTkLabel(
+                c, text=self.tr("ai_settings_key_lbl"),
+                font=("Arial", 11), text_color="#b8bcc6", anchor="w",
+            ).pack(fill="x", pady=(10, 4))
+            ai_key_entry = ctk.CTkEntry(
+                c, show="*", width=380, placeholder_text="sk-..."
+            )
+            if getattr(self, "ai_api_key", ""):
+                ai_key_entry.insert(0, self.ai_api_key)
+            ai_key_entry.pack(anchor="w")
+            vars_store["ai_key_entry"] = ai_key_entry
+
+            ctk.CTkLabel(
+                c, text=self.tr("settings_ai_model_lbl"),
+                font=("Arial", 11), text_color="#b8bcc6", anchor="w",
+            ).pack(fill="x", pady=(10, 4))
+            ai_model_entry = ctk.CTkEntry(
+                c, width=280, placeholder_text=getattr(self, "ai_model", "")
+            )
+            ai_model_entry.pack(anchor="w")
+            vars_store["ai_model_entry"] = ai_model_entry
+
+        # ---- 9. LAN ----
+        def build_lan(parent):
+            import secrets as _secrets
+
+            accent, bg = "#16a085", "#0f2318"
+            card = ctk.CTkFrame(
+                parent, fg_color=bg, corner_radius=12,
+                border_width=2, border_color=accent,
+            )
+            card.pack(fill="x", padx=18, pady=(14, 14))
+            c = self._card_header(
+                card, "🔗", self.tr("settings_sec_lan"), accent
+            )
+
+            # --- Host szekció ---
+            ctk.CTkLabel(
+                c, text="🖥️  " + self.tr("settings_lan_host_section"),
+                font=("Arial", 12, "bold"), text_color="#16a085",
+                anchor="w",
+            ).pack(fill="x", pady=(2, 8))
+
+            lan_switch = ctk.CTkSwitch(
+                c, text=self.tr("settings_lan_enable")
+            )
+            lan_switch.pack(anchor="w", pady=(0, 6))
+            if getattr(self, "lan_enabled", False):
+                lan_switch.select()
+            vars_store["lan_switch"] = lan_switch 
+
+            # Port
+            port_row = ctk.CTkFrame(c, fg_color="transparent")
+            port_row.pack(fill="x", pady=(4, 2))
+            ctk.CTkLabel(
+                port_row, text=self.tr("settings_lan_port_lbl"),
+                font=("Arial", 11), text_color="#b8bcc6",
+                width=140, anchor="w",
+            ).pack(side="left")
+            lan_port_entry = ctk.CTkEntry(
+                port_row, width=100, height=32, font=("Consolas", 12)
+            )
+            lan_port_entry.insert(0, str(getattr(self, "lan_port", 8765)))
+            lan_port_entry.pack(side="left")
+            vars_store["lan_port_entry"] = lan_port_entry
+
+            # Token
+            token_row = ctk.CTkFrame(c, fg_color="transparent")
+            token_row.pack(fill="x", pady=(6, 2))
+            ctk.CTkLabel(
+                token_row, text=self.tr("settings_lan_token_lbl"),
+                font=("Arial", 11), text_color="#b8bcc6",
+                width=140, anchor="w",
+            ).pack(side="left")
+
+            token_value = getattr(self, "lan_token", "") or _secrets.token_hex(16)
+            lan_token_entry = ctk.CTkEntry(
+                token_row, width=260, height=32,
+                font=("Consolas", 10),
+            )
+            lan_token_entry.insert(0, token_value)
+            lan_token_entry.pack(side="left", padx=(0, 6))
+            vars_store["lan_token_entry"] = lan_token_entry
+
+            def copy_token():
+                try:
+                    self.clipboard_clear()
+                    self.clipboard_append(lan_token_entry.get())
+                    self.update()
+                    self.notify(self.tr("copied_msg"), "success", 1500)
+                except Exception:
+                    pass
+
+            def regen_token():
+                new_token = _secrets.token_hex(16)
+                lan_token_entry.delete(0, "end")
+                lan_token_entry.insert(0, new_token)
+
+            ctk.CTkButton(
+                token_row, text="📋", width=36, height=32,
+                fg_color="#3498db", hover_color="#5dade2",
+                command=copy_token,
+            ).pack(side="left", padx=2)
+            ctk.CTkButton(
+                token_row, text="🔄", width=36, height=32,
+                fg_color="#9b59b6", hover_color="#8e44ad",
+                command=regen_token,
+            ).pack(side="left", padx=2)
+
+            # Vezérlés engedélyezése
+            allow_switch = ctk.CTkSwitch(
+                c, text=self.tr("settings_lan_allow_control")
+            )
+            allow_switch.pack(anchor="w", pady=(10, 4))
+            if getattr(self, "lan_allow_control", True):
+                allow_switch.select()
+            vars_store["lan_allow_switch"] = allow_switch
+
+            # Státusz
+            lan_status = ctk.CTkLabel(
+                c, text="", font=("Arial", 10), anchor="w"
+            )
+            lan_status.pack(fill="x", pady=(4, 0))
+            vars_store["lan_status_lbl"] = lan_status
+
+            def refresh_lan_status():
+                try:
+                    if getattr(self, "lan_enabled", False) and self._lan_server is not None:
+                        lan_status.configure(
+                            text=self.tr("settings_lan_status_on",
+                                          port=self.lan_port),
+                            text_color="#2ecc71",
+                        )
+                    else:
+                        lan_status.configure(
+                            text=self.tr("settings_lan_status_off"),
+                            text_color="#8a8e98",
+                        )
+                except Exception:
+                    pass
+
+            refresh_lan_status()
+
+            # Elválasztó
+            ctk.CTkFrame(c, height=1, fg_color="#1e3a2e").pack(
+                fill="x", pady=(14, 10)
+            )
+
+            # --- Kliens szekció ---
+            ctk.CTkLabel(
+                c, text="🌐  " + self.tr("settings_lan_client_section"),
+                font=("Arial", 12, "bold"), text_color="#3498db",
+                anchor="w",
+            ).pack(fill="x", pady=(0, 8))
+
+            ctk.CTkLabel(
+                c, text=self.tr("settings_lan_client_hint"),
+                font=("Arial", 10), text_color="#8a8e98",
+                justify="left", anchor="w", wraplength=520,
+            ).pack(fill="x", pady=(0, 10))
+
+            ctk.CTkButton(
+                c, text=self.tr("settings_lan_open_client"),
+                height=38, fg_color="#3498db", hover_color="#5dade2",
+                width=280, font=("Arial", 12, "bold"),
+                command=self.open_lan_client_window,
+            ).pack(anchor="w")
+
+        # ============================================================
+        #  MENTÉS
+        # ============================================================
         def save_settings():
-            # --- Panel beállítások ---
-            self.current_language = language_var.get()
-            self.panel_password = password_entry.get().strip()
-            self.minimize_to_tray_enabled = bool(tray_switch.get())
-            self.rpc_enabled = bool(rpc_switch.get())
-                        # Csendes órák
-            self.quiet_hours_enabled = bool(quiet_switch.get())
-            self.quiet_hours_start = quiet_start_entry.get().strip() or "22:00"
-            self.quiet_hours_end = quiet_end_entry.get().strip() or "06:00"
+            self.current_language = vars_store["language_var"].get()
+            self.panel_password = vars_store["password_entry"].get().strip()
+            self.minimize_to_tray_enabled = bool(vars_store["tray_switch"].get())
+            self.rpc_enabled = bool(vars_store["rpc_switch"].get())
 
-            # Fix kulcsok a megjelenített nevekből
+            # Csendes órák
+            self.quiet_hours_enabled = bool(vars_store["quiet_switch"].get())
+            self.quiet_hours_start = (
+                vars_store["quiet_start_entry"].get().strip() or "22:00"
+            )
+            self.quiet_hours_end = (
+                vars_store["quiet_end_entry"].get().strip() or "06:00"
+            )
+
+                        # --- LAN ---
+            try:
+                new_port = int(vars_store["lan_port_entry"].get().strip())
+            except (ValueError, KeyError):
+                new_port = 8765
+
+            old_enabled = getattr(self, "lan_enabled", False)
+            old_port = getattr(self, "lan_port", 8765)
+            old_token = getattr(self, "lan_token", "")
+
+            self.lan_enabled = bool(vars_store["lan_allow_switch"].winfo_exists()
+                                     and vars_store.get("lan_allow_switch") is not None
+                                     and lan_switch.get())
+            self.lan_port = new_port
+            self.lan_token = vars_store["lan_token_entry"].get().strip()
+            self.lan_allow_control = bool(vars_store["lan_allow_switch"].get())
+
+            # Ha változott valami → újraindítjuk a szervert
+            if (old_enabled != self.lan_enabled or
+                    old_port != self.lan_port or
+                    old_token != self.lan_token):
+                if self.lan_enabled:
+                    self.restart_lan_server()
+                else:
+                    self.stop_lan_server()
+
+
+            # Hang + log
             self.log_save_level = self._log_key_from_display(
-                log_display_var.get()
+                vars_store["log_display_var"].get()
             )
             self.selected_error_sound = self._sound_key_from_display(
-                sound_display_var.get()
+                vars_store["sound_display_var"].get()
             )
 
             # AFK
-            self.afk_enabled = bool(afk_switch.get())
-            selected_timeout_label = afk_timeout_var.get()
+            self.afk_enabled = bool(vars_store["afk_switch"].get())
+            selected_timeout_label = vars_store["afk_timeout_var"].get()
             for key, seconds in AFK_TIMEOUT_OPTIONS:
                 if self.tr(key) == selected_timeout_label:
                     self.afk_idle_seconds = seconds
                     break
 
             # Backup
-            self.backup_enabled = bool(backup_switch.get())
-            self.backup_on_start = bool(backup_start_switch.get())
+            self.backup_enabled = bool(vars_store["backup_switch"].get())
+            self.backup_on_start = bool(vars_store["backup_start_switch"].get())
             try:
                 self.backup_interval_hours = max(
-                    0, int(backup_interval_entry.get())
+                    0, int(vars_store["backup_interval_entry"].get())
                 )
             except ValueError:
                 status_lbl.configure(
@@ -659,17 +1152,15 @@ class WindowSettingsMixin:
                 )
                 return
 
-            # --- GitHub update intervallum ---
-            selected_update_label = update_interval_var.get()
+            # GitHub update intervallum
+            selected_update_label = vars_store["update_interval_var"].get()
             for key, minutes in UPDATE_INTERVAL_OPTIONS:
                 if self.tr(key) == selected_update_label:
                     self.update_check_interval_minutes = minutes
                     break
 
-            # Ha "Soha" → ne ütemezzük
             try:
-                if (hasattr(self, "_update_check_after_id")
-                        and self._update_check_after_id):
+                if getattr(self, "_update_check_after_id", None):
                     self.after_cancel(self._update_check_after_id)
                     self._update_check_after_id = None
             except Exception:
@@ -681,44 +1172,17 @@ class WindowSettingsMixin:
                 ))
 
             # AI
-            self.ai_provider = provider_var.get()
-            self.ai_api_key = ai_key_entry.get().strip()
-            self.ai_model = ai_model_entry.get().strip()
+            self.ai_provider = vars_store["provider_var"].get()
+            self.ai_api_key = vars_store["ai_key_entry"].get().strip()
+            self.ai_model = vars_store["ai_model_entry"].get().strip()
 
-            # --- Bot beállítások ---
-            bot["test_mode"] = bool(test_switch.get())
-            bot["auto_restart_on_crash"] = bool(crash_switch.get())
-            try:
-                bot["crash_restart_delay"] = max(
-                    1, int(crash_delay_entry.get())
-                )
-            except ValueError:
-                status_lbl.configure(
-                    text=self.tr("settings_err_crash_delay"),
-                    text_color="#e74c3c",
-                )
-                return
-            bot["allowed_discord_ids"] = [
-                v.strip() for v in testers_entry.get().split(",")
-                if v.strip().isdigit()
-            ]
-            try:
-                self.max_ram_mb = max(50, int(ram_entry.get()))
-            except ValueError:
-                status_lbl.configure(
-                    text=self.tr("settings_err_ram"),
-                    text_color="#e74c3c",
-                )
-                return
-
-            # --- Téma alkalmazása ---
-            selected_theme = theme_var.get()
+            # Téma
+            selected_theme = vars_store["theme_var"].get()
             if selected_theme != self.current_theme:
                 self.apply_theme_setting(selected_theme)
 
-            # --- Mentés ---
+            # Mentés
             self.save_config()
-            self.switch_bot(self.active_bot_key)
             self.update_ui_texts()
 
             status_lbl.configure(
@@ -728,13 +1192,40 @@ class WindowSettingsMixin:
             self.notify(self.tr("settings_saved_toast"), "success", 2000)
             self.after(400, win.destroy)
 
+                        # --- LAN ---
+            try:
+                new_port = int(vars_store["lan_port_entry"].get().strip())
+            except (ValueError, KeyError):
+                new_port = 8765
+
+            old_enabled = getattr(self, "lan_enabled", False)
+            old_port = getattr(self, "lan_port", 8765)
+            old_token = getattr(self, "lan_token", "")
+
+            self.lan_enabled = bool(vars_store["lan_switch"].get())
+            self.lan_port = new_port
+            self.lan_token = vars_store["lan_token_entry"].get().strip()
+            self.lan_allow_control = bool(vars_store["lan_allow_switch"].get())
+
+            if (old_enabled != self.lan_enabled or
+                    old_port != self.lan_port or
+                    old_token != self.lan_token):
+                if self.lan_enabled:
+                    self.after(300, self.restart_lan_server)
+                else:
+                    self.stop_lan_server()
+
         save_btn.configure(command=save_settings)
+
+        # ============================================================
+        #  INDÍTÁS — első tab aktív
+        # ============================================================
+        switch_tab("security", animate=False)
 
     # ==================================================================
     #  AFK előnézet
     # ==================================================================
     def _afk_preview(self):
-        """Azonnal megnyitja az AFK képernyőt (előnézet)."""
         try:
             if hasattr(self, "_show_afk_screen"):
                 if getattr(self, "_afk_running", False):

@@ -21,6 +21,7 @@ LANGUAGES = {
         # =============================================================
         #  PANEL / ÁLTALÁNOS
         # =============================================================
+        
         "panel_title": "Discord Bot Manager - Professional Multi-Bot Panel",
         "online_status": "● ONLINE",
         "offline_status": "● OFFLINE",
@@ -52,6 +53,7 @@ LANGUAGES = {
         "stats_section": "Statistics & System",
         "system_section": "System",
         "ai_section": "AI & Extras",
+        "bot_manage": "Bot Manager",
 
         # =============================================================
         #  SIDEBAR — GOMBOK
@@ -1332,6 +1334,58 @@ LANGUAGES = {
         "settings_quiet_to_lbl": "to",
         "settings_quiet_now_active": "🔇 Quiet hours are active right now",
         "settings_quiet_now_inactive": "🔊 Quiet hours are inactive",
+        "animation_stage_loading": "Loading configuration",
+        "animation_stage_connecting": "Connecting to Discord API",
+        "animation_stage_syncing": "Syncing commands",
+        # --- LAN szerver ---
+        "lan_server_started": "LAN server started on port {port}",
+        "lan_server_stopped": "LAN server stopped",
+        "lan_server_error": "LAN server error: {error}",
+
+        # --- LAN kliens ---
+        "lan_client_title": "Remote Panel Connection",
+        "lan_host_lbl": "Host:",
+        "lan_port_lbl": "Port:",
+        "lan_token_lbl": "Token:",
+        "lan_connect_btn": "Connect",
+        "lan_connecting": "Connecting...",
+        "lan_connecting_to": "Connecting to {host}:{port}...",
+        "lan_connected": "Connected",
+        "lan_disconnected": "Disconnected",
+        "lan_host_offline": "Host offline — no data",
+        "lan_invalid_port": "Invalid port!",
+        "lan_invalid_host": "Invalid host address!",
+        "lan_running": "🟢 RUNNING",
+        "lan_stopped": "🔴 STOPPED",
+        "lan_no_bots": "No bots on remote panel.",
+        "lan_client_logs": "Connection Logs",
+        "lan_client_logs_hint": "Connection logs will appear here...\n",
+
+        # --- LAN Settings (Settings ablak) ---
+        "settings_sec_lan": "LAN Connection",
+        "settings_lan_enable": "  Enable LAN server (others can control)",
+        "settings_lan_port_lbl": "Server port:",
+        "settings_lan_token_lbl": "Access token:",
+        "settings_lan_allow_control": "  Allow remote control (start/stop/restart)",
+        "settings_lan_token_copy": "📋 Copy token",
+        "settings_lan_open_client": "🔗 Connect to remote panel",
+        "settings_lan_status_on": "🟢 Server running on port {port}",
+        "settings_lan_status_off": "⚪ Server stopped",
+                # --- LAN sidebar + settings ---
+        "lan_client_btn": "Remote Panel",
+
+        "settings_sec_lan": "LAN Connection",
+        "settings_lan_host_section": "Host — this panel is controllable",
+        "settings_lan_client_section": "Client — connect to another panel",
+        "settings_lan_client_hint": "Connect to a remote panel on the local network to control its bots.\nThe remote panel must have its LAN server enabled and the same token set.",
+        "settings_lan_enable": "  Enable LAN server (others can control this panel)",
+        "settings_lan_port_lbl": "Server port:",
+        "settings_lan_token_lbl": "Access token:",
+        "settings_lan_allow_control": "  Allow remote control (start / stop / restart)",
+        "settings_lan_token_copy": "📋 Copy token",
+        "settings_lan_open_client": "🔗  Connect to remote panel",
+        "settings_lan_status_on": "🟢 Server running on port {port}",
+        "settings_lan_status_off": "⚪ Server stopped",
     },
     "Magyar": {
         # =============================================================
@@ -1378,7 +1432,7 @@ LANGUAGES = {
         "stats_section": "Statisztika és rendszer",
         "system_section": "Rendszer",
         "ai_section": "AI és extrák",
-
+        "bot_manage": "Bot kezelő",
         # =============================================================
         #  SIDEBAR — GOMBOK
         # =============================================================
@@ -2642,12 +2696,60 @@ LANGUAGES = {
         "test_mode_changed_msg": "Teszt mód: {status}",
         "settings_manually_saved_msg": "✅ Beállítások mentve",
         "file_not_found_msg": "Fájl nem található:\n{path}",
-        "settings_quiet_switch": "  Quiet hours (no error sound)",
-        "settings_quiet_hint": "During this time range, error sounds are muted.\nIf start > end, the range spans midnight (e.g., 22:00 → 06:00).",
-        "settings_quiet_from_lbl": "From:",
-        "settings_quiet_to_lbl": "to",
-        "settings_quiet_now_active": "🔇 Quiet hours are active right now",
-        "settings_quiet_now_inactive": "🔊 Quiet hours are inactive",
+        "settings_quiet_switch": "  Csendes órák (ne szóljon a hiba hang)",
+        "settings_quiet_hint": "Ebben az idősávban a hiba hangok némák maradnak.\nHa a kezdés > befejezés, az időszak átnyúlik éjfélen (pl. 22:00 → 06:00).",
+        "settings_quiet_from_lbl": "Ettől:",
+        "settings_quiet_to_lbl": "eddig",
+        "settings_quiet_now_active": "🔇 Csendes órák vannak most",
+        "settings_quiet_now_inactive": "🔊 Csendes órák nincsenek aktívak",
+        "animation_stage_loading": "Konfiguráció betöltése",
+        "animation_stage_connecting": "Kapcsolódás a Discord API-hoz",
+        "animation_stage_syncing": "Parancsok szinkronizálása",
+        "lan_server_started": "LAN szerver elindult a {port} porton",
+        "lan_server_stopped": "LAN szerver leállítva",
+        "lan_server_error": "LAN szerver hiba: {error}",
+
+        "lan_client_title": "Távoli panel kapcsolat",
+        "lan_host_lbl": "Host:",
+        "lan_port_lbl": "Port:",
+        "lan_token_lbl": "Token:",
+        "lan_connect_btn": "Kapcsolódás",
+        "lan_connecting": "Kapcsolódás...",
+        "lan_connecting_to": "Kapcsolódás: {host}:{port}...",
+        "lan_connected": "Csatlakozva",
+        "lan_disconnected": "Nincs kapcsolat",
+        "lan_host_offline": "Host offline — nincs adat",
+        "lan_invalid_port": "Érvénytelen port!",
+        "lan_invalid_host": "Érvénytelen host cím!",
+        "lan_running": "🟢 FUT",
+        "lan_stopped": "🔴 LEÁLLT",
+        "lan_no_bots": "Nincsenek botok a távoli panelen.",
+        "lan_client_logs": "Kapcsolódási naplók",
+        "lan_client_logs_hint": "A kapcsolódási naplók itt jelennek meg...\n",
+
+        "settings_sec_lan": "LAN kapcsolat",
+        "settings_lan_enable": "  LAN szerver engedélyezése (mások vezérelhetnek)",
+        "settings_lan_port_lbl": "Szerver port:",
+        "settings_lan_token_lbl": "Hozzáférési token:",
+        "settings_lan_allow_control": "  Távoli vezérlés engedélyezése (start/stop/restart)",
+        "settings_lan_token_copy": "📋 Token másolása",
+        "settings_lan_open_client": "🔗 Kapcsolódás távoli panelhez",
+        "settings_lan_status_on": "🟢 Szerver fut a {port} porton",
+        "settings_lan_status_off": "⚪ Szerver leállítva",
+        "lan_client_btn": "Távoli panel",
+
+        "settings_sec_lan": "LAN kapcsolat",
+        "settings_lan_host_section": "Host — ez a panel vezérelhető",
+        "settings_lan_client_section": "Kliens — kapcsolódás másik panelhez",
+        "settings_lan_client_hint": "Csatlakozz egy távoli panelhez a helyi hálózaton, hogy vezérelhesd a botjait.\nA távoli panelen be kell kapcsolni a LAN szervert, és ugyanazt a tokent kell megadni.",
+        "settings_lan_enable": "  LAN szerver engedélyezése (mások vezérelhetik ezt a panelt)",
+        "settings_lan_port_lbl": "Szerver port:",
+        "settings_lan_token_lbl": "Hozzáférési token:",
+        "settings_lan_allow_control": "  Távoli vezérlés engedélyezése (start / stop / restart)",
+        "settings_lan_token_copy": "📋 Token másolása",
+        "settings_lan_open_client": "🔗  Kapcsolódás távoli panelhez",
+        "settings_lan_status_on": "🟢 Szerver fut a {port} porton",
+        "settings_lan_status_off": "⚪ Szerver leállítva",
     },
 }
 
