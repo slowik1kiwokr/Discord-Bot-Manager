@@ -1,6 +1,33 @@
 import os
 import secrets
 
+# --- Verzió betöltése a version.py-ból ---
+def _load_version():
+    """Beolvassa a verziót a version.py-ból, fallback a version.txt-re."""
+    try:
+        import version as _version_mod
+        v = (getattr(_version_mod, "version", None)
+             or getattr(_version_mod, "__version__", None)
+             or getattr(_version_mod, "VERSION", None))
+        if v:
+            return str(v).strip()
+    except Exception:
+        pass
+
+    try:
+        import os
+        txt_path = os.path.join(SCRIPT_DIR, "version.txt")
+        if os.path.exists(txt_path):
+            with open(txt_path, "r", encoding="utf-8") as f:
+                return f.read().strip().splitlines()[0].strip()
+    except Exception:
+        pass
+
+    return "unknown"
+
+
+VERSION = _load_version()
+
 # A projekt gyökérkönyvtára (a modules/ szülője)
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 

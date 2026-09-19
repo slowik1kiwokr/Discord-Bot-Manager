@@ -20,9 +20,8 @@ class LANServerMixin:
         self.lan_port = getattr(self, "lan_port", 8765)
         self.lan_token = getattr(self, "lan_token", "")
         self.lan_allow_control = getattr(self, "lan_allow_control", True)
-        self._lan_requests_log = []   # utolsó 30 kérés
+        self._lan_requests_log = []
 
-        # Ha be van kapcsolva, indítjuk
         if self.lan_enabled:
             self.after(2000, self.start_lan_server)
 
@@ -33,7 +32,6 @@ class LANServerMixin:
         if self._lan_server is not None:
             return True
 
-        # Token generálás, ha nincs
         if not self.lan_token:
             self.lan_token = secrets.token_hex(16)
 
@@ -41,7 +39,7 @@ class LANServerMixin:
 
         class Handler(http.server.BaseHTTPRequestHandler):
             def log_message(self, *args):
-                pass  # csendes
+                pass
 
             def _send_json(self, data, code=200):
                 try:
@@ -81,17 +79,17 @@ class LANServerMixin:
                 client_ip = self.client_address[0]
                 path = self.path.split("?")[0]
 
-                # Ping — token nélkül is
+                # --- Ping: token nélkül is elérhető ---
                 if path == "/api/ping":
                     self._log_request("GET", path, client_ip, 200)
                     self._send_json({
                         "ok": True,
                         "panel_id": config.PANEL_ID,
-                        "version": "2.5.0",
+                        "version": config.VERSION,
                     })
                     return
 
-                # Token ellenőrzés
+                # --- Token ellenőrzés ---
                 if not self._check_auth():
                     self._log_request("GET", path, client_ip, 401)
                     self._send_json({"error": "Invalid token"}, 401)
@@ -211,6 +209,7 @@ class LANServerMixin:
         return {
             "ok": True,
             "panel_id": config.PANEL_ID,
+            "version": config.VERSION,          # ← ÚJ
             "active_bot": self.active_bot_key,
             "bots": bots_data,
             "temperature": self.get_temperature_text(),

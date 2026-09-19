@@ -7,7 +7,6 @@ import datetime
 
 import customtkinter as ctk
 
-
 class LANClientMixin:
     """LAN kliens — másik panelhez csatlakozás."""
 
@@ -142,11 +141,128 @@ class LANClientMixin:
         client_state = {
             "running": False,
             "thread": None,
+            "session": 0,       # ← ÚJ: minden kapcsolódás egyedi azonosítót kap
             "host": "",
             "port": 8765,
             "token": "",
         }
 
+        # --- UI frissítő függvények (a worker ezeket hívja) ---
+        def render_bots(bots):
+            for w in bots_wrap.winfo_children():
+                w.destroy()
+
+            if not bots:
+                ctk.CTkLabel(bots_wrap, text=self.tr("lan_no_bots"),
+                              font=("Arial", 12), text_color="#6a6e78").pack(pady=30)
+                return
+
+            for bot in bots:
+                is_running = bot.get("is_running", False)
+                color = bot.get("color", "#5865F2")
+                emoji = bot.get("emoji", "🤖")
+
+                card = ctk.CTkFrame(bots_wrap, fg_color="#1a1d26", corner_radius=10)
+                card.pack(fill="x", pady=4)
+
+                left = ctk.CTkFrame(card, fg_color="transparent")
+                left.pack(side="left", fill="x", expand=True, padx=14, pady=12)
+
+                ctk.CTkLabel(left, text=f"{emoji}  {bot.get('name', '?')}",
+                              font=("Arial", 13, "bold"),
+                              text_color=color, anchor="w").pack(fill="x")
+
+                status_text = self.tr("lan_running") if is_running else self.tr("lan_stopped")
+                ctk.CTkLabel(
+                    left,
+                    text=f"{status_text}  •  "
+                          f"RAM: {bot.get('ram_mb', 0)} MB  •  "
+                          f"CPU: {bot.get('cpu_percent', 0)}%  •  "
+                          f"Hibák: {bot.get('error_count', 0)}",
+                    font=("Consolas", 10), text_color="#8a8e98",
+                    anchor="w",
+                ).pack(fill="x", pady=(2, 0))
+
+                right = ctk.CTkFrame(card, fg_color="transparent")
+                right.pack(side="right", padx=10, pady=10)
+
+                def send_cmd(action, bot_key=bot.get("key")):
+                    def cmd_worker():
+                        try:
+                            base = f"http://{client_state['host']}:{client_state['port']}"
+                            payload = json.dumps(
+                                {"action": action, "bot": bot_key}
+                            ).encode("utf-8")
+                            req = urllib.request.Request(
+                                f"{base}/api/command",
+                                data=payload,
+                                headers={
+                                    "Content-Type": "application/json",
+                                    "X-API-Key": client_state["token"],
+                                },
+                                method="POST",
+                            )
+                            with urllib.request.urlopen(req, timeout=6) as r:
+                                result = json.loads(r.read().decode("utf-8"))
+                            msg = result.get("message", "?")
+                            self.after(0, lambda: log_line(f"✅ {action} → {msg}"))
+                        except Exception as e:
+                            self.after(0, lambda err=str(e):
+                                        log_line(f"❌ {action}: {err}"))
+
+                    threading.Thread(target=cmd_worker, daemon=True).start()
+
+                ctk.CTkButton(
+                    right, text="▶", width=36, height=32,
+                    fg_color="#27ae60", hover_color="#2ecc71",
+                    font=("Arial", 14, "bold"),
+                    command=lambda bk=bot.get("key"): send_cmd("start", bk),
+                ).pack(side="left", padx=2)
+
+                ctk.CTkButton(
+                    right, text="🔄", width=36, height=32,
+                    fg_color="#d35400", hover_color="#e67e22",
+                    font=("Arial", 12),
+                    command=lambda bk=bot.get("key"): send_cmd("restart", bk),
+                ).pack(side="left", padx=2)
+
+                ctk.CTkButton(
+                    right, text="⏸", width=36, height=32,
+                    fg_color="#c0392b", hover_color="#e74c3c",
+                    font=("Arial", 14, "bold"),
+                    command=lambda bk=bot.get("key"): send_cmd("stop", bk),
+                ).pack(side="left", padx=2)
+
+        def update_ui(data, base):
+            status_lbl.configure(
+                text="🟢 " + self.tr("lan_connected"),
+                text_color="#2ecc71")
+            self._lan_client_cache = data
+            self._lan_client_connected = True
+            try:
+                info_lbl.configure(
+                    text=f"Panel: {data.get('panel_id', '?')}  |  "
+                          f"Ver: {data.get('version', '?')}  |  "
+                          f"Active: {data.get('active_bot', '?')}  |  "
+                          f"Temp: {data.get('temperature', '?')}"
+                )
+
+
+            except Exception:
+                pass
+            render_bots(data.get("bots", []))
+
+        def on_connection_fail(err_msg, fail_count):
+            if fail_count == 1:
+                log_line(f"❌ {err_msg}")
+            if fail_count >= 3:
+                status_lbl.configure(
+                    text="⚪ " + self.tr("lan_disconnected"),
+                    text_color="#e74c3c")
+                self._lan_client_connected = False
+                info_lbl.configure(text=self.tr("lan_host_offline"))
+
+        # --- Kapcsolódás ---
         def do_connect():
             host = host_entry.get().strip()
             try:
@@ -160,10 +276,16 @@ class LANClientMixin:
                 log_line("❌ " + self.tr("lan_invalid_host"))
                 return
 
-            # Ha már fut, állítsuk le
+            # Előző kapcsolat leállítása — megvárjuk, míg tényleg kilép
             if client_state["running"]:
                 client_state["running"] = False
-                time.sleep(0.3)
+                old_thread = client_state.get("thread")
+                if old_thread and old_thread.is_alive():
+                    old_thread.join(timeout=6)
+
+            # Új session azonosító — a régi thread ebből tudja, hogy le kell állnia
+            client_state["session"] += 1
+            my_session = client_state["session"]
 
             client_state["host"] = host
             client_state["port"] = port
@@ -186,160 +308,61 @@ class LANClientMixin:
             def worker():
                 base = f"http://{host}:{port}"
                 fail_count = 0
+                backoff = 2.0           # első próba után ennyi szünet
+                max_backoff = 30.0      # maximum várakozás
 
-                while client_state["running"]:
+                while (client_state["running"]
+                       and client_state["session"] == my_session):
+                    t0 = time.time()
                     try:
-                        # Ping
                         req = urllib.request.Request(
                             f"{base}/api/status",
                             headers={"X-API-Key": token} if token else {},
                         )
                         with urllib.request.urlopen(req, timeout=4) as r:
                             data = json.loads(r.read().decode("utf-8"))
+                        # Sikeres kapcsolat → visszaáll a normál poll ütemre
                         fail_count = 0
-
-                        # Frissítés a main thread-en
-                        self.after(0, lambda d=data: update_ui(d, True, base))
-
+                        backoff = 2.0
+                        self.after(0, lambda d=data, b=base: update_ui(d, b))
                     except Exception as e:
                         fail_count += 1
                         err_msg = str(e)
                         self.after(0, lambda em=err_msg, fc=fail_count:
                                     on_connection_fail(em, fc))
+                        # Exponenciális backoff hiba esetén
+                        backoff = min(backoff * 1.5, max_backoff)
 
-                    time.sleep(2)
+                    # Szünet — a kérésre fordított időt levonjuk, hogy pontos legyen
+                    elapsed = time.time() - t0
+                    sleep_time = max(0.5, backoff - elapsed)
 
-                self.after(0, lambda: connect_btn.configure(
-                    state="normal", text="🔌 " + self.tr("lan_connect_btn")))
+                    # Kis darabokban alszunk, hogy gyorsan leállhassunk
+                    end = time.time() + sleep_time
+                    while time.time() < end:
+                        if (not client_state["running"]
+                                or client_state["session"] != my_session):
+                            break
+                        time.sleep(0.1)
 
-            def update_ui(data, ok, base):
-                nonlocal state_holder
-                state_holder = {"ok": ok}
-                # Státusz
-                if ok:
-                    status_lbl.configure(
-                        text="🟢 " + self.tr("lan_connected"),
-                        text_color="#2ecc71")
-                    self._lan_client_cache = data
-                    self._lan_client_connected = True
-                # Info
-                try:
-                    info_lbl.configure(
-                        text=f"Panel: {data.get('panel_id', '?')}  |  "
-                              f"Active: {data.get('active_bot', '?')}  |  "
-                              f"Temp: {data.get('temperature', '?')}"
-                    )
-                except Exception:
-                    pass
-                # Bot lista újraépítés
-                render_bots(data.get("bots", []))
+                # Ha ez a session ért véget (nem egy újabb írta felül), állítsuk vissza a gombot
+                if client_state["session"] == my_session:
+                    self.after(0, lambda: connect_btn.configure(
+                        state="normal",
+                        text="🔌 " + self.tr("lan_connect_btn")))
 
-            def on_connection_fail(err_msg, fail_count):
-                if fail_count == 1:
-                    log_line(f"❌ {err_msg}")
-                if fail_count >= 3:
-                    status_lbl.configure(
-                        text="⚪ " + self.tr("lan_disconnected"),
-                        text_color="#e74c3c")
-                    self._lan_client_connected = False
-                    info_lbl.configure(text=self.tr("lan_host_offline"))
-
-            state_holder = {"ok": False}
-
-            def render_bots(bots):
-                for w in bots_wrap.winfo_children():
-                    w.destroy()
-
-                if not bots:
-                    ctk.CTkLabel(bots_wrap, text=self.tr("lan_no_bots"),
-                                  font=("Arial", 12), text_color="#6a6e78").pack(pady=30)
-                    return
-
-                for bot in bots:
-                    is_running = bot.get("is_running", False)
-                    color = bot.get("color", "#5865F2")
-                    emoji = bot.get("emoji", "🤖")
-
-                    card = ctk.CTkFrame(bots_wrap, fg_color="#1a1d26",
-                                          corner_radius=10)
-                    card.pack(fill="x", pady=4)
-
-                    # Bal oldal — ikon + név
-                    left = ctk.CTkFrame(card, fg_color="transparent")
-                    left.pack(side="left", fill="x", expand=True, padx=14, pady=12)
-
-                    ctk.CTkLabel(left, text=f"{emoji}  {bot.get('name', '?')}",
-                                  font=("Arial", 13, "bold"),
-                                  text_color=color, anchor="w").pack(fill="x")
-
-                    status_color = "#2ecc71" if is_running else "#e74c3c"
-                    status_text = self.tr("lan_running") if is_running else self.tr("lan_stopped")
-                    ctk.CTkLabel(
-                        left,
-                        text=f"{status_text}  •  "
-                              f"RAM: {bot.get('ram_mb', 0)} MB  •  "
-                              f"CPU: {bot.get('cpu_percent', 0)}%  •  "
-                              f"Hibák: {bot.get('error_count', 0)}",
-                        font=("Consolas", 10), text_color="#8a8e98",
-                        anchor="w",
-                    ).pack(fill="x", pady=(2, 0))
-
-                    # Jobb oldal — gombok
-                    right = ctk.CTkFrame(card, fg_color="transparent")
-                    right.pack(side="right", padx=10, pady=10)
-
-                    def send_cmd(action, bot_key=bot.get("key")):
-                        def worker():
-                            try:
-                                base = f"http://{client_state['host']}:{client_state['port']}"
-                                payload = json.dumps(
-                                    {"action": action, "bot": bot_key}
-                                ).encode("utf-8")
-                                req = urllib.request.Request(
-                                    f"{base}/api/command",
-                                    data=payload,
-                                    headers={
-                                        "Content-Type": "application/json",
-                                        "X-API-Key": client_state["token"],
-                                    },
-                                    method="POST",
-                                )
-                                with urllib.request.urlopen(req, timeout=6) as r:
-                                    result = json.loads(r.read().decode("utf-8"))
-                                msg = result.get("message", "?")
-                                self.after(0, lambda: log_line(f"✅ {action} → {msg}"))
-                            except Exception as e:
-                                self.after(0, lambda err=str(e):
-                                            log_line(f"❌ {action}: {err}"))
-
-                        threading.Thread(target=worker, daemon=True).start()
-
-                    ctk.CTkButton(
-                        right, text="▶", width=36, height=32,
-                        fg_color="#27ae60", hover_color="#2ecc71",
-                        font=("Arial", 14, "bold"),
-                        command=lambda bk=bot.get("key"): send_cmd("start", bk),
-                    ).pack(side="left", padx=2)
-
-                    ctk.CTkButton(
-                        right, text="🔄", width=36, height=32,
-                        fg_color="#d35400", hover_color="#e67e22",
-                        font=("Arial", 12),
-                        command=lambda bk=bot.get("key"): send_cmd("restart", bk),
-                    ).pack(side="left", padx=2)
-
-                    ctk.CTkButton(
-                        right, text="⏸", width=36, height=32,
-                        fg_color="#c0392b", hover_color="#e74c3c",
-                        font=("Arial", 14, "bold"),
-                        command=lambda bk=bot.get("key"): send_cmd("stop", bk),
-                    ).pack(side="left", padx=2)
-
-            client_state["thread"] = None
+            # >>> EZ A LÉNYEG: a worker tényleg elindul <<<
+            thread = threading.Thread(target=worker, daemon=True)
+            client_state["thread"] = thread
+            thread.start()
 
         # Bezárás
         def on_close():
             client_state["running"] = False
+            # Várunk, hogy a thread szépen kilépjen (max 1 mp)
+            t = client_state.get("thread")
+            if t and t.is_alive():
+                t.join(timeout=1.0)
             try:
                 win.destroy()
             except Exception:
